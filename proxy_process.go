@@ -1,13 +1,16 @@
 package main
 
 import (
-	"bufio"
-	"github.com/libp2p/go-libp2p-core/network"
+	"context"
+	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	"highway/p2p"
 )
 
-func (s *ProxyHost) ProcessConnection() {
-	s.Host.SetStreamHandler(s.GetProxyStreamProtocolID(), func(stream network.Stream) {
-		_ = bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+func ProcessConnection(s *p2p.Host) {
+	pubsub, err := p2pPubSub.NewGossipSub(context.Background(), s.Host)
+	must(err)
 
-	})
+	//subscribe to beacon
+	pubsub.Subscribe("beacon")
+
 }

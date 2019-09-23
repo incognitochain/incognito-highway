@@ -1,12 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"highway/p2p"
 )
+
+type PeerConn struct {
+	RemotePeer *p2p.Peer
+	RW         *bufio.ReadWriter
+}
 
 type ConnManager struct {
 	Host     host.Host

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"highway/p2p"
 	_ "net/http/pprof"
 )
 
@@ -9,9 +10,9 @@ func main() {
 	config.printConfig()
 
 	//process proxy stream
-	proxyHost := NewProxyHost(config.version, config.host, config.proxyPort, nil)
+	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, []byte(config.privateKey))
 
-	go proxyHost.ProcessConnection()
+	go ProcessConnection(proxyHost)
 
 	//web server
 	StartMonitorServer(config.adminPort)
