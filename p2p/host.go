@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	crypto2 "crypto"
 	"fmt"
 	"github.com/libp2p/go-libp2p"
 	core "github.com/libp2p/go-libp2p-core"
@@ -11,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	p2pgrpc "github.com/paralin/go-libp2p-grpc"
 )
 
 type PeerConn struct {
@@ -23,13 +25,21 @@ type Peer struct {
 	Port          int
 	TargetAddress []core.Multiaddr
 	PeerID        peer.ID
-	PublicKey     string
+	PublicKey     crypto2.PublicKey
+}
+
+type HostConfig struct {
+	MaxConnection int
+	PublicIP      string
+	Port          int
+	PrivateKey    crypto.PrivKey
 }
 
 type Host struct {
 	Version  string
 	Host     host.Host
 	SelfPeer *Peer
+	GRPC     *p2pgrpc.GRPCProtocol
 }
 
 func NewHost(version string, pubIP string, port int, rand []byte) *Host {
@@ -66,9 +76,10 @@ func NewHost(version string, pubIP string, port int, rand []byte) *Host {
 		Host:     p2pHost,
 		SelfPeer: selfPeer,
 		Version:  version,
+		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost),
 	}
 
-	fmt.Println("Local Peer: ", selfPeer)
+	fmt.Println(selfPeer)
 	return node
 }
 
