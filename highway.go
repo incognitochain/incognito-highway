@@ -1,3 +1,4 @@
+//+build !test
 package main
 
 import (
@@ -12,7 +13,8 @@ func main() {
 	//process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, []byte(config.privateKey))
 
-	go ProcessConnection(proxyHost)
+	// go ProcessConnection(proxyHost)
+	ProcessConnection(proxyHost)
 
 	//web server
 	StartMonitorServer(config.adminPort)
