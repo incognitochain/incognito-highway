@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"google.golang.org/grpc"
 )
+
+var call = 0
 
 type GRPCService_Server struct {
 }
@@ -15,6 +16,14 @@ func (self *GRPCService_Server) registerServices(grpsServer *grpc.Server) {
 }
 
 func (self *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegisterMsg) (*ProxyRegisterResponse, error) {
-	fmt.Println(req)
-	return &ProxyRegisterResponse{Topics: []string{"123", "456", "789"}}, nil
+	topics := []string{}
+	for i, m := range req.WantedMessages {
+		topic := "PROXY" + m
+		// if call%10 == i {
+		// 	topic = topic[1:]
+		// }
+		topics = append(topics, topic)
+	}
+	call += 1
+	return &ProxyRegisterResponse{Topics: topics}, nil
 }
