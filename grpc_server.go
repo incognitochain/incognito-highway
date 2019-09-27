@@ -16,14 +16,17 @@ func (self *GRPCService_Server) registerServices(grpsServer *grpc.Server) {
 }
 
 func (self *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegisterMsg) (*ProxyRegisterResponse, error) {
-	topics := []string{}
+	pairs := []*MessageTopicPair{}
 	for i, m := range req.WantedMessages {
-		topic := "PROXY" + m
-		// if call%10 == i {
-		// 	topic = topic[1:]
-		// }
-		topics = append(topics, topic)
+		pair := &MessageTopicPair{
+			Message: m,
+			Topic:   "PROXY" + m,
+		}
+		if call%10 == i {
+			pair.Topic = pair.Topic[1:]
+		}
+		pairs = append(pairs, pair)
 	}
 	call += 1
-	return &ProxyRegisterResponse{Topics: topics}, nil
+	return &ProxyRegisterResponse{Pair: pairs}, nil
 }

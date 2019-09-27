@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"highway/p2p"
 	"testing"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func TestProcessConnection(t *testing.T) {
@@ -21,9 +22,8 @@ func TestProcessConnection(t *testing.T) {
 	err := host1.Host.Connect(context.Background(), peer.AddrInfo{host2.Host.ID(), host2.Host.Addrs()})
 	must(err)
 
-	client := GRPCService_Client{host1.GRPC}
-	peerid, err := peer.IDB58Decode(host2.Host.ID().String())
-	res, err := client.ProxyRegister(context.Background(), peerid, "mypub")
-	fmt.Println(res, err)
-
+	// client := GRPCService_Client{host1.GRPC}
+	// peerid, err := peer.IDB58Decode(host2.Host.ID().String())
+	// res, err := client.ProxyRegister(context.Background(), peerid, "mypub")
+	// fmt.Println(res, err)
 }
