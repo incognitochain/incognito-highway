@@ -1,7 +1,8 @@
-package main
+package process
 
 import (
 	"context"
+	"highway/process/topic"
 
 	"google.golang.org/grpc"
 )
@@ -17,12 +18,15 @@ func (self *GRPCService_Server) registerServices(grpsServer *grpc.Server) {
 
 func (self *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegisterMsg) (*ProxyRegisterResponse, error) {
 	topics := []string{}
-	for i, m := range req.WantedMessages {
-		topic := "PROXY" + m
-		// if call%10 == i {
-		// 	topic = topic[1:]
-		// }
-		topics = append(topics, topic)
+	topicGenerator := new(topic.InsideTopic)
+	for _, m := range req.WantedMessages {
+		err := topicGenerator.FromMessageType(req.CommitteePublicKey, m)
+		if err != nil {
+			topics = append(topics, "")
+		} else {
+			topics = append(topics, topicGenerator.ToString())
+			GlobalPubsub.NewMessage <- topicGenerator.ToString()
+		}
 	}
 	call += 1
 	return &ProxyRegisterResponse{Topics: topics}, nil

@@ -1,4 +1,4 @@
-package main
+package process
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 )
 
 type GRPCService_Client struct {
-	p2pgrpc *p2pgrpc.GRPCProtocol
+	P2Pgrpc *p2pgrpc.GRPCProtocol
 }
 
 func (self *GRPCService_Client) ProxyRegister(ctx context.Context, peerID peer.ID, pubkey string) ([]string, error) {
-	grpcConn, err := self.p2pgrpc.Dial(ctx, peerID, grpc.WithInsecure(), grpc.WithBlock())
+	grpcConn, err := self.P2Pgrpc.Dial(ctx, peerID, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}

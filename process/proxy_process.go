@@ -1,4 +1,4 @@
-package main
+package process
 
 import (
 	"highway/p2p"
