@@ -1,7 +1,7 @@
 package common
 
 var (
-	SelfID string
+	SelfID string = "aaaaa"
 	//Remove soon
 	CommitteeGenesis map[string]byte
 )

@@ -26,7 +26,7 @@ func (self *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyReg
 		responseTopic := ""
 		if err == nil {
 			responseTopic = topicGenerator.ToString()
-			logger.Debugf("%v wanted message %v, response %v", req.GetCommitteePublicKey(), responseTopic)
+			logger.Infof("%v wanted message %v, response %v", req.GetCommitteePublicKey(), responseTopic)
 			GlobalPubsub.NewMessage <- responseTopic
 		}
 		pair := &MessageTopicPair{
