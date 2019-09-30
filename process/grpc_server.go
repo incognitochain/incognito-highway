@@ -2,12 +2,12 @@ package process
 
 import (
 	"context"
+	fmt "fmt"
+	logger "highway/customizelog"
 	"highway/process/topic"
 
 	"google.golang.org/grpc"
 )
-
-var call = 0
 
 type GRPCService_Server struct {
 }
@@ -17,17 +17,24 @@ func (self *GRPCService_Server) registerServices(grpsServer *grpc.Server) {
 }
 
 func (self *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegisterMsg) (*ProxyRegisterResponse, error) {
-	topics := []string{}
+	logger.Infof("Receive new request from %v via gRPC\n", req.GetCommitteePublicKey())
+	pairs := []*MessageTopicPair{}
+	// topics := []string{}
 	topicGenerator := new(topic.InsideTopic)
 	for _, m := range req.WantedMessages {
 		err := topicGenerator.FromMessageType(req.CommitteePublicKey, m)
-		if err != nil {
-			topics = append(topics, "")
-		} else {
-			topics = append(topics, topicGenerator.ToString())
-			GlobalPubsub.NewMessage <- topicGenerator.ToString()
+		responseTopic := ""
+		if err == nil {
+			responseTopic = topicGenerator.ToString()
+			logger.Debugf("%v wanted message %v, response %v", req.GetCommitteePublicKey(), responseTopic)
+			GlobalPubsub.NewMessage <- responseTopic
 		}
+		pair := &MessageTopicPair{
+			Message: m,
+			Topic:   responseTopic,
+		}
+		pairs = append(pairs, pair)
 	}
-	call += 1
-	return &ProxyRegisterResponse{Topics: topics}, nil
+	fmt.Println(pairs)
+	return &ProxyRegisterResponse{Pair: pairs}, nil
 }

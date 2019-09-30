@@ -14,14 +14,19 @@ func GetCommitteeIDOfValidator(validator string) int {
 	return -1
 }
 
-type KeyListFromFile struct {
-	Bc []string         `json:"Beacon"`
-	Sh map[int][]string `json:"Shard"`
+type Key struct {
+	Payment         string `json:"PaymentAddress"`
+	CommitteePubKey string `json:"CommitteePublicKey"`
+}
+
+type KeyList struct {
+	Bc []Key         `json:"Beacon"`
+	Sh map[int][]Key `json:"Shard"`
 }
 
 func InitGenesisCommitteeFromFile(filename string, numberOfShard, numberOfCandidate int) error {
 	CommitteeGenesis = map[string]byte{}
-	keyListFromFile := KeyListFromFile{}
+	keyListFromFile := KeyList{}
 	if filename != "" {
 		jsonFile, err := os.Open(filename)
 		if err != nil {
@@ -37,13 +42,13 @@ func InitGenesisCommitteeFromFile(filename string, numberOfShard, numberOfCandid
 
 	for i := 0; i < numberOfCandidate; i++ {
 		if i < len(keyListFromFile.Bc) {
-			CommitteeGenesis[keyListFromFile.Bc[i]] = BEACONID
+			CommitteeGenesis[keyListFromFile.Bc[i].CommitteePubKey] = BEACONID
 		}
 	}
 	for j := 0; j < numberOfShard; j++ {
 		for i := 0; i < numberOfCandidate; i++ {
 			if i < len(keyListFromFile.Sh[j]) {
-				CommitteeGenesis[keyListFromFile.Sh[j][i]] = byte(j)
+				CommitteeGenesis[keyListFromFile.Sh[j][i].CommitteePubKey] = byte(j)
 			}
 		}
 	}

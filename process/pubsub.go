@@ -2,7 +2,7 @@ package process
 
 import (
 	"context"
-	fmt "fmt"
+	logger "highway/customizelog"
 
 	"github.com/libp2p/go-libp2p-core/host"
 	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
@@ -41,8 +41,10 @@ func (pubsub *PubSubManager) WatchingChain() {
 		case newTopic := <-pubsub.NewMessage:
 			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
 			if err != nil {
-				fmt.Println(err)
+				logger.Error(err)
+				continue
 			}
+			logger.Infof("Success subscribe topic %v\n", newTopic)
 			pubsub.Msgs = append(pubsub.Msgs, subch)
 			go pubsub.handleNewMess(subch)
 		}
@@ -50,9 +52,17 @@ func (pubsub *PubSubManager) WatchingChain() {
 }
 
 func (pubsub *PubSubManager) handleNewMess(x *p2pPubSub.Subscription) {
-	a, err := x.Next(nil)
-	//TODO implement GossipSub with special topic
-	if (err == nil) && (a != nil) {
-		pubsub.FloodMachine.Publish(x.Topic(), a.GetData())
+	for {
+		data, err := x.Next(nil)
+		//TODO implement GossipSub with special topic
+		if (err == nil) && (data != nil) {
+			err = pubsub.FloodMachine.Publish(x.Topic(), data.GetData())
+			if err == nil {
+				logger.Infof("Success publish topic %v\n")
+				logger.Debugf("Topic: %v, data: %v\n", x.Topic(), data.Data)
+			} else {
+				logger.Errorf("Publish topic %v failed, err: %v\n", x.Topic(), err)
+			}
+		}
 	}
 }
