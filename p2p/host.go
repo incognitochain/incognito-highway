@@ -6,11 +6,14 @@ import (
 	"context"
 	crypto2 "crypto"
 	"fmt"
+	"log"
+
 	"github.com/libp2p/go-libp2p"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
 	p2pgrpc "github.com/paralin/go-libp2p-grpc"
 )
@@ -65,6 +68,23 @@ func NewHost(version string, pubIP string, port int, rand []byte) *Host {
 
 	p2pHost, err := libp2p.New(ctx, opts...)
 
+	ps, _ := pubsub.NewFloodSub(context.Background(), p2pHost)
+	topics := []string{
+		"PROXYblockshard",
+		"PROXYblockbeacon",
+		"PROXYbft",
+		"PROXYpeerstate",
+		"PROXYcrossshard",
+		"PROXYblkshdtobcn",
+	}
+	for _, t := range topics {
+		sub, err := ps.Subscribe(t)
+		if err != nil {
+			fmt.Println(err)
+		}
+		go processPrint(sub)
+	}
+
 	selfPeer := &Peer{
 		PeerID:        p2pHost.ID(),
 		IP:            pubIP,
@@ -81,6 +101,18 @@ func NewHost(version string, pubIP string, port int, rand []byte) *Host {
 
 	fmt.Println(selfPeer)
 	return node
+}
+
+func processPrint(sub *pubsub.Subscription) {
+	ctx := context.Background()
+	for {
+		msg, err := sub.Next(ctx)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Println("[db] Receive message", msg)
+	}
 }
 
 func catchError(err error) {
