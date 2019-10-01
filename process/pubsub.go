@@ -28,10 +28,10 @@ func InitPubSub(s host.Host) error {
 	if err != nil {
 		return err
 	}
-	GlobalPubsub.GossipMachine, err = p2pPubSub.NewGossipSub(ctx, s)
-	if err != nil {
-		return err
-	}
+	// GlobalPubsub.GossipMachine, err = p2pPubSub.NewGossipSub(ctx, s)
+	// if err != nil {
+	// 	return err
+	// }
 	GlobalPubsub.NewMessage = make(chan string)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
@@ -60,7 +60,7 @@ func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription) {
 		fmt.Println("~~~~~~~~~~", err, "~~~~~~~~~~", data, "~~~~~~~~~~")
 		//TODO implement GossipSub with special topic
 		if (err == nil) && (data != nil) {
-			err = pubsub.FloodMachine.Publish(sub.Topic(), data.GetData())
+			// err = pubsub.FloodMachine.Publish(sub.Topic(), data.GetData())
 			if err == nil {
 				logger.Infof("Success publish topic %v\n")
 				logger.Infof("Topic: %v, data: %v\n", sub.Topic(), data.Data)
