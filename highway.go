@@ -9,14 +9,19 @@ import (
 )
 
 func main() {
-	config := GetProxyConfig()
+	config, err := GetProxyConfig()
+	if err != nil {
+		logger.Errorf("%+v", err)
+		return
+	}
 	config.printConfig()
 
 	// Process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, []byte(config.privateKey))
 	process.ProcessConnection(proxyHost)
-	err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize)
-	if err != nil {
+
+	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
+		logger.Error(err)
 		return
 	}
 
