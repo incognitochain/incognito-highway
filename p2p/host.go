@@ -68,23 +68,6 @@ func NewHost(version string, pubIP string, port int, rand []byte) *Host {
 
 	p2pHost, err := libp2p.New(ctx, opts...)
 
-	// ps, _ := pubsub.NewFloodSub(context.Background(), p2pHost)
-	// topics := []string{
-	// 	"PROXYblockshard",
-	// 	"PROXYblockbeacon",
-	// 	"PROXYbft",
-	// 	"PROXYpeerstate",
-	// 	"PROXYcrossshard",
-	// 	"PROXYblkshdtobcn",
-	// }
-	// for _, t := range topics {
-	// 	sub, err := ps.Subscribe(t)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	go processPrint(sub)
-	// }
-
 	selfPeer := &Peer{
 		PeerID:        p2pHost.ID(),
 		IP:            pubIP,

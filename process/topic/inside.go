@@ -1,13 +1,14 @@
 package topic
 
 import (
-	"errors"
 	"fmt"
 	"highway/common"
+
+	"github.com/pkg/errors"
 )
 
 // InsideTopic is topic inside a committee, using for communicate between proxy node and INC node
-// MessageID is defined as type of message
+// MessageType is defined as type of message
 // CommitteeID is defined as type of committee (0->254: shardID, 255: beacon)
 // SelfID (optional) is ID of Proxy node
 type InsideTopic struct {
@@ -26,7 +27,7 @@ func (topic *InsideTopic) FromMessageType(
 ) error {
 	committeeID := common.GetCommitteeIDOfValidator(validator)
 	if (committeeID) < 0 {
-		return errors.New("")
+		return errors.New("not a validator")
 	}
 	topic.CommitteeID = byte(committeeID)
 	if isBroadcastMessage(messageType) {
