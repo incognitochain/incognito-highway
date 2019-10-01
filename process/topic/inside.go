@@ -3,8 +3,6 @@ package topic
 import (
 	"fmt"
 	"highway/common"
-
-	"github.com/pkg/errors"
 )
 
 // InsideTopic is topic inside a committee, using for communicate between proxy node and INC node
@@ -25,11 +23,12 @@ func (topic *InsideTopic) FromMessageType(
 	validator string,
 	messageType string,
 ) error {
-	committeeID := common.GetCommitteeIDOfValidator(validator)
-	if (committeeID) < 0 {
-		return errors.New("not a validator")
-	}
-	topic.CommitteeID = byte(committeeID)
+	// committeeID := common.GetCommitteeIDOfValidator(validator)
+	// if (committeeID) < 0 {
+	// 	return errors.New("Candidate not found")
+	// }
+	// topic.CommitteeID = byte(committeeID)
+	topic.CommitteeID = byte(0x00)
 	if isBroadcastMessage(messageType) {
 		topic.SelfID = ""
 	} else {

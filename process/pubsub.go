@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	fmt "fmt"
 	logger "highway/customizelog"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -31,7 +32,9 @@ func InitPubSub(s host.Host) error {
 	if err != nil {
 		return err
 	}
-	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 1024)
+	GlobalPubsub.NewMessage = make(chan string)
+	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
+	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
 	return nil
 }
 
@@ -41,10 +44,10 @@ func (pubsub *PubSubManager) WatchingChain() {
 		case newTopic := <-pubsub.NewMessage:
 			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
 			if err != nil {
-				logger.Error(err)
+				logger.Info(err)
 				continue
 			}
-			logger.Infof("Success subscribe topic %v", newTopic)
+			logger.Infof("Success subscribe topic %v\n", newTopic)
 			pubsub.Msgs = append(pubsub.Msgs, subch)
 			go pubsub.handleNewMsg(subch)
 		}
@@ -52,24 +55,18 @@ func (pubsub *PubSubManager) WatchingChain() {
 }
 
 func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription) {
-	ctx := context.Background()
 	for {
-		data, err := sub.Next(ctx)
-
-		logger.Infof("Received new message from topic %s", sub.Topic())
-
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-
+		data, err := sub.Next(context.Background())
+		fmt.Println("~~~~~~~~~~", err, "~~~~~~~~~~", data, "~~~~~~~~~~")
 		//TODO implement GossipSub with special topic
-		err = pubsub.FloodMachine.Publish(sub.Topic(), data.GetData())
-		if err == nil {
-			logger.Infof("Success publish topic %v\n")
-			logger.Debugf("Topic: %v, data: %v\n", sub.Topic(), data.Data)
-		} else {
-			logger.Errorf("Publish topic %v failed, err: %v\n", sub.Topic(), err)
+		if (err == nil) && (data != nil) {
+			err = pubsub.FloodMachine.Publish(sub.Topic(), data.GetData())
+			if err == nil {
+				logger.Infof("Success publish topic %v\n")
+				logger.Infof("Topic: %v, data: %v\n", sub.Topic(), data.Data)
+			} else {
+				logger.Infof("Publish topic %v failed, err: %v\n", sub.Topic(), err)
+			}
 		}
 	}
 }
