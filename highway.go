@@ -33,8 +33,8 @@ func main() {
 	process.GlobalPubsub.WatchingChain()
 
 	// Highway manager: connect cross shards
-	hm := NewHighwayManager(config.supportShards, config.bootstrap, proxyHost.Host.ID())
-	go hm.Start()
+	h := NewHighway(config.supportShards, config.bootstrap, proxyHost.Host)
+	go h.Start()
 
 	logger.Println("Init ok")
 }
