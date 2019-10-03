@@ -47,38 +47,35 @@ func (h *Highway) Start() {
 		_ = newHighway
 
 		// Connect to other highways if needed
-		highwayMap := map[byte][]peer.AddrInfo{
-			byte(0):               []peer.AddrInfo{},
-			byte(common.BEACONID): []peer.AddrInfo{},
-		}
-		h.UpdateConnection(highwayMap)
+		h.UpdateConnection()
 	}
 }
 
-func (h *Highway) UpdateConnection(highways map[byte][]peer.AddrInfo) {
+func (h *Highway) UpdateConnection() {
 	for i := byte(0); i < common.NumberOfShard; i++ {
-		if err := h.connectChain(highways, i); err != nil {
+		if err := h.connectChain(i); err != nil {
 			logger.Error(err)
 		}
 	}
 
-	if err := h.connectChain(highways, common.BEACONID); err != nil {
+	if err := h.connectChain(common.BEACONID); err != nil {
 		logger.Error(err)
 	}
 }
 
-// connectChain connects this highway to a chain (shard or beacon) if it hasn't connected to one yet
-func (h *Highway) connectChain(highways map[byte][]peer.AddrInfo, sid byte) error {
+// connectChain connects this highway to a peer in a chain (shard or beacon) if it hasn't connected to one yet
+func (h *Highway) connectChain(sid byte) error {
 	if h.hmap.IsConnectedToShard(sid) {
 		return nil
 	}
 
-	if len(highways[sid]) == 0 {
-		return errors.Errorf("Found no highway supporting shard %d", sid)
+	highways := h.hmap.Peers[sid]
+	if len(highways) == 0 {
+		return errors.Errorf("found no highway supporting shard %d", sid)
 	}
 
 	// TODO(@0xbunyip): repick if fail to connect
-	p, err := choosePeer(highways[sid], h.ID)
+	p, err := choosePeer(highways, h.ID)
 	if err != nil {
 		return errors.WithMessagef(err, "shardID: %v", sid)
 	}
@@ -87,8 +84,7 @@ func (h *Highway) connectChain(highways map[byte][]peer.AddrInfo, sid byte) erro
 	}
 
 	// Update list of connected shards
-	// TODO(@0xbunyip): update more than one sid when highway supports many
-	h.hmap.ConnectToShard(sid)
+	h.hmap.ConnectToShardOfPeer(p)
 	return nil
 }
 

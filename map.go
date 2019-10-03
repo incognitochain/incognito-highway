@@ -3,8 +3,8 @@ package main
 import "github.com/libp2p/go-libp2p-core/peer"
 
 type HighwayMap struct {
-	peers   map[byte][]peer.AddrInfo // shard => peers
-	support map[peer.ID][]byte       // peerID => shards supported
+	Peers    map[byte][]peer.AddrInfo // shard => peers
+	Supports map[peer.ID][]byte       // peerID => shards supported
 
 	connected []byte // keep track of connected shards
 }
@@ -17,13 +17,13 @@ func NewHighwayMap(p peer.AddrInfo, supportShards []byte) *HighwayMap {
 	}
 
 	m := &HighwayMap{
-		peers:     map[byte][]peer.AddrInfo{},
-		support:   map[peer.ID][]byte{p.ID: cop(supportShards)},
+		Peers:     map[byte][]peer.AddrInfo{},
+		Supports:  map[peer.ID][]byte{p.ID: cop(supportShards)},
 		connected: cop(supportShards),
 	}
 
 	for _, s := range supportShards {
-		m.peers[s] = append(m.peers[s], p)
+		m.Peers[s] = append(m.Peers[s], p)
 	}
 	return m
 }
@@ -39,4 +39,10 @@ func (h *HighwayMap) IsConnectedToShard(s byte) bool {
 
 func (h *HighwayMap) ConnectToShard(s byte) {
 	h.connected = append(h.connected, s)
+}
+
+func (h *HighwayMap) ConnectToShardOfPeer(p peer.AddrInfo) {
+	for _, s := range h.Supports[p.ID] {
+		h.ConnectToShard(s)
+	}
 }
