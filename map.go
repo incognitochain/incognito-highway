@@ -46,3 +46,9 @@ func (h *HighwayMap) ConnectToShardOfPeer(p peer.AddrInfo) {
 		h.ConnectToShard(s)
 	}
 }
+
+// IsEnlisted checks if a peer has already registered as a valid highway
+func (h *HighwayMap) IsEnlisted(p peer.AddrInfo) bool {
+	_, ok := h.Supports[p.ID]
+	return ok
+}

@@ -29,11 +29,12 @@ func NewHighway(
 		ID:    h.ID(),
 		Addrs: h.Addrs(),
 	}
+	hmap := NewHighwayMap(p, supportShards)
 	hw := &Highway{
 		SupportShards: supportShards,
 		ID:            h.ID(),
-		hmap:          NewHighwayMap(p, supportShards),
-		hc:            NewHighwayConnector(h),
+		hmap:          hmap,
+		hc:            NewHighwayConnector(h, hmap),
 	}
 	return hw
 }

@@ -11,14 +11,17 @@ import (
 
 type HighwayConnector struct {
 	host host.Host
+	hmap *HighwayMap
 
-	outPeers chan peer.AddrInfo
-	inPeers  chan peer.AddrInfo
+	outPeers       chan peer.AddrInfo
+	inPeers        chan peer.AddrInfo
+	pendingInPeers []peer.AddrInfo
 }
 
-func NewHighwayConnector(host host.Host) *HighwayConnector {
+func NewHighwayConnector(host host.Host, hmap *HighwayMap) *HighwayConnector {
 	hc := &HighwayConnector{
 		host:     host,
+		hmap:     hmap,
 		outPeers: make(chan peer.AddrInfo, 1000),
 	}
 
@@ -44,10 +47,14 @@ func (hc *HighwayConnector) ConnectTo(p peer.AddrInfo) error {
 	return nil
 }
 
-func (hc *HighwayConnector) checkInPeer(p peer.AddrInfo) error {
-	// Update shards connected by this highway
-	// Add to pending if enlist message hasn't arrived
-	return nil
+func (hc *HighwayConnector) checkInPeer(p peer.AddrInfo) {
+	if hc.hmap.IsEnlisted(p) {
+		// Update shards connected by this highway
+		hc.hmap.ConnectToShardOfPeer(p)
+	} else {
+		// Add to pending if enlist message hasn't arrived
+		hc.pendingInPeers = append(hc.pendingInPeers, p)
+	}
 }
 
 type notifiee HighwayConnector
@@ -56,7 +63,10 @@ func (no *notifiee) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (no *notifiee) ListenClose(network.Network, multiaddr.Multiaddr) {}
 func (no *notifiee) Connected(n network.Network, c network.Conn) {
 	go func() {
-		// no.inPeers <- c.RemotePeer()
+		no.inPeers <- peer.AddrInfo{
+			ID:    c.RemotePeer(),
+			Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()},
+		}
 	}()
 }
 func (no *notifiee) Disconnected(network.Network, network.Conn)   {}
