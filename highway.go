@@ -29,12 +29,13 @@ func main() {
 		logger.Error(err)
 		return
 	}
+	logger.Println("Init ok")
 
-	process.GlobalPubsub.WatchingChain()
+	go process.GlobalPubsub.WatchingChain()
 
 	// Highway manager: connect cross shards
 	h := NewHighway(config.supportShards, config.bootstrap, proxyHost.Host)
 	go h.Start()
 
-	logger.Println("Init ok")
+	select {}
 }

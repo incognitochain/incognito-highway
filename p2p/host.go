@@ -81,8 +81,6 @@ func NewHost(version string, pubIP string, port int, rand []byte) *Host {
 		Version:  version,
 		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost),
 	}
-
-	fmt.Println(selfPeer)
 	return node
 }
 

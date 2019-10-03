@@ -6,7 +6,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/libp2p/go-libp2p v0.3.1
 	github.com/libp2p/go-libp2p-core v0.2.2
-	github.com/libp2p/go-libp2p-host v0.1.0
+	github.com/libp2p/go-libp2p-host v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-net v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-protocol v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
@@ -16,4 +16,5 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
 	google.golang.org/grpc v1.19.0
+	stathat.com/c/consistent v1.0.0 // indirect
 )
