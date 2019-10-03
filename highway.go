@@ -17,7 +17,7 @@ func main() {
 	config.printConfig()
 
 	// Process proxy stream
-	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, []byte(config.privateKey))
+	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
 	process.ProcessConnection(proxyHost)
 
 	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {

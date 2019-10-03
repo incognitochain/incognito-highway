@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/stathat/consistent"
 )
@@ -30,17 +31,29 @@ func NewHighway(
 		Addrs: h.Addrs(),
 	}
 	hmap := NewHighwayMap(p, supportShards)
+
+	if len(bootstrap) > 0 && len(bootstrap[0]) > 0 {
+		ss := []byte{0}
+		id, _ := peer.IDB58Decode("12D3KooW9sbQK4J64Qat5D9vQEhBCnDYD3WPqWmgUZD4M7CJ2rXS")
+		addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/9330")
+		hmap.AddPeer(peer.AddrInfo{
+			ID:    id,
+			Addrs: []multiaddr.Multiaddr{addr},
+		}, ss)
+	}
+
 	hw := &Highway{
 		SupportShards: supportShards,
 		ID:            h.ID(),
 		hmap:          hmap,
 		hc:            NewHighwayConnector(h, hmap),
 	}
+	go hw.hc.Start()
 	return hw
 }
 
 func (h *Highway) Start() {
-	for range time.Tick(60 * time.Second) {
+	for range time.Tick(5 * time.Second) {
 		// TODO(@0xbunyip) Check for liveness of connected highways
 
 		// New highways online: update map and reconnect to load-balance
@@ -70,6 +83,7 @@ func (h *Highway) connectChain(sid byte) error {
 		return nil
 	}
 
+	logger.Info("connect chain", sid)
 	highways := h.hmap.Peers[sid]
 	if len(highways) == 0 {
 		return errors.Errorf("found no highway supporting shard %d", sid)

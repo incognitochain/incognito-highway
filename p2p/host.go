@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	crypto2 "crypto"
 	"fmt"
@@ -45,15 +44,10 @@ type Host struct {
 	GRPC     *p2pgrpc.GRPCProtocol
 }
 
-func NewHost(version string, pubIP string, port int, rand []byte) *Host {
-	if len(rand) == 0 {
-		rand = generateRand()
-	}
-	if len(rand) < 40 {
-		panic("Rand bytes is less than 40")
-	}
-	buf := bytes.NewBuffer(rand)
-	privKey, _, err := crypto.GenerateKeyPairWithReader(crypto.ECDSA, 256, buf)
+func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
+	b, err := crypto.ConfigDecodeKey(privKeyStr)
+	catchError(err)
+	privKey, err := crypto.UnmarshalPrivateKey(b)
 	catchError(err)
 
 	listenAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", pubIP, port))
@@ -81,6 +75,8 @@ func NewHost(version string, pubIP string, port int, rand []byte) *Host {
 		Version:  version,
 		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost),
 	}
+
+	fmt.Println(selfPeer)
 	return node
 }
 

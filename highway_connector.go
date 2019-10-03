@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	logger "highway/customizelog"
 
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -23,6 +24,7 @@ func NewHighwayConnector(host host.Host, hmap *HighwayMap) *HighwayConnector {
 		host:     host,
 		hmap:     hmap,
 		outPeers: make(chan peer.AddrInfo, 1000),
+		inPeers:  make(chan peer.AddrInfo, 1000),
 	}
 
 	// Register to receive notif when new connection is established
@@ -34,7 +36,10 @@ func (hc *HighwayConnector) Start() {
 	for {
 		select {
 		case p := <-hc.outPeers:
-			hc.host.Connect(context.Background(), p)
+			err := hc.host.Connect(context.Background(), p)
+			if err != nil {
+				logger.Error(err, p)
+			}
 
 		case p := <-hc.inPeers:
 			hc.checkInPeer(p)
@@ -49,9 +54,11 @@ func (hc *HighwayConnector) ConnectTo(p peer.AddrInfo) error {
 
 func (hc *HighwayConnector) checkInPeer(p peer.AddrInfo) {
 	if hc.hmap.IsEnlisted(p) {
+		logger.Info("Enlisted", p, hc.hmap.Supports[p.ID])
 		// Update shards connected by this highway
 		hc.hmap.ConnectToShardOfPeer(p)
 	} else {
+		logger.Info("Pending", p)
 		// Add to pending if enlist message hasn't arrived
 		hc.pendingInPeers = append(hc.pendingInPeers, p)
 	}

@@ -1,6 +1,10 @@
 package main
 
-import "github.com/libp2p/go-libp2p-core/peer"
+import (
+	logger "highway/customizelog"
+
+	"github.com/libp2p/go-libp2p-core/peer"
+)
 
 type HighwayMap struct {
 	Peers    map[byte][]peer.AddrInfo // shard => peers
@@ -10,21 +14,12 @@ type HighwayMap struct {
 }
 
 func NewHighwayMap(p peer.AddrInfo, supportShards []byte) *HighwayMap {
-	cop := func(b []byte) []byte { // Create new slice and copy
-		c := make([]byte, len(b))
-		copy(c, b)
-		return c
-	}
-
 	m := &HighwayMap{
 		Peers:     map[byte][]peer.AddrInfo{},
-		Supports:  map[peer.ID][]byte{p.ID: cop(supportShards)},
-		connected: cop(supportShards),
+		Supports:  map[peer.ID][]byte{},
+		connected: supportShards,
 	}
-
-	for _, s := range supportShards {
-		m.Peers[s] = append(m.Peers[s], p)
-	}
+	m.AddPeer(p, supportShards)
 	return m
 }
 
@@ -51,4 +46,20 @@ func (h *HighwayMap) ConnectToShardOfPeer(p peer.AddrInfo) {
 func (h *HighwayMap) IsEnlisted(p peer.AddrInfo) bool {
 	_, ok := h.Supports[p.ID]
 	return ok
+}
+
+func (h *HighwayMap) AddPeer(p peer.AddrInfo, supportShards []byte) {
+	// TODO(@0xbunyip): serialize all access to prevent race condition
+
+	mcopy := func(b []byte) []byte { // Create new slice and copy
+		c := make([]byte, len(b))
+		copy(c, b)
+		return c
+	}
+
+	h.Supports[p.ID] = mcopy(supportShards)
+	for _, s := range supportShards {
+		h.Peers[s] = append(h.Peers[s], p)
+	}
+	logger.Info("added peer", p, supportShards)
 }
