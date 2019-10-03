@@ -11,10 +11,15 @@ import (
 
 var GlobalPubsub PubSubManager
 
+type SubHandler struct {
+	Topic   string
+	Handler func(*p2pPubSub.Message)
+}
+
 type PubSubManager struct {
 	FloodMachine   *p2pPubSub.PubSub
 	GossipMachine  *p2pPubSub.PubSub
-	NewMessage     chan string
+	NewMessage     chan SubHandler
 	insideMessage  []string
 	outsideMessage []string
 	ForwardNow     chan p2pPubSub.Message
@@ -32,7 +37,7 @@ func InitPubSub(s host.Host) error {
 	// if err != nil {
 	// 	return err
 	// }
-	GlobalPubsub.NewMessage = make(chan string)
+	GlobalPubsub.NewMessage = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
 	return nil
@@ -41,20 +46,20 @@ func InitPubSub(s host.Host) error {
 func (pubsub *PubSubManager) WatchingChain() {
 	for {
 		select {
-		case newTopic := <-pubsub.NewMessage:
-			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
+		case subHandler := <-pubsub.NewMessage:
+			subch, err := pubsub.FloodMachine.Subscribe(subHandler.Topic)
 			if err != nil {
 				logger.Info(err)
 				continue
 			}
-			logger.Infof("Success subscribe topic %v\n", newTopic)
+			logger.Infof("Success subscribe topic %v\n", subHandler.Topic)
 			pubsub.Msgs = append(pubsub.Msgs, subch)
-			go pubsub.handleNewMsg(subch)
+			go pubsub.handleNewMsg(subch, subHandler.Handler)
 		}
 	}
 }
 
-func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription) {
+func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription, handler func(*p2pPubSub.Message)) {
 	for {
 		data, err := sub.Next(context.Background())
 		fmt.Println("~~~~~~~~~~", err, "~~~~~~~~~~", data, "~~~~~~~~~~")
@@ -62,11 +67,11 @@ func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription) {
 		if (err == nil) && (data != nil) {
 			// err = pubsub.FloodMachine.Publish(sub.Topic(), data.GetData())
 			if err == nil {
-				logger.Infof("Success publish topic %v\n")
-				logger.Infof("Topic: %v, data: %v\n", sub.Topic(), data.Data)
+				logger.Infof("Topic: %v, data: %v\n", sub.Topic(), string(data.Data))
 			} else {
 				logger.Infof("Publish topic %v failed, err: %v\n", sub.Topic(), err)
 			}
+			handler(data)
 		}
 	}
 }

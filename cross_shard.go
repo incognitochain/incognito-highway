@@ -3,6 +3,7 @@ package main
 import (
 	"highway/common"
 	logger "highway/customizelog"
+	"highway/process"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -13,8 +14,7 @@ import (
 )
 
 type Highway struct {
-	SupportShards []byte
-	ID            peer.ID
+	ID peer.ID
 
 	hmap *HighwayMap
 	hc   *HighwayConnector
@@ -43,10 +43,9 @@ func NewHighway(
 	}
 
 	hw := &Highway{
-		SupportShards: supportShards,
-		ID:            h.ID(),
-		hmap:          hmap,
-		hc:            NewHighwayConnector(h, hmap),
+		ID:   h.ID(),
+		hmap: hmap,
+		hc:   NewHighwayConnector(h, hmap, &process.GlobalPubsub),
 	}
 	go hw.hc.Start()
 	return hw

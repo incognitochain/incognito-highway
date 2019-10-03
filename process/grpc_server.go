@@ -6,6 +6,8 @@ import (
 	logger "highway/customizelog"
 	"highway/p2p"
 	"highway/process/topic"
+
+	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
 )
 
 func ProcessConnection(h *p2p.Host) {
@@ -23,7 +25,10 @@ func (s *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegist
 		if err == nil {
 			responseTopic = topicGenerator.ToString()
 			logger.Infof("Someone wanted message %v, response %v", m, responseTopic)
-			GlobalPubsub.NewMessage <- responseTopic
+			GlobalPubsub.NewMessage <- SubHandler{
+				Topic:   responseTopic,
+				Handler: func(*p2pPubSub.Message) {},
+			}
 		}
 		pair := &MessageTopicPair{
 			Message: m,

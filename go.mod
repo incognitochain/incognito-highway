@@ -15,6 +15,6 @@ require (
 	github.com/paralin/go-libp2p-grpc v0.0.0-20171228081709-3d5d33466aef
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
-	google.golang.org/grpc v1.19.0
+	google.golang.org/grpc v1.20.1
 	stathat.com/c/consistent v1.0.0 // indirect
 )
