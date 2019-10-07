@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package msg;
+option go_package="msg";
+
+message GetBlockBeaconByHeightRequest {
+    bool Specific = 1;
+    uint64 FromHeight = 2;
+    uint64 ToHeight = 3;
+    repeated uint64 Heights = 4;
+    bool FromPool = 5;
+}
+
+message GetBlockBeaconByHeightResponse {
+    bytes Data = 1;
+}
+
+message GetBlockBeaconByHashRequest {
+    repeated bytes Hashes = 1;
+}
+
+message GetBlockBeaconByHashResponse {
+    bytes Data = 1;
+}
+

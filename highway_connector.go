@@ -102,6 +102,7 @@ func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
 }
 
 func (hc *HighwayConnector) checkInPeer(p peer.AddrInfo) {
+	// TODO(@0xakk0r0kamui): check highway's signature
 	if hc.hmap.IsEnlisted(p) {
 		logger.Info("Enlisted", p, hc.hmap.Supports[p.ID])
 		// Update shards connected by this highway

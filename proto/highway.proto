@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "register.proto";
+import "shard_block.proto";
+import "beacon_block.proto";
+import "cross_shard.proto";
+
+option go_package="process";
+
+service HighwayService {
+    rpc Register(msg.RegisterRequest) returns (msg.RegisterResponse) {};
+
+    rpc GetBlockShardByHeight(msg.GetBlockShardByHeightRequest) returns (msg.GetBlockShardByHeightResponse) {};
+    rpc GetBlockShardByHash(msg.GetBlockShardByHashRequest) returns (msg.GetBlockShardByHashResponse) {};
+
+    rpc GetBlockBeaconByHeight(msg.GetBlockBeaconByHeightRequest) returns (msg.GetBlockBeaconByHeightResponse) {};
+    rpc GetBlockBeaconByHash(msg.GetBlockBeaconByHashRequest) returns (msg.GetBlockBeaconByHashResponse) {};
+
+    rpc GetBlockCrossShardByHeight(msg.GetBlockCrossShardByHeightRequest) returns (msg.GetBlockCrossShardByHeightResponse) {};
+    rpc GetBlockCrossShardByHash(msg.GetBlockCrossShardByHashRequest) returns (msg.GetBlockCrossShardByHashResponse) {};
+}
+

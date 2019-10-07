@@ -12,10 +12,10 @@ import (
 
 func ProcessConnection(h *p2p.Host) {
 	s := &GRPCService_Server{}
-	RegisterProxyRegisterServiceServer(h.GRPC.GetGRPCServer(), s)
+	RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
 }
 
-func (s *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegisterMsg) (*ProxyRegisterResponse, error) {
+func (s *GRPCService_Server) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
 	logger.Infof("Receive new request from %v via gRPC", req.GetCommitteePublicKey())
 	pairs := []*MessageTopicPair{}
 	topicGenerator := new(topic.InsideTopic)
