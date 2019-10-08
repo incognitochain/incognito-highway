@@ -8,6 +8,6 @@ var (
 
 const (
 	BEACONID      byte = 255
-	NumberOfShard      = 1
+	NumberOfShard      = 0
 	CommitteeSize      = 4
 )

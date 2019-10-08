@@ -5,6 +5,7 @@ option go_package="process";
 message RegisterRequest {
     string CommitteePublicKey = 1;
     repeated string WantedMessages = 2;
+    string PeerID = 3;
 }
 
 message RegisterResponse {

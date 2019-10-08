@@ -2,7 +2,6 @@ package process
 
 import (
 	"context"
-	fmt "fmt"
 	logger "highway/customizelog"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -62,12 +61,12 @@ func (pubsub *PubSubManager) WatchingChain() {
 func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription, handler func(*p2pPubSub.Message)) {
 	for {
 		data, err := sub.Next(context.Background())
-		fmt.Println("~~~~~~~~~~", err, "~~~~~~~~~~", data, "~~~~~~~~~~")
+		// fmt.Println("~~~~~~~~~~", err, "~~~~~~~~~~", data, "~~~~~~~~~~")
 		//TODO implement GossipSub with special topic
 		if (err == nil) && (data != nil) {
 			// err = pubsub.FloodMachine.Publish(sub.Topic(), data.GetData())
 			if err == nil {
-				logger.Infof("Topic: %v, data: %v\n", sub.Topic(), string(data.Data))
+				// logger.Infof("Topic: %v, data: %v\n", sub.Topic(), string(data.Data))
 			} else {
 				logger.Infof("Publish topic %v failed, err: %v\n", sub.Topic(), err)
 			}

@@ -34,7 +34,7 @@ func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubMan
 	}
 
 	// Register to receive notif when new connection is established
-	host.Network().Notify((*notifiee)(hc))
+	// host.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
 	hc.ps.NewMessage <- process.SubHandler{
