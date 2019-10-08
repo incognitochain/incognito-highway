@@ -1,22 +1,97 @@
 syntax = "proto3";
 
-import "register.proto";
-import "shard_block.proto";
-import "beacon_block.proto";
-import "cross_shard.proto";
-
 option go_package="process";
 
+message RegisterRequest {
+    string CommitteePublicKey = 1;
+    repeated string WantedMessages = 2;
+}
+
+message RegisterResponse {
+    repeated MessageTopicPair Pair = 1;
+}
+
+message MessageTopicPair {
+    string Message = 1;
+    string Topic = 2;
+}
+
+message GetBlockShardByHeightRequest {
+    int32 Shard = 1;
+    bool Specific = 2;
+    uint64 FromHeight = 3;
+    uint64 ToHeight = 4;
+    repeated uint64 Heights = 5;
+    bool FromPool = 6;
+}
+
+message GetBlockShardByHeightResponse {
+    bytes Data = 1;
+}
+
+message GetBlockShardByHashRequest {
+    int32 Shard = 1;
+    repeated bytes Hashes = 2;
+}
+
+message GetBlockShardByHashResponse {
+    bytes Data = 1;
+}
+
+message GetBlockBeaconByHeightRequest {
+    bool Specific = 1;
+    uint64 FromHeight = 2;
+    uint64 ToHeight = 3;
+    repeated uint64 Heights = 4;
+    bool FromPool = 5;
+}
+
+message GetBlockBeaconByHeightResponse {
+    bytes Data = 1;
+}
+
+message GetBlockBeaconByHashRequest {
+    repeated bytes Hashes = 1;
+}
+
+message GetBlockBeaconByHashResponse {
+    bytes Data = 1;
+}
+
+message GetBlockCrossShardByHeightRequest {
+    int32 FromShard = 1;
+    int32 ToShard = 2;
+    bool Specific = 3;
+    uint64 FromHeight = 4;
+    uint64 ToHeight = 5;
+    repeated uint64 Heights = 6;
+    bool FromPool = 7;
+}
+
+message GetBlockCrossShardByHeightResponse {
+    bytes Data = 1;
+}
+
+message GetBlockCrossShardByHashRequest {
+    int32 FromShard = 1;
+    int32 ToShard = 2;
+    repeated bytes Hashes = 3;
+}
+
+message GetBlockCrossShardByHashResponse {
+    bytes Data = 1;
+}
+
 service HighwayService {
-    rpc Register(msg.RegisterRequest) returns (msg.RegisterResponse) {};
+    rpc Register(RegisterRequest) returns (RegisterResponse) {};
 
-    rpc GetBlockShardByHeight(msg.GetBlockShardByHeightRequest) returns (msg.GetBlockShardByHeightResponse) {};
-    rpc GetBlockShardByHash(msg.GetBlockShardByHashRequest) returns (msg.GetBlockShardByHashResponse) {};
+    rpc GetBlockShardByHeight(GetBlockShardByHeightRequest) returns (GetBlockShardByHeightResponse) {};
+    rpc GetBlockShardByHash(GetBlockShardByHashRequest) returns (GetBlockShardByHashResponse) {};
 
-    rpc GetBlockBeaconByHeight(msg.GetBlockBeaconByHeightRequest) returns (msg.GetBlockBeaconByHeightResponse) {};
-    rpc GetBlockBeaconByHash(msg.GetBlockBeaconByHashRequest) returns (msg.GetBlockBeaconByHashResponse) {};
+    rpc GetBlockBeaconByHeight(GetBlockBeaconByHeightRequest) returns (GetBlockBeaconByHeightResponse) {};
+    rpc GetBlockBeaconByHash(GetBlockBeaconByHashRequest) returns (GetBlockBeaconByHashResponse) {};
 
-    rpc GetBlockCrossShardByHeight(msg.GetBlockCrossShardByHeightRequest) returns (msg.GetBlockCrossShardByHeightResponse) {};
-    rpc GetBlockCrossShardByHash(msg.GetBlockCrossShardByHashRequest) returns (msg.GetBlockCrossShardByHashResponse) {};
+    rpc GetBlockCrossShardByHeight(GetBlockCrossShardByHeightRequest) returns (GetBlockCrossShardByHeightResponse) {};
+    rpc GetBlockCrossShardByHash(GetBlockCrossShardByHashRequest) returns (GetBlockCrossShardByHashResponse) {};
 }
 

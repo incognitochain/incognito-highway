@@ -11,11 +11,11 @@ import (
 )
 
 func ProcessConnection(h *p2p.Host) {
-	s := &GRPCService_Server{}
+	s := &HighwayServer{}
 	RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
 }
 
-func (s *GRPCService_Server) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
+func (s *HighwayServer) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
 	logger.Infof("Receive new request from %v via gRPC", req.GetCommitteePublicKey())
 	pairs := []*MessageTopicPair{}
 	topicGenerator := new(topic.InsideTopic)
@@ -37,7 +37,31 @@ func (s *GRPCService_Server) Register(ctx context.Context, req *RegisterRequest)
 		pairs = append(pairs, pair)
 	}
 	fmt.Println(pairs)
-	return &ProxyRegisterResponse{Pair: pairs}, nil
+	return &RegisterResponse{Pair: pairs}, nil
 }
 
-type GRPCService_Server struct{}
+func (s *HighwayServer) GetBlockShardByHeight(context.Context, *GetBlockShardByHeightRequest) (*GetBlockShardByHeightResponse, error) {
+	return nil, nil
+}
+
+func (s *HighwayServer) GetBlockShardByHash(context.Context, *GetBlockShardByHashRequest) (*GetBlockShardByHashResponse, error) {
+	return nil, nil
+}
+
+func (s *HighwayServer) GetBlockBeaconByHeight(context.Context, *GetBlockBeaconByHeightRequest) (*GetBlockBeaconByHeightResponse, error) {
+	return nil, nil
+}
+
+func (s *HighwayServer) GetBlockBeaconByHash(context.Context, *GetBlockBeaconByHashRequest) (*GetBlockBeaconByHashResponse, error) {
+	return nil, nil
+}
+
+func (s *HighwayServer) GetBlockCrossShardByHeight(context.Context, *GetBlockCrossShardByHeightRequest) (*GetBlockCrossShardByHeightResponse, error) {
+	return nil, nil
+}
+
+func (s *HighwayServer) GetBlockCrossShardByHash(context.Context, *GetBlockCrossShardByHashRequest) (*GetBlockCrossShardByHashResponse, error) {
+	return nil, nil
+}
+
+type HighwayServer struct{}
