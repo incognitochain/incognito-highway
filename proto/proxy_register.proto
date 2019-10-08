@@ -6,6 +6,7 @@ option go_package="main";
 message ProxyRegisterMsg {
     string CommitteePublicKey = 1;
     repeated string WantedMessages = 2;
+    string PeerID = 3;
 }
 
 message ProxyRegisterResponse {
