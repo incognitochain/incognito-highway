@@ -41,26 +41,32 @@ func (s *HighwayServer) Register(ctx context.Context, req *RegisterRequest) (*Re
 }
 
 func (s *HighwayServer) GetBlockShardByHeight(context.Context, *GetBlockShardByHeightRequest) (*GetBlockShardByHeightResponse, error) {
+	logger.Println("Receive GetBlockShardByHeight request")
 	return nil, nil
 }
 
 func (s *HighwayServer) GetBlockShardByHash(context.Context, *GetBlockShardByHashRequest) (*GetBlockShardByHashResponse, error) {
+	logger.Println("Receive GetBlockShardByHash request")
 	return nil, nil
 }
 
 func (s *HighwayServer) GetBlockBeaconByHeight(context.Context, *GetBlockBeaconByHeightRequest) (*GetBlockBeaconByHeightResponse, error) {
+	logger.Println("Receive GetBlockBeaconByHeight request")
 	return nil, nil
 }
 
 func (s *HighwayServer) GetBlockBeaconByHash(context.Context, *GetBlockBeaconByHashRequest) (*GetBlockBeaconByHashResponse, error) {
+	logger.Println("Receive GetBlockBeaconByHash request")
 	return nil, nil
 }
 
 func (s *HighwayServer) GetBlockCrossShardByHeight(context.Context, *GetBlockCrossShardByHeightRequest) (*GetBlockCrossShardByHeightResponse, error) {
+	logger.Println("Receive GetBlockCrossShardByHeight request")
 	return nil, nil
 }
 
 func (s *HighwayServer) GetBlockCrossShardByHash(context.Context, *GetBlockCrossShardByHashRequest) (*GetBlockCrossShardByHashResponse, error) {
+	logger.Println("Receive GetBlockCrossShardByHash request")
 	return nil, nil
 }
 
