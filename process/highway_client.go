@@ -3,8 +3,8 @@ package process
 import (
 	context "context"
 
+	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-peer"
-	p2pgrpc "github.com/paralin/go-libp2p-grpc"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 )

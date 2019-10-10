@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -14,7 +15,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
-	p2pgrpc "github.com/paralin/go-libp2p-grpc"
 )
 
 type PeerConn struct {
