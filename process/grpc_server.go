@@ -25,9 +25,11 @@ func (s *GRPCService_Server) ProxyRegister(ctx context.Context, req *ProxyRegist
 			logger.Infof("Someone wanted message %v, response %v", m, responseTopic)
 			GlobalPubsub.NewMessage <- responseTopic
 		}
+		// TODO(@0xakk0r0kamui): add Action here
 		pair := &MessageTopicPair{
 			Message: m,
-			Topic:   responseTopic,
+			Topic:   []string{responseTopic},
+			Act:     []MessageTopicPair_Action{},
 		}
 		pairs = append(pairs, pair)
 	}
