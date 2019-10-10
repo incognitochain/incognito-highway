@@ -33,18 +33,23 @@ func (s *HighwayServer) Register(ctx context.Context, req *RegisterRequest) (*Re
 		pairs = append(pairs, pair)
 	}
 	fmt.Println(pairs)
+
+	// Notify HighwayClient of a new peer to request data later if possible
+	pid, err := peer.IDB58Decode(req.PeerID)
+	if err == nil {
+		s.hc.NewPeers <- pid
+	} else {
+		logger.Errorf("Invalid peerID: %v", req.PeerID)
+	}
 	return &RegisterResponse{Pair: pairs}, nil
 }
 
 func (s *HighwayServer) GetBlockShardByHeight(ctx context.Context, req *GetBlockShardByHeightRequest) (*GetBlockShardByHeightResponse, error) {
 	logger.Println("Receive GetBlockShardByHeight request")
 	// TODO(@0xbunyip): check if block in cache
-	// TODO(0xakk0r0kamui): choose client from peer state
-	var peerID peer.ID
 
 	// Call node to get blocks
 	data, err := s.hc.GetBlockShardByHeight(
-		peerID,
 		req.Shard,
 		req.FromHeight,
 		req.ToHeight,
