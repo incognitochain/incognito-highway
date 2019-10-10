@@ -27,7 +27,7 @@ message GetBlockShardByHeightRequest {
 }
 
 message GetBlockShardByHeightResponse {
-    bytes Data = 1;
+    repeated bytes Data = 1;
 }
 
 message GetBlockShardByHashRequest {
@@ -36,7 +36,7 @@ message GetBlockShardByHashRequest {
 }
 
 message GetBlockShardByHashResponse {
-    bytes Data = 1;
+    repeated bytes Data = 1;
 }
 
 message GetBlockBeaconByHeightRequest {
@@ -48,7 +48,7 @@ message GetBlockBeaconByHeightRequest {
 }
 
 message GetBlockBeaconByHeightResponse {
-    bytes Data = 1;
+    repeated bytes Data = 1;
 }
 
 message GetBlockBeaconByHashRequest {
@@ -56,7 +56,7 @@ message GetBlockBeaconByHashRequest {
 }
 
 message GetBlockBeaconByHashResponse {
-    bytes Data = 1;
+    repeated bytes Data = 1;
 }
 
 message GetBlockCrossShardByHeightRequest {
@@ -70,7 +70,7 @@ message GetBlockCrossShardByHeightRequest {
 }
 
 message GetBlockCrossShardByHeightResponse {
-    bytes Data = 1;
+    repeated bytes Data = 1;
 }
 
 message GetBlockCrossShardByHashRequest {
@@ -80,7 +80,7 @@ message GetBlockCrossShardByHashRequest {
 }
 
 message GetBlockCrossShardByHashResponse {
-    bytes Data = 1;
+    repeated bytes Data = 1;
 }
 
 service HighwayService {

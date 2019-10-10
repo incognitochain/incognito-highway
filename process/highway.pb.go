@@ -245,7 +245,7 @@ func (m *GetBlockShardByHeightRequest) GetFromPool() bool {
 }
 
 type GetBlockShardByHeightResponse struct {
-	Data                 []byte   `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Data                 [][]byte `protobuf:"bytes,1,rep,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -276,7 +276,7 @@ func (m *GetBlockShardByHeightResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlockShardByHeightResponse proto.InternalMessageInfo
 
-func (m *GetBlockShardByHeightResponse) GetData() []byte {
+func (m *GetBlockShardByHeightResponse) GetData() [][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -331,7 +331,7 @@ func (m *GetBlockShardByHashRequest) GetHashes() [][]byte {
 }
 
 type GetBlockShardByHashResponse struct {
-	Data                 []byte   `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Data                 [][]byte `protobuf:"bytes,1,rep,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -362,7 +362,7 @@ func (m *GetBlockShardByHashResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlockShardByHashResponse proto.InternalMessageInfo
 
-func (m *GetBlockShardByHashResponse) GetData() []byte {
+func (m *GetBlockShardByHashResponse) GetData() [][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -441,7 +441,7 @@ func (m *GetBlockBeaconByHeightRequest) GetFromPool() bool {
 }
 
 type GetBlockBeaconByHeightResponse struct {
-	Data                 []byte   `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Data                 [][]byte `protobuf:"bytes,1,rep,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -472,7 +472,7 @@ func (m *GetBlockBeaconByHeightResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlockBeaconByHeightResponse proto.InternalMessageInfo
 
-func (m *GetBlockBeaconByHeightResponse) GetData() []byte {
+func (m *GetBlockBeaconByHeightResponse) GetData() [][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -519,7 +519,7 @@ func (m *GetBlockBeaconByHashRequest) GetHashes() [][]byte {
 }
 
 type GetBlockBeaconByHashResponse struct {
-	Data                 []byte   `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Data                 [][]byte `protobuf:"bytes,1,rep,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -550,7 +550,7 @@ func (m *GetBlockBeaconByHashResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlockBeaconByHashResponse proto.InternalMessageInfo
 
-func (m *GetBlockBeaconByHashResponse) GetData() []byte {
+func (m *GetBlockBeaconByHashResponse) GetData() [][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -645,7 +645,7 @@ func (m *GetBlockCrossShardByHeightRequest) GetFromPool() bool {
 }
 
 type GetBlockCrossShardByHeightResponse struct {
-	Data                 []byte   `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Data                 [][]byte `protobuf:"bytes,1,rep,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -676,7 +676,7 @@ func (m *GetBlockCrossShardByHeightResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlockCrossShardByHeightResponse proto.InternalMessageInfo
 
-func (m *GetBlockCrossShardByHeightResponse) GetData() []byte {
+func (m *GetBlockCrossShardByHeightResponse) GetData() [][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -739,7 +739,7 @@ func (m *GetBlockCrossShardByHashRequest) GetHashes() [][]byte {
 }
 
 type GetBlockCrossShardByHashResponse struct {
-	Data                 []byte   `protobuf:"bytes,1,opt,name=Data,proto3" json:"Data,omitempty"`
+	Data                 [][]byte `protobuf:"bytes,1,rep,name=Data,proto3" json:"Data,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -770,7 +770,7 @@ func (m *GetBlockCrossShardByHashResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetBlockCrossShardByHashResponse proto.InternalMessageInfo
 
-func (m *GetBlockCrossShardByHashResponse) GetData() []byte {
+func (m *GetBlockCrossShardByHashResponse) GetData() [][]byte {
 	if m != nil {
 		return m.Data
 	}
@@ -819,7 +819,7 @@ var fileDescriptor_a48762df9e8cc53a = []byte{
 	0xe2, 0x2a, 0x2b, 0xa3, 0xa6, 0xb5, 0xd9, 0x8c, 0x27, 0xcd, 0x3d, 0x13, 0x79, 0xd4, 0x56, 0xd1,
 	0xa9, 0x9d, 0xb6, 0x9f, 0xfd, 0x92, 0xae, 0xe3, 0x5b, 0x3d, 0x9b, 0x15, 0x66, 0x9a, 0x95, 0xd6,
 	0x18, 0x08, 0x71, 0xe9, 0xb6, 0xb3, 0x17, 0x0b, 0x9b, 0x1c, 0xc2, 0x76, 0xc3, 0x0c, 0x39, 0xa0,
-	0x08, 0xf6, 0x71, 0x90, 0x04, 0x6a, 0x86, 0x15, 0xa6, 0x7e, 0x93, 0x37, 0xe0, 0x55, 0x93, 0x02,
+	0x08, 0xf6, 0x71, 0x90, 0x04, 0x0a, 0xd0, 0x15, 0xa6, 0x7e, 0x93, 0x37, 0xe0, 0x55, 0x93, 0x02,
 	0x39, 0xd2, 0x8f, 0xbd, 0x09, 0xed, 0xf4, 0xa3, 0x9c, 0xe4, 0x15, 0x96, 0x5b, 0x64, 0x1f, 0xb6,
 	0x6a, 0x6b, 0x69, 0x9e, 0xff, 0x69, 0x96, 0x4d, 0xf7, 0x79, 0x10, 0x8a, 0xeb, 0x2a, 0xf2, 0xb3,
 	0x18, 0x9b, 0x5a, 0x8c, 0x5b, 0x5a, 0x8c, 0xad, 0x66, 0x8c, 0xed, 0x66, 0x8c, 0x9d, 0x0a, 0xc6,
@@ -838,7 +838,7 @@ var fileDescriptor_a48762df9e8cc53a = []byte{
 	0x14, 0x89, 0x81, 0xc3, 0x52, 0x48, 0xff, 0x5d, 0x46, 0x24, 0x74, 0xe1, 0x51, 0x7a, 0x0f, 0xe9,
 	0xe2, 0x6d, 0x26, 0x06, 0x06, 0xe0, 0x36, 0x2d, 0x12, 0xfa, 0x74, 0xc1, 0x5a, 0x7b, 0x7b, 0x74,
 	0xd1, 0x16, 0x12, 0xa3, 0xdf, 0xf9, 0xb4, 0x34, 0x8e, 0x45, 0xc8, 0xa5, 0x3c, 0x6f, 0xab, 0xff,
-	0x08, 0x87, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0xfd, 0x57, 0xcc, 0x21, 0x34, 0x08, 0x00, 0x00,
+	0x08, 0x87, 0x7f, 0x03, 0x00, 0x00, 0xff, 0xff, 0xbc, 0x0a, 0x3c, 0xb5, 0x34, 0x08, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
