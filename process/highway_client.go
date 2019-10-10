@@ -55,10 +55,10 @@ type HighwayClient struct {
 	peers []peer.ID
 }
 
-func NewHighwayClient() *HighwayClient {
+func NewHighwayClient(pr *p2pgrpc.GRPCProtocol) *HighwayClient {
 	hc := &HighwayClient{
 		NewPeers: make(chan peer.ID, 1000),
-		cc:       NewClientConnector(nil),
+		cc:       NewClientConnector(pr),
 	}
 	go hc.start()
 	return hc
@@ -74,7 +74,21 @@ func (hc *HighwayClient) start() {
 }
 
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (HighwayServiceClient, error) {
-	return nil, nil
+	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for HighwayClient to retry if fail to connect
+	if _, ok := cc.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to cc.conns
+		conn, err := cc.pr.Dial(
+			context.Background(),
+			peerID,
+			grpc.WithInsecure(),
+			grpc.WithBlock(),
+		)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		cc.conns[peerID] = conn
+	}
+	client := NewHighwayServiceClient(cc.conns[peerID])
+	return client, nil
 }
 
 type ClientConnector struct {

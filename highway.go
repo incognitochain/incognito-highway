@@ -18,7 +18,7 @@ func main() {
 
 	// Process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
-	process.RunHighwayServer(proxyHost, process.NewHighwayClient())
+	process.RunHighwayServer(proxyHost, process.NewHighwayClient(proxyHost.GRPC))
 
 	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
 		logger.Error(err)
