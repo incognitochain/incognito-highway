@@ -14,7 +14,7 @@ message RegisterResponse {
 
 message MessageTopicPair {
     string Message = 1;
-    string Topic = 2;
+    repeated string Topic = 2;
     enum Action {
         PUBSUB = 0;
         PUB = 1;
