@@ -18,6 +18,13 @@ const (
 )
 
 const (
+	DoNothing byte = iota
+	ProcessAndPublishAfter
+	ProcessAndPublish
+	WTFisThis
+)
+
+const (
 	CmdGetBlockBeacon     = "getblkbeacon"
 	CmdGetBlockShard      = "getblkshard"
 	CmdGetCrossShard      = "getcrossshd"
@@ -44,24 +51,27 @@ const (
 	CmdMsgCheckResp = "msgcheckresp"
 )
 
-var Message4Process = []string{
-	"a",
-	"getblkbeacon",
-	"getblkshard",
-	"getcrossshd",
-	"getshdtobcn",
-	"blockshard",
-	"blockbeacon",
-	"crossshard",
-	"blkshdtobcn",
-	"tx",
-	"txtoken",
-	"txprivacytok",
-	"version",
-	"verack",
-	"getaddr",
-	"addr",
-	"ping",
-	"bft",
-	"peerstate",
-}
+var (
+	Message4Process = []string{
+		"a",
+		"getblkbeacon",
+		"getblkshard",
+		"getcrossshd",
+		"getshdtobcn",
+		"blockshard",
+		"blockbeacon",
+		"crossshard",
+		"blkshdtobcn",
+		"tx",
+		"txtoken",
+		"txprivacytok",
+		"version",
+		"verack",
+		"getaddr",
+		"addr",
+		"ping",
+		"bft",
+		"peerstate",
+	}
+	TypeOfTopicProcessor map[string]byte
+)

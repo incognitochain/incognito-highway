@@ -1,14 +1,14 @@
 package p2p
 
 import (
-	"fmt"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/multiformats/go-multihash"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multihash"
 )
 
 func ParseListenner(s, defaultIP string, defaultPort int) (string, int) {
@@ -44,7 +44,7 @@ func must(err error) {
 
 func generateRand() []byte {
 	res := make([]byte, 40)
-	fmt.Println(time.Now().UnixNano())
+	// fmt.Println(time.Now().UnixNano())
 	rand.Seed(int64(time.Now().Nanosecond()))
 	for i := 0; i < 40; i++ {
 		rand := byte(rand.Intn(256))
