@@ -2,37 +2,44 @@ package process
 
 import (
 	"context"
-	fmt "fmt"
 	logger "highway/customizelog"
 	"highway/p2p"
-	"highway/process/topic"
+	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
 )
 
-func (s *HighwayServer) Register(ctx context.Context, req *RegisterRequest) (*RegisterResponse, error) {
+var CommitteePubkeyByPeerID map[peer.ID]string
+var IsPublicIP map[peer.ID]bool
+var updatePKbyPIDLocker sync.Mutex
+
+func (s *HighwayServer) Register(
+	ctx context.Context,
+	req *RegisterRequest,
+) (
+	*RegisterResponse,
+	error,
+) {
 	logger.Infof("Receive new request from %v via gRPC", req.GetCommitteePublicKey())
 	pairs := []*MessageTopicPair{}
-	topicGenerator := new(topic.InsideTopic)
+	var err error
+	var pair *MessageTopicPair
 	for _, m := range req.WantedMessages {
-		err := topicGenerator.FromMessageType(req.CommitteePublicKey, m)
-		responseTopic := ""
-		if err == nil {
-			responseTopic = topicGenerator.ToString()
-			logger.Infof("Someone wanted message %v, response %v", m, responseTopic)
-			GlobalPubsub.NewMessage <- SubHandler{
-				Topic:   responseTopic,
-				Handler: func(*p2pPubSub.Message) {},
+		pair, err = generateResponseTopic(&GlobalPubsub, req.CommitteePublicKey, m)
+		if err != nil {
+			logger.Infof("generateResponseTopic failed, error: %v", err.Error())
+			pair = &MessageTopicPair{
+				Message: m,
+				Topic:   []string{},
+				Act:     []MessageTopicPair_Action{},
 			}
 		}
-		pair := &MessageTopicPair{
-			Message: m,
-			Topic:   responseTopic,
-		}
+		peerid, _ := peer.IDB58Decode(req.GetPeerID())
+		UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &peerid)
 		pairs = append(pairs, pair)
 	}
-	fmt.Println(pairs)
+	logger.Info(pairs)
+	//	return &ProxyRegisterResponse{Pair: pairs}, nil
 
 	// Notify HighwayClient of a new peer to request data later if possible
 	pid, err := peer.IDB58Decode(req.PeerID)

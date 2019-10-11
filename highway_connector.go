@@ -37,10 +37,10 @@ func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubMan
 	// host.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
-	hc.ps.NewMessage <- process.SubHandler{
-		Topic:   "highway_enlist",
-		Handler: hc.processEnlistMessage,
-	}
+	// hc.ps.GRPCMessage <- process.SubHandler{
+	// 	Topic:   "highway_enlist",
+	// 	Handler: hc.processEnlistMessage,
+	// }
 	return hc
 }
 

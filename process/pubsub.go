@@ -25,7 +25,7 @@ type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
 	GossipMachine        *p2pPubSub.PubSub
-	RegisterMessage      chan string
+	GRPCMessage          chan string
 	OutSideMessage       chan string
 	followedTopic        []string
 	outsideMessage       []string
@@ -41,40 +41,24 @@ func InitPubSub(s host.Host, supportShards []byte) error {
 	if err != nil {
 		return err
 	}
-	// GlobalPubsub.GossipMachine, err = p2pPubSub.NewGossipSub(ctx, s)
-	// if err != nil {
-	// 	return err
-	// }
-	GlobalPubsub.RegisterMessage = make(chan string)
-	GlobalPubsub.NewMessage = make(chan SubHandler, 100)
+	GlobalPubsub.GRPCMessage = make(chan string)
+	// GlobalPubsub.NewMessage = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
 	GlobalPubsub.SupportShards = supportShards
 	topic.InitTypeOfProcessor()
+	// TODO hy remove global param
 	initGlobalParams()
-	// done := make(chan bool)
-	// go func() {
-	// for {
-	// select {
-	// case <-done:
-	// return
-	// case t := <-ticker.C:
-	// fmt.Println("Tick at", t)
-	// }
-	// }
-	// }()
 	return nil
 }
 
 func (pubsub *PubSubManager) WatchingChain() {
 	for {
 		select {
-		case newTopic := <-pubsub.RegisterMessage:
+		case newTopic := <-pubsub.GRPCMessage:
 			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
 			pubsub.followedTopic = append(pubsub.followedTopic, newTopic)
-		// case subHandler := <-pubsub.NewMessage:
-		// 	subch, err := pubsub.FloodMachine.Subscribe(subHandler.Topic)
 			if err != nil {
 				logger.Info(err)
 				continue
@@ -106,15 +90,15 @@ func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription, typeOfPro
 				logger.Infof("Receive data from topic %v DoNothing", sub.Topic())
 				continue
 			case topic.ProcessAndPublishAfter:
-				// logger.Infof("Receive data ProcessAndPublishAfter") //, data.GetData())
-				// logger.Info(CommitteePubkeyByPeerID)
+				// logger.Infof("Receive data ProcessAndPublishAfter")
 				go UpdatePeerState(CommitteePubkeyByPeerID[data.GetFrom()], data.GetData())
 			case topic.ProcessAndPublish:
+				//TODO hy add handler(data)
 				go ProcessNPublishDataFromTopic(pubsub.FloodMachine, sub.Topic(), data.GetData(), pubsub.SupportShards)
 			default:
 				return
 			}
-			handler(data)
+			// handler(data)
 		}
 	}
 }
