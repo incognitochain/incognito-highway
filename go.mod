@@ -12,6 +12,13 @@ require (
 	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-host v0.1.0
 	github.com/libp2p/go-libp2p-peer v0.2.0
+	github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50
+	github.com/libp2p/go-libp2p v0.3.1
+	github.com/libp2p/go-libp2p-core v0.2.2
+	github.com/libp2p/go-libp2p-host v0.1.0 // indirect
+	github.com/libp2p/go-libp2p-net v0.1.0 // indirect
+	github.com/libp2p/go-libp2p-peer v0.2.0
+	github.com/libp2p/go-libp2p-protocol v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/libp2p/go-tcp-transport v0.1.0
 	github.com/libp2p/go-ws-transport v0.1.0
@@ -22,4 +29,8 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
 	google.golang.org/grpc v1.20.1
+	github.com/pkg/errors v0.8.1
+	github.com/stathat/consistent v1.0.0
+	google.golang.org/grpc v1.20.1
+	stathat.com/c/consistent v1.0.0 // indirect
 )

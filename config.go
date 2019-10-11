@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -55,10 +54,10 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		version:       *version,
 		host:          *host,
 	}
-	if config.privateKey == "" {
-		config.printConfig()
-		log.Fatal("Need private key")
-	}
+	// if config.privateKey == "" {
+	// 	config.printConfig()
+	// 	log.Fatal("Need private key")
+	// }
 	proxyConfig = config
 	return proxyConfig, nil
 }
@@ -81,7 +80,7 @@ func parseSupportShards(s string) ([]byte, error) {
 		for _, v := range strings.Split(s, ",") {
 			j, err := strconv.Atoi(v)
 			if err != nil {
-				return nil, errors.WithStack(err)
+				return nil, errors.Wrapf(err, "invalid support shard: %v", v)
 			}
 			if j > NumShards || j < 0 {
 				return nil, errors.Errorf("invalid support shard: %v", v)

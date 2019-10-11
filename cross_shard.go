@@ -3,20 +3,21 @@ package main
 import (
 	"highway/common"
 	logger "highway/customizelog"
+	"highway/process"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/stathat/consistent"
 )
 
 type Highway struct {
-	SupportShards []byte
-	ID            peer.ID
+	ID peer.ID
 
-	shardsConnected []byte
-	hc              *HighwayConnector
+	hmap *HighwayMap
+	hc   *HighwayConnector
 }
 
 func NewHighway(
@@ -25,19 +26,33 @@ func NewHighway(
 	h host.Host,
 ) *Highway {
 	// TODO(@0xbunyip): use bootstrap to get initial highways
-	sc := make([]byte, len(supportShards))
-	copy(sc, supportShards)
-	hw := &Highway{
-		SupportShards:   supportShards,
-		ID:              h.ID(),
-		shardsConnected: sc,
-		hc:              NewHighwayConnector(h),
+	p := peer.AddrInfo{
+		ID:    h.ID(),
+		Addrs: h.Addrs(),
 	}
+	hmap := NewHighwayMap(p, supportShards)
+
+	if len(bootstrap) > 0 && len(bootstrap[0]) > 0 {
+		ss := []byte{0}
+		id, _ := peer.IDB58Decode("12D3KooW9sbQK4J64Qat5D9vQEhBCnDYD3WPqWmgUZD4M7CJ2rXS")
+		addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/9330")
+		hmap.AddPeer(peer.AddrInfo{
+			ID:    id,
+			Addrs: []multiaddr.Multiaddr{addr},
+		}, ss)
+	}
+
+	hw := &Highway{
+		ID:   h.ID(),
+		hmap: hmap,
+		hc:   NewHighwayConnector(h, hmap, &process.GlobalPubsub),
+	}
+	go hw.hc.Start()
 	return hw
 }
 
 func (h *Highway) Start() {
-	for range time.Tick(60 * time.Second) {
+	for range time.Tick(5 * time.Second) {
 		// TODO(@0xbunyip) Check for liveness of connected highways
 
 		// New highways online: update map and reconnect to load-balance
@@ -45,34 +60,36 @@ func (h *Highway) Start() {
 		_ = newHighway
 
 		// Connect to other highways if needed
-		highwayMap := map[byte][]peer.AddrInfo{}
-		h.UpdateConnection(highwayMap)
+		h.UpdateConnection()
 	}
 }
 
-func (h *Highway) UpdateConnection(highways map[byte][]peer.AddrInfo) {
+func (h *Highway) UpdateConnection() {
 	for i := byte(0); i < common.NumberOfShard; i++ {
-		if err := h.connectChain(highways, i); err != nil {
+		if err := h.connectChain(i); err != nil {
 			logger.Error(err)
 		}
 	}
 
-	if err := h.connectChain(highways, common.BEACONID); err != nil {
+	if err := h.connectChain(common.BEACONID); err != nil {
 		logger.Error(err)
 	}
 }
 
-// connectChain connects this highway to a chain (shard or beacon) if it hasn't connected to one yet
-func (h *Highway) connectChain(highways map[byte][]peer.AddrInfo, sid byte) error {
-	if contain(sid, h.shardsConnected) { // Connected
+// connectChain connects this highway to a peer in a chain (shard or beacon) if it hasn't connected to one yet
+func (h *Highway) connectChain(sid byte) error {
+	if h.hmap.IsConnectedToShard(sid) {
 		return nil
 	}
 
-	if len(highways[sid]) == 0 {
-		return errors.Errorf("Found no highway supporting shard %d", sid)
+	logger.Info("connect chain", sid)
+	highways := h.hmap.Peers[sid]
+	if len(highways) == 0 {
+		return errors.Errorf("found no highway supporting shard %d", sid)
 	}
 
-	p, err := choosePeer(highways[sid], h.ID)
+	// TODO(@0xbunyip): repick if fail to connect
+	p, err := choosePeer(highways, h.ID)
 	if err != nil {
 		return errors.WithMessagef(err, "shardID: %v", sid)
 	}
@@ -81,8 +98,7 @@ func (h *Highway) connectChain(highways map[byte][]peer.AddrInfo, sid byte) erro
 	}
 
 	// Update list of connected shards
-	// TODO(@0xbunyip): update more than one sid when highway supports many
-	h.shardsConnected = append(h.shardsConnected, sid)
+	h.hmap.ConnectToShardOfPeer(p)
 	return nil
 }
 
@@ -108,13 +124,4 @@ func choosePeer(peers []peer.AddrInfo, id peer.ID) (peer.AddrInfo, error) {
 		}
 	}
 	return peer.AddrInfo{}, errors.New("failed choosing peer to connect")
-}
-
-func contain(b byte, l []byte) bool {
-	for _, m := range l {
-		if b == m {
-			return true
-		}
-	}
-	return false
 }

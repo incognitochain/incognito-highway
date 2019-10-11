@@ -2,12 +2,12 @@ package p2p
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	crypto2 "crypto"
 	"fmt"
 	"log"
 
+	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -15,7 +15,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
-	p2pgrpc "github.com/paralin/go-libp2p-grpc"
 )
 
 type PeerConn struct {
@@ -45,15 +44,10 @@ type Host struct {
 	GRPC     *p2pgrpc.GRPCProtocol
 }
 
-func NewHost(version string, pubIP string, port int, rand []byte) *Host {
-	if len(rand) == 0 {
-		rand = generateRand()
-	}
-	if len(rand) < 40 {
-		panic("Rand bytes is less than 40")
-	}
-	buf := bytes.NewBuffer(rand)
-	privKey, _, err := crypto.GenerateKeyPairWithReader(crypto.ECDSA, 256, buf)
+func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
+	b, err := crypto.ConfigDecodeKey(privKeyStr)
+	catchError(err)
+	privKey, err := crypto.UnmarshalPrivateKey(b)
 	catchError(err)
 
 	listenAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", pubIP, port))

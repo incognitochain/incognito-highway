@@ -12,6 +12,11 @@ import (
 
 var GlobalPubsub PubSubManager
 
+type SubHandler struct {
+	Topic   string
+	Handler func(*p2pPubSub.Message)
+}
+
 // type Config struct {
 // 	Suppo
 // }
@@ -41,6 +46,7 @@ func InitPubSub(s host.Host, supportShards []byte) error {
 	// 	return err
 	// }
 	GlobalPubsub.RegisterMessage = make(chan string)
+	GlobalPubsub.NewMessage = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
@@ -67,6 +73,8 @@ func (pubsub *PubSubManager) WatchingChain() {
 		case newTopic := <-pubsub.RegisterMessage:
 			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
 			pubsub.followedTopic = append(pubsub.followedTopic, newTopic)
+		// case subHandler := <-pubsub.NewMessage:
+		// 	subch, err := pubsub.FloodMachine.Subscribe(subHandler.Topic)
 			if err != nil {
 				logger.Info(err)
 				continue
@@ -106,6 +114,7 @@ func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription, typeOfPro
 			default:
 				return
 			}
+			handler(data)
 		}
 	}
 }
