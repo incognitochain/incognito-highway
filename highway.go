@@ -25,7 +25,7 @@ func main() {
 		return
 	}
 
-	if err := process.InitPubSub(proxyHost.Host); err != nil {
+	if err := process.InitPubSub(proxyHost.Host, config.supportShards); err != nil {
 		logger.Error(err)
 		return
 	}

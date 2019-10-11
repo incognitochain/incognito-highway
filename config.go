@@ -36,7 +36,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	privateKey := flag.String("privatekey", "", "private key of this proxy, use  for authentication with other node")
 	bootstrap := flag.String("bootstrap", "", "specify other proxy node to join proxy network as bootstrap node")
 	version := flag.String("version", "0.1", "proxy version")
-	host := flag.String("host", "127.0.0.1", "listenning address")
+	host := flag.String("host", "0.0.0.0", "listenning address")
 	flag.Parse()
 
 	ss, err := parseSupportShards(*supportShards)
