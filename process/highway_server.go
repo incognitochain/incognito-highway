@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	"highway/common"
 	logger "highway/customizelog"
 	"highway/p2p"
 	"sync"
@@ -43,8 +44,9 @@ func (s *HighwayServer) Register(
 
 	// Notify HighwayClient of a new peer to request data later if possible
 	pid, err := peer.IDB58Decode(req.PeerID)
+	cid := common.GetCommitteeIDOfValidator(req.CommitteePublicKey)
 	if err == nil {
-		s.hc.NewPeers <- pid
+		s.hc.NewPeers <- PeerInfo{ID: pid, CID: cid}
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}

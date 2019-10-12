@@ -2,6 +2,7 @@ package process
 
 import (
 	context "context"
+	logger "highway/customizelog"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -9,20 +10,13 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-func (hc *HighwayClient) choosePeerIDForShardBlock(shardID byte, from, to uint64) (peer.ID, error) {
-	// TODO(0xakk0r0kamui): choose client from peer state
-	if len(hc.peers) < 1 {
-		return peer.ID(""), errors.Errorf("empty peer list for shardID %v, block %v to %v", shardID, from, to)
-	}
-	return hc.peers[0], nil
-}
-
 func (hc *HighwayClient) GetBlockShardByHeight(
 	shardID int32,
 	from uint64,
 	to uint64,
 ) ([][]byte, error) {
-	peerID, err := hc.choosePeerIDForShardBlock(byte(shardID), from, to)
+	peerID, err := hc.choosePeerIDForShardBlock(int(shardID), from, to)
+	logger.Infof("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -42,23 +36,38 @@ func (hc *HighwayClient) GetBlockShardByHeight(
 			FromPool:   false,
 		},
 	)
+	logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return reply.Data, nil
 }
 
+func (hc *HighwayClient) choosePeerIDForShardBlock(shardID int, from, to uint64) (peer.ID, error) {
+	// TODO(0xakk0r0kamui): choose client from peer state
+	if len(hc.peers[int(shardID)]) < 1 {
+		return peer.ID(""), errors.Errorf("empty peer list for shardID %v, block %v to %v", shardID, from, to)
+	}
+	return hc.peers[int(shardID)][0], nil
+}
+
+type PeerInfo struct {
+	ID  peer.ID
+	CID int // CommitteeID
+}
+
 type HighwayClient struct {
-	NewPeers chan peer.ID
+	NewPeers chan PeerInfo
 
 	cc    *ClientConnector
-	peers []peer.ID
+	peers map[int][]peer.ID
 }
 
 func NewHighwayClient(pr *p2pgrpc.GRPCProtocol) *HighwayClient {
 	hc := &HighwayClient{
-		NewPeers: make(chan peer.ID, 1000),
+		NewPeers: make(chan PeerInfo, 1000),
 		cc:       NewClientConnector(pr),
+		peers:    map[int][]peer.ID{},
 	}
 	go hc.start()
 	return hc
@@ -67,8 +76,9 @@ func NewHighwayClient(pr *p2pgrpc.GRPCProtocol) *HighwayClient {
 func (hc *HighwayClient) start() {
 	for {
 		select {
-		case pid := <-hc.NewPeers:
-			hc.peers = append(hc.peers, pid)
+		case p := <-hc.NewPeers:
+			logger.Infof("Append new peer: cid = %v, pid = %v", p.CID, p.ID)
+			hc.peers[p.CID] = append(hc.peers[p.CID], p.ID)
 		}
 	}
 }
