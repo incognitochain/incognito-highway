@@ -2,6 +2,7 @@ package process
 
 import (
 	context "context"
+	"highway/common"
 	logger "highway/customizelog"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -12,27 +13,23 @@ import (
 
 func (hc *HighwayClient) GetBlockShardByHeight(
 	shardID int32,
+	specific bool,
 	from uint64,
 	to uint64,
+	heights []uint64,
 ) ([][]byte, error) {
-	peerID, err := hc.choosePeerIDForShardBlock(int(shardID), from, to)
-	logger.Infof("Chosen peer: %v", peerID)
+	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	client, err := hc.cc.GetServiceClient(peerID)
-	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	reply, err := client.GetBlockShardByHeight(
 		context.Background(),
 		&GetBlockShardByHeightRequest{
 			Shard:      shardID,
-			Specific:   false,
+			Specific:   specific,
 			FromHeight: from,
 			ToHeight:   to,
-			Heights:    nil,
+			Heights:    heights,
 			FromPool:   false,
 		},
 	)
@@ -43,12 +40,63 @@ func (hc *HighwayClient) GetBlockShardByHeight(
 	return reply.Data, nil
 }
 
-func (hc *HighwayClient) choosePeerIDForShardBlock(shardID int, from, to uint64) (peer.ID, error) {
-	// TODO(0xakk0r0kamui): choose client from peer state
-	if len(hc.peers[int(shardID)]) < 1 {
-		return peer.ID(""), errors.Errorf("empty peer list for shardID %v, block %v to %v", shardID, from, to)
+func (hc *HighwayClient) GetBlockBeaconByHeight(
+	specific bool,
+	from uint64,
+	to uint64,
+	heights []uint64,
+) ([][]byte, error) {
+	client, err := hc.getClientWithBlock(int(common.BEACONID), specific, to, heights)
+	if err != nil {
+		return nil, err
 	}
-	return hc.peers[int(shardID)][0], nil
+	reply, err := client.GetBlockBeaconByHeight(
+		context.Background(),
+		&GetBlockBeaconByHeightRequest{
+			Specific:   specific,
+			FromHeight: from,
+			ToHeight:   to,
+			Heights:    heights,
+			FromPool:   false,
+		},
+	)
+	logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
+func (hc *HighwayClient) getClientWithBlock(
+	cid int,
+	specific bool,
+	to uint64,
+	heights []uint64,
+) (HighwayServiceClient, error) {
+	peerID := peer.ID("")
+	maxHeight := to
+	if specific {
+		maxHeight = heights[len(heights)-1]
+	}
+	peerID, err := hc.choosePeerIDWithBlock(cid, maxHeight)
+	logger.Infof("Chosen peer: %v", peerID)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := hc.cc.GetServiceClient(peerID)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+func (hc *HighwayClient) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
+	// TODO(0xakk0r0kamui): choose client from peer state
+	if len(hc.peers[int(cid)]) < 1 {
+		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
+	}
+	return hc.peers[int(cid)][0], nil
 }
 
 type PeerInfo struct {

@@ -58,10 +58,13 @@ func (s *HighwayServer) GetBlockShardByHeight(ctx context.Context, req *GetBlock
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
+	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockShardByHeight(
 		req.Shard,
+		req.Specific,
 		req.FromHeight,
 		req.ToHeight,
+		req.Heights,
 	)
 	if err != nil {
 		return nil, err
@@ -78,7 +81,22 @@ func (s *HighwayServer) GetBlockShardByHash(ctx context.Context, req *GetBlockSh
 
 func (s *HighwayServer) GetBlockBeaconByHeight(ctx context.Context, req *GetBlockBeaconByHeightRequest) (*GetBlockBeaconByHeightResponse, error) {
 	logger.Println("Receive GetBlockBeaconByHeight request")
-	return nil, nil
+	// TODO(@0xbunyip): check if block in cache
+
+	// Call node to get blocks
+	// TODO(@0xbunyip): use fromPool
+	data, err := s.hc.GetBlockBeaconByHeight(
+		req.Specific,
+		req.FromHeight,
+		req.ToHeight,
+		req.Heights,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(@0xbunyip): cache blocks
+	return &GetBlockBeaconByHeightResponse{Data: data}, nil
 }
 
 func (s *HighwayServer) GetBlockBeaconByHash(ctx context.Context, req *GetBlockBeaconByHashRequest) (*GetBlockBeaconByHashResponse, error) {
