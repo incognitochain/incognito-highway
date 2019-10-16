@@ -38,6 +38,13 @@ func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubMan
 		Topic:   "highway_enlist",
 		Handler: hc.enlistHighways,
 	}
+
+	// Subscribe to receive new committee
+	// TODO(@0xbunyip): move logic updating committee to another object
+	hc.ps.GRPCSpecSub <- process.SubHandler{
+		Topic:   "chain_committee",
+		Handler: hc.saveNewCommittee,
+	}
 	return hc
 }
 
@@ -102,6 +109,23 @@ func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
+	ctx := context.Background()
+	for {
+		msg, err := sub.Next(ctx)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+
+		var comm interface{}
+		if err := json.Unmarshal(msg.Data, comm); err != nil {
+			logger.Error(err)
+			continue
+		}
+	}
 }
 
 type notifiee HighwayConnector
