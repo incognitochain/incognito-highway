@@ -6,6 +6,7 @@ import (
 	logger "highway/customizelog"
 	"highway/process"
 
+	"github.com/incognitochain/incognito-chain/peerv2"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -120,7 +121,7 @@ func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
 			continue
 		}
 
-		var comm interface{}
+		comm := &peerv2.ChainCommittee{}
 		if err := json.Unmarshal(msg.Data, comm); err != nil {
 			logger.Error(err)
 			continue
