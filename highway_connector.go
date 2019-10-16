@@ -31,13 +31,13 @@ func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubMan
 	}
 
 	// Register to receive notif when new connection is established
-	// host.Network().Notify((*notifiee)(hc))
+	host.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
-	// hc.ps.GRPCMessage <- process.SubHandler{
-	// 	Topic:   "highway_enlist",
-	// 	Handler: hc.processEnlistMessage,
-	// }
+	hc.ps.GRPCSpecSub <- process.SubHandler{
+		Topic:   "highway_enlist",
+		Handler: hc.enlistHighways,
+	}
 	return hc
 }
 
@@ -58,18 +58,26 @@ func (hc *HighwayConnector) ConnectTo(p peer.AddrInfo) error {
 	return nil
 }
 
-func (hc *HighwayConnector) processEnlistMessage(msg *pubsub.Message) {
-	// TODO(@0xakk0r0kamui): check highway's signature in msg
-	em := &enlistMessage{}
-	err := json.Unmarshal(msg.Data, em)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
+func (hc *HighwayConnector) enlistHighways(sub *pubsub.Subscription) {
+	ctx := context.Background()
+	for {
+		msg, err := sub.Next(ctx)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
 
-	// Update supported shards of peer
-	hc.hmap.AddPeer(em.Peer, em.SupportShards)
-	hc.hmap.ConnectToShardOfPeer(em.Peer)
+		// TODO(@0xakk0r0kamui): check highway's signature in msg
+		em := &enlistMessage{}
+		if err := json.Unmarshal(msg.Data, em); err != nil {
+			logger.Error(err)
+			continue
+		}
+
+		// Update supported shards of peer
+		hc.hmap.AddPeer(em.Peer, em.SupportShards)
+		hc.hmap.ConnectToShardOfPeer(em.Peer)
+	}
 }
 
 func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
