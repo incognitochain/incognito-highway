@@ -19,9 +19,7 @@ type HighwayConnector struct {
 	hmap *HighwayMap
 	ps   *process.PubSubManager
 
-	outPeers       chan peer.AddrInfo
-	inPeers        chan peer.AddrInfo
-	pendingInPeers []peer.AddrInfo
+	outPeers chan peer.AddrInfo
 }
 
 func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubManager) *HighwayConnector {
@@ -30,7 +28,6 @@ func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubMan
 		hmap:     hmap,
 		ps:       ps,
 		outPeers: make(chan peer.AddrInfo, 1000),
-		inPeers:  make(chan peer.AddrInfo, 1000),
 	}
 
 	// Register to receive notif when new connection is established
@@ -52,9 +49,6 @@ func (hc *HighwayConnector) Start() {
 			if err != nil {
 				logger.Error(err, p)
 			}
-
-		case p := <-hc.inPeers:
-			hc.checkInPeer(p)
 		}
 	}
 }
@@ -65,6 +59,7 @@ func (hc *HighwayConnector) ConnectTo(p peer.AddrInfo) error {
 }
 
 func (hc *HighwayConnector) processEnlistMessage(msg *pubsub.Message) {
+	// TODO(@0xakk0r0kamui): check highway's signature in msg
 	em := &enlistMessage{}
 	err := json.Unmarshal(msg.Data, em)
 	if err != nil {
@@ -101,30 +96,12 @@ func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
 	return nil
 }
 
-func (hc *HighwayConnector) checkInPeer(p peer.AddrInfo) {
-	// TODO(@0xakk0r0kamui): check highway's signature
-	if hc.hmap.IsEnlisted(p) {
-		logger.Info("Enlisted", p, hc.hmap.Supports[p.ID])
-		// Update shards connected by this highway
-		hc.hmap.ConnectToShardOfPeer(p)
-	} else {
-		logger.Info("Pending", p)
-		// Add to pending if enlist message hasn't arrived
-		hc.pendingInPeers = append(hc.pendingInPeers, p)
-	}
-}
-
 type notifiee HighwayConnector
 
 func (no *notifiee) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (no *notifiee) ListenClose(network.Network, multiaddr.Multiaddr) {}
 func (no *notifiee) Connected(n network.Network, c network.Conn) {
-	go func() {
-		no.inPeers <- peer.AddrInfo{
-			ID:    c.RemotePeer(),
-			Addrs: []multiaddr.Multiaddr{c.RemoteMultiaddr()},
-		}
-	}()
+	// TODO(@0xbunyip): check if highway or node connection
 }
 func (no *notifiee) Disconnected(network.Network, network.Conn)   {}
 func (no *notifiee) OpenedStream(network.Network, network.Stream) {}
