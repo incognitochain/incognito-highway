@@ -14,7 +14,7 @@ var GlobalPubsub PubSubManager
 
 type SubHandler struct {
 	Topic   string
-	Handler func(*p2pPubSub.Message)
+	Handler func(*p2pPubSub.Subscription)
 }
 
 // type Config struct {
@@ -26,6 +26,7 @@ type PubSubManager struct {
 	FloodMachine         *p2pPubSub.PubSub
 	GossipMachine        *p2pPubSub.PubSub
 	GRPCMessage          chan string
+	GRPCSpecSub          chan SubHandler
 	OutSideMessage       chan string
 	followedTopic        []string
 	outsideMessage       []string
@@ -42,7 +43,7 @@ func InitPubSub(s host.Host, supportShards []byte) error {
 		return err
 	}
 	GlobalPubsub.GRPCMessage = make(chan string)
-	// GlobalPubsub.NewMessage = make(chan SubHandler, 100)
+	GlobalPubsub.GRPCSpecSub = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
@@ -69,6 +70,19 @@ func (pubsub *PubSubManager) WatchingChain() {
 			logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
 			pubsub.Msgs = append(pubsub.Msgs, subch)
 			go pubsub.handleNewMsg(subch, typeOfProcessor)
+		case newGRPCSpecSub := <-pubsub.GRPCSpecSub:
+			subch, err := pubsub.FloodMachine.Subscribe(newGRPCSpecSub.Topic)
+			pubsub.followedTopic = append(pubsub.followedTopic, newGRPCSpecSub.Topic)
+			if err != nil {
+				logger.Info(err)
+				continue
+			}
+			// typeOfProcessor := topic.GetTypeOfProcess(newTopic)
+			logger.Infof("Received new special sub from GRPC, topic: %v", newGRPCSpecSub.Topic)
+
+			// logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
+			// pubsub.Msgs = append(pubsub.Msgs, subch)
+			go newGRPCSpecSub.Handler(subch)
 		case <-pubsub.SpecialPublishTicker.C:
 			for committeeID, committeeState := range AllPeerState {
 				for _, stateData := range committeeState {
