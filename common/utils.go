@@ -111,7 +111,7 @@ func InitGenesisCommitteeFromFile(filename string, numberOfShard, numberOfCandid
 			logger.Info(err)
 		} else {
 			pkString, _ := committeePK.MiningPublicKey()
-			MiningKeyByCommitteeKey[pkString] = key
+			MiningKeyByCommitteeKey[pkString] = key // TODO(@0xakk0r0kamui): MiningKeyByCommitteeKey => CommitteeKeyByMiningKey???
 		}
 	}
 	return nil
