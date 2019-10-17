@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+var TypeOfTopicProcessor map[string]byte
+
 func isBroadcastMessage(message string) bool {
 	if message == CmdBFT {
 		return true

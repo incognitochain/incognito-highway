@@ -11,6 +11,75 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
+func (hc *HighwayClient) GetBlockByHeight(
+	shardID int32,
+	specific bool,
+	from uint64,
+	to uint64,
+	heights []uint64,
+	fromCandidate string,
+) ([][]byte, error) {
+	client, err := hc.getClientWithPublicKey(fromCandidate)
+	if err != nil {
+		return nil, err
+	}
+	if shardID != -1 {
+		reply, err := client.GetBlockShardByHeight(
+			context.Background(),
+			&GetBlockShardByHeightRequest{
+				Shard:      shardID,
+				Specific:   specific,
+				FromHeight: from,
+				ToHeight:   to,
+				Heights:    heights,
+				FromPool:   false,
+			},
+		)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			logger.Infof("Reply: %v", reply)
+			return reply.GetData(), nil
+		}
+	}
+
+	reply, err := client.GetBlockBeaconByHeight(
+		context.Background(),
+		&GetBlockBeaconByHeightRequest{
+			Specific:   specific,
+			FromHeight: from,
+			ToHeight:   to,
+			Heights:    heights,
+			FromPool:   false,
+		},
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	} else {
+		logger.Infof("Reply: %v", reply)
+		return reply.GetData(), nil
+	}
+}
+
+func (hc *HighwayClient) getClientWithPublicKey(
+	committeePublicKey string,
+) (HighwayServiceClient, error) {
+	peerID, exist := hc.chainData.PeerIDByCommitteePubkey[committeePublicKey]
+	if !exist {
+		logger.Infof("Committee Publickey %v", committeePublicKey)
+		PK := common.CommitteePublicKey{}
+		PK.FromString(committeePublicKey)
+		pkstring, _ := PK.MiningPublicKey()
+		logger.Infof("Committee Publickey by mining key %v", common.MiningKeyByCommitteeKey[pkstring])
+		return nil, errors.Errorf("Can not find PeerID of this committee PublicKey %v", committeePublicKey)
+	}
+	client, err := hc.cc.GetServiceClient(peerID)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
 func (hc *HighwayClient) GetBlockShardByHeight(
 	shardID int32,
 	specific bool,
@@ -26,6 +95,35 @@ func (hc *HighwayClient) GetBlockShardByHeight(
 		context.Background(),
 		&GetBlockShardByHeightRequest{
 			Shard:      shardID,
+			Specific:   specific,
+			FromHeight: from,
+			ToHeight:   to,
+			Heights:    heights,
+			FromPool:   false,
+		},
+	)
+	logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
+func (hc *HighwayClient) GetBlockShardToBeaconByHeight(
+	shardID int32,
+	specific bool,
+	from uint64,
+	to uint64,
+	heights []uint64,
+) ([][]byte, error) {
+	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
+	if err != nil {
+		return nil, err
+	}
+	reply, err := client.GetBlockShardToBeaconByHeight(
+		context.Background(),
+		&GetBlockShardToBeaconByHeightRequest{
+			FromShard:  shardID,
 			Specific:   specific,
 			FromHeight: from,
 			ToHeight:   to,
@@ -96,7 +194,12 @@ func (hc *HighwayClient) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, er
 	if len(hc.peers[int(cid)]) < 1 {
 		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
 	}
-	return hc.peers[int(cid)][0], nil
+	peerID, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
+	if err != nil {
+		return peer.ID(""), err
+	}
+	return *peerID, nil
+	// return hc.peers[int(cid)][0], nil
 }
 
 type PeerInfo struct {
@@ -105,7 +208,8 @@ type PeerInfo struct {
 }
 
 type HighwayClient struct {
-	NewPeers chan PeerInfo
+	NewPeers  chan PeerInfo
+	chainData *ChainData
 
 	cc    *ClientConnector
 	peers map[int][]peer.ID

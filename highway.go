@@ -16,16 +16,13 @@ func main() {
 	}
 	config.printConfig()
 
+	chainData := new(process.ChainData)
+	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize)
 	// Process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
-	process.RunHighwayServer(proxyHost, process.NewHighwayClient(proxyHost.GRPC))
+	process.RunHighwayServer(proxyHost, chainData, process.NewHighwayClient(proxyHost.GRPC))
 
-	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
-		logger.Error(err)
-		return
-	}
-
-	if err := process.InitPubSub(proxyHost.Host, config.supportShards); err != nil {
+	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
 		logger.Error(err)
 		return
 	}

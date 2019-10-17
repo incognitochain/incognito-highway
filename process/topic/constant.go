@@ -73,5 +73,4 @@ var (
 		"bft",
 		"peerstate",
 	}
-	TypeOfTopicProcessor map[string]byte
 )

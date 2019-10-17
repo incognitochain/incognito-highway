@@ -22,11 +22,9 @@ func (topic *InsideTopic) ToString() string {
 }
 
 func (topic *InsideTopic) FromMessageType(
-	validator string,
+	committeeID int,
 	messageType string,
 ) error {
-	committeeID := common.GetCommitteeIDOfValidator(validator)
-	// fmt.Println(validator, common.MiningKeyByCommitteeKey)
 	if (committeeID) < 0 {
 		logger.Infof("Candidate not found")
 		return errors.New("Candidate not found")
@@ -57,7 +55,10 @@ func (topic *InsideTopic) GetTopic4ProxySub() string {
 	return topic.ToString()
 }
 
-func GetTopic4ProxySub(committeeID byte, message string) string {
+func GetTopic4ProxySub(
+	committeeID byte,
+	message string,
+) string {
 	topicGenerator := &InsideTopic{
 		MessageType: message,
 		CommitteeID: committeeID,
@@ -72,7 +73,10 @@ func GetTopic4ProxySub(committeeID byte, message string) string {
 	return topicGenerator.ToString()
 }
 
-func GetTopic4ProxyPub(committeeID byte, message string) string {
+func GetTopic4ProxyPub(
+	committeeID byte,
+	message string,
+) string {
 	topicGenerator := &InsideTopic{
 		MessageType: message,
 		CommitteeID: committeeID,
