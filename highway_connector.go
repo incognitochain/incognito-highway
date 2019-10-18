@@ -116,11 +116,13 @@ func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
 	ctx := context.Background()
 	for {
 		msg, err := sub.Next(ctx)
+		logger.Println("Received new committee")
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
+		logger.Println("Saving new committee")
 		comm := &incognitokey.ChainCommittee{}
 		if err := json.Unmarshal(msg.Data, comm); err != nil {
 			logger.Error(err)

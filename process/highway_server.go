@@ -54,7 +54,7 @@ func (s *HighwayServer) Register(
 }
 
 func (s *HighwayServer) GetBlockShardByHeight(ctx context.Context, req *GetBlockShardByHeightRequest) (*GetBlockShardByHeightResponse, error) {
-	logger.Println("Receive GetBlockShardByHeight request")
+	// logger.Println("Receive GetBlockShardByHeight request")
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -80,7 +80,7 @@ func (s *HighwayServer) GetBlockShardByHash(ctx context.Context, req *GetBlockSh
 }
 
 func (s *HighwayServer) GetBlockBeaconByHeight(ctx context.Context, req *GetBlockBeaconByHeightRequest) (*GetBlockBeaconByHeightResponse, error) {
-	logger.Println("Receive GetBlockBeaconByHeight request")
+	// logger.Println("Receive GetBlockBeaconByHeight request")
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks

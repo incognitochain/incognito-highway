@@ -33,7 +33,7 @@ func (hc *HighwayClient) GetBlockShardByHeight(
 			FromPool:   false,
 		},
 	)
-	logger.Infof("Reply: %v", reply)
+	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -60,7 +60,7 @@ func (hc *HighwayClient) GetBlockBeaconByHeight(
 			FromPool:   false,
 		},
 	)
-	logger.Infof("Reply: %v", reply)
+	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
