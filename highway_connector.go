@@ -21,14 +21,22 @@ type HighwayConnector struct {
 	ps   *process.PubSubManager
 
 	outPeers chan peer.AddrInfo
+
+	masternode peer.ID
 }
 
-func NewHighwayConnector(host host.Host, hmap *HighwayMap, ps *process.PubSubManager) *HighwayConnector {
+func NewHighwayConnector(
+	host host.Host,
+	hmap *HighwayMap,
+	ps *process.PubSubManager,
+	masternode peer.ID,
+) *HighwayConnector {
 	hc := &HighwayConnector{
-		host:     host,
-		hmap:     hmap,
-		ps:       ps,
-		outPeers: make(chan peer.AddrInfo, 1000),
+		host:       host,
+		hmap:       hmap,
+		ps:         ps,
+		outPeers:   make(chan peer.AddrInfo, 1000),
+		masternode: masternode,
 	}
 
 	// Register to receive notif when new connection is established
@@ -119,6 +127,14 @@ func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
 		logger.Println("Received new committee")
 		if err != nil {
 			logger.Error(err)
+			continue
+		}
+
+		// TODO(@0xbunyip): check if msg.From can be manipulated by forwarder
+		if peer.ID(msg.From) != hc.masternode {
+			from := peer.IDB58Encode(peer.ID(msg.From))
+			exp := peer.IDB58Encode(hc.masternode)
+			logger.Warnf("Received NewCommittee from unauthorized source, expect from %+v, got from %+v, data %+v", from, exp, msg.Data)
 			continue
 		}
 

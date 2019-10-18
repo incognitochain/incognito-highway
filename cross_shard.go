@@ -23,6 +23,7 @@ type Highway struct {
 func NewHighway(
 	supportShards []byte,
 	bootstrap []string,
+	masternode peer.ID,
 	h host.Host,
 ) *Highway {
 	// TODO(@0xbunyip): use bootstrap to get initial highways
@@ -45,7 +46,12 @@ func NewHighway(
 	hw := &Highway{
 		ID:   h.ID(),
 		hmap: hmap,
-		hc:   NewHighwayConnector(h, hmap, &process.GlobalPubsub),
+		hc: NewHighwayConnector(
+			h,
+			hmap,
+			&process.GlobalPubsub,
+			masternode,
+		),
 	}
 	go hw.hc.Start()
 	return hw

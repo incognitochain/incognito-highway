@@ -76,7 +76,7 @@ func ProcessNPublishDataFromTopic(
 ) error {
 	// logger.Info("ProcessNPublishDataFromTopic")
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
-	logger.Info(topicReceived, msgType)
+	// logger.Info(topicReceived, msgType)
 	switch msgType {
 	case topic.CmdBlockBeacon: //, topic.CmdBlockShard, topic.CmdBlkShardToBeacon: //, topic.CmdAddr:
 		// logger.Infof("Process and publish blockbeacon to shards %v", supportCommittee)

@@ -38,7 +38,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	bootstrap := flag.String("bootstrap", "", "specify other proxy node to join proxy network as bootstrap node")
 	version := flag.String("version", "0.1", "proxy version")
 	host := flag.String("host", "0.0.0.0", "listenning address")
-	masternode := flag.String("masternode", "QmYMpCasu9oJSTmca9fotDs21fTC5jHEWQ2oUaytNXiRnT", "libp2p PeerID of master node")
+	masternode := flag.String("masternode", "QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV", "libp2p PeerID of master node")
 	flag.Parse()
 
 	ss, err := parseSupportShards(*supportShards)

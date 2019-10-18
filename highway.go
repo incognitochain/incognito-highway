@@ -6,6 +6,8 @@ import (
 	logger "highway/customizelog"
 	"highway/p2p"
 	"highway/process"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func main() {
@@ -29,12 +31,22 @@ func main() {
 		logger.Error(err)
 		return
 	}
-	logger.Println("Init ok")
+	logger.Println("Init pubsub ok")
 
 	go process.GlobalPubsub.WatchingChain()
 
 	// Highway manager: connect cross shards
-	h := NewHighway(config.supportShards, config.bootstrap, proxyHost.Host)
+	masterPeerID, err := peer.IDB58Decode(config.masternode)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	h := NewHighway(
+		config.supportShards,
+		config.bootstrap,
+		masterPeerID,
+		proxyHost.Host,
+	)
 	go h.Start()
 
 	select {}

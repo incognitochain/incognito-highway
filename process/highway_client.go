@@ -79,7 +79,7 @@ func (hc *HighwayClient) getClientWithBlock(
 		maxHeight = heights[len(heights)-1]
 	}
 	peerID, err := hc.choosePeerIDWithBlock(cid, maxHeight)
-	logger.Infof("Chosen peer: %v", peerID)
+	// logger.Infof("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, err
 	}
