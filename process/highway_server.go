@@ -45,6 +45,13 @@ func (s *HighwayServer) Register(
 	// Notify HighwayClient of a new peer to request data later if possible
 	pid, err := peer.IDB58Decode(req.PeerID)
 	cid := common.GetCommitteeIDOfValidator(req.CommitteePublicKey)
+
+	// TODO(0xbunyip): remove hardcode here (testing)
+	m, _ := peer.IDB58Decode("QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV")
+	if pid == m {
+		cid = 0
+	}
+
 	if err == nil {
 		s.hc.NewPeers <- PeerInfo{ID: pid, CID: cid}
 	} else {
