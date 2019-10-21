@@ -215,11 +215,12 @@ type HighwayClient struct {
 	peers map[int][]peer.ID
 }
 
-func NewHighwayClient(pr *p2pgrpc.GRPCProtocol) *HighwayClient {
+func NewHighwayClient(pr *p2pgrpc.GRPCProtocol, incChainData *ChainData) *HighwayClient {
 	hc := &HighwayClient{
-		NewPeers: make(chan PeerInfo, 1000),
-		cc:       NewClientConnector(pr),
-		peers:    map[int][]peer.ID{},
+		NewPeers:  make(chan PeerInfo, 1000),
+		chainData: incChainData,
+		cc:        NewClientConnector(pr),
+		peers:     map[int][]peer.ID{},
 	}
 	go hc.start()
 	return hc

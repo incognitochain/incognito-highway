@@ -21,7 +21,7 @@ type ChainData struct {
 	PeerIDByCommitteePubkey   map[string]peer.ID
 	ShardByCommitteePublicKey map[string]byte
 	MiningKeyByCommitteeKey   map[string]string
-	Locker                    sync.RWMutex
+	Locker                    *sync.RWMutex
 }
 
 func (chainData *ChainData) Init(
@@ -29,8 +29,9 @@ func (chainData *ChainData) Init(
 	numberOfShard,
 	numberOfCandidate int,
 ) error {
-	chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
+	logger.Info("Init chaindata")
 	chainData.ListMsgPeerStateOfShard = map[byte]CommitteeState{}
+	chainData.Locker = &sync.RWMutex{}
 	for i := 0; i < numberOfShard; i++ {
 		chainData.ListMsgPeerStateOfShard[byte(i)] = map[string][]byte{}
 	}
@@ -42,6 +43,10 @@ func (chainData *ChainData) Init(
 	chainData.PeerIDByCommitteePubkey = map[string]peer.ID{}
 	chainData.ShardByCommitteePublicKey = map[string]byte{}
 	chainData.MiningKeyByCommitteeKey = map[string]string{}
+	err := chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -57,18 +62,34 @@ func (chainData *ChainData) GetCommitteeIDOfValidator(
 		return id, nil
 	} else {
 		validatorKey := new(common.CommitteePublicKey)
-		validatorKey.FromString(validator)
+		err := validatorKey.FromString(validator)
+		if err != nil {
+			return 0, err
+		}
 		validatorMiningPK, err := validatorKey.MiningPublicKey()
 		if err != nil {
-			return 0, errors.New("Candidate " + validator + " not found")
+			return 0, errors.New("Candidate " + validator + " not found 1")
 		}
-		if fullKey, ok := common.MiningKeyByCommitteeKey[validatorMiningPK]; ok {
+
+		if fullKey, ok := chainData.MiningKeyByCommitteeKey[validatorMiningPK]; ok {
 			if fullKeyID, isExist := chainData.ShardByCommitteePublicKey[fullKey]; isExist {
 				return fullKeyID, nil
+			} else {
+				logger.Infof("MiningKeyByCommitteeKey %v", chainData.ShardByCommitteePublicKey)
+			}
+		} else {
+			logger.Infof("MiningKeyOfUser %v, len MiningKeyByCommitteeKey %v", validatorMiningPK, len(chainData.MiningKeyByCommitteeKey))
+			i := 0
+			for key, value := range chainData.MiningKeyByCommitteeKey {
+				i++
+				logger.Infof("First 4 candidate in keylist:\n MiningKey:%v \nCommitteeKey: %v", key, value)
+				if i == 5 {
+					break
+				}
 			}
 		}
 	}
-	return 0, errors.New("Candidate " + validator + " not found")
+	return 0, errors.New("Candidate " + validator + " not found 2")
 }
 
 func (chainData *ChainData) GetPeerHasBlk(
@@ -100,7 +121,7 @@ func (chainData *ChainData) GetPeerHasBlk(
 		}
 
 	}
-	return nil, errors.New(fmt.Sprintf("Can not find any peer who has this block height: %v of committee %v", blkHeight, committeeID))
+	return nil, fmt.Errorf("Can not find any peer who has this block height: %v of committee %v", blkHeight, committeeID)
 }
 
 func (chainData *ChainData) GetPeerIDOfValidator(
@@ -115,7 +136,10 @@ func (chainData *ChainData) GetPeerIDOfValidator(
 		return &peerID, nil
 	} else {
 		validatorKey := new(common.CommitteePublicKey)
-		validatorKey.FromString(validator)
+		err := validatorKey.FromString(validator)
+		if err != nil {
+			return nil, err
+		}
 		if len(validatorKey.IncPubKey) == 0 {
 			return nil, errors.New("Peer ID for this candidate " + validator + " not found")
 		}
@@ -123,7 +147,7 @@ func (chainData *ChainData) GetPeerIDOfValidator(
 		if err != nil {
 			return nil, errors.New("Peer ID for this candidate " + validator + " not found")
 		}
-		if fullKey, ok := common.MiningKeyByCommitteeKey[validatorMiningPK]; ok {
+		if fullKey, ok := chainData.MiningKeyByCommitteeKey[validatorMiningPK]; ok {
 
 			if peerID, exist := chainData.PeerIDByCommitteePubkey[fullKey]; exist {
 				return &peerID, nil
@@ -153,6 +177,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	defer chainData.Locker.Unlock()
 	chainData.ShardByCommitteePublicKey = map[string]byte{}
 	chainData.MiningKeyByCommitteeKey = map[string]string{}
+	//#region Reading genesis committee key from keylist.json
 	keyListFromFile := common.KeyList{}
 	if filename != "" {
 		jsonFile, err := os.Open(filename)
@@ -163,8 +188,10 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 		fmt.Printf("Successfully Opened %v\n", filename)
 		defer jsonFile.Close()
 		byteValue, _ := ioutil.ReadAll(jsonFile)
-		json.Unmarshal([]byte(byteValue), &keyListFromFile)
-
+		err = json.Unmarshal([]byte(byteValue), &keyListFromFile)
+		if err != nil {
+			return err
+		}
 	}
 
 	for i := 0; i < numberOfCandidate; i++ {
@@ -172,6 +199,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 			chainData.ShardByCommitteePublicKey[keyListFromFile.Bc[i].CommitteePubKey] = common.BEACONID
 		}
 	}
+	logger.Infof("NumberOfShard %v, NumberOfCandidate %v", numberOfShard, numberOfCandidate)
 	for j := 0; j < numberOfShard; j++ {
 		for i := 0; i < numberOfCandidate; i++ {
 			if i < len(keyListFromFile.Sh[j]) {
@@ -179,16 +207,20 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 			}
 		}
 	}
-	for key, _ := range chainData.ShardByCommitteePublicKey {
+	//#endregion Reading genesis committee key from keylist.json
+	logger.Infof("Result of reading from file:\nLen of keyListFromFile:\n\tBeacon %v\n\tShard: %v\nlen of ShardByCommittee %v", len(keyListFromFile.Bc), len(keyListFromFile.Sh[0]), len(chainData.ShardByCommitteePublicKey))
+	for key := range chainData.ShardByCommitteePublicKey {
 		committeePK := new(common.CommitteePublicKey)
 		err := committeePK.FromString(key)
 		if err != nil {
 			logger.Info(err)
 		} else {
 			pkString, _ := committeePK.MiningPublicKey()
+			logger.Info(pkString)
 			chainData.MiningKeyByCommitteeKey[pkString] = key
 		}
 	}
+	logger.Info("Result of init key %v", len(chainData.MiningKeyByCommitteeKey))
 	return nil
 }
 

@@ -20,8 +20,7 @@ func main() {
 	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize)
 	// Process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
-	process.RunHighwayServer(proxyHost, chainData, process.NewHighwayClient(proxyHost.GRPC))
-
+	process.RunHighwayServer(proxyHost, process.NewHighwayClient(proxyHost.GRPC, chainData))
 	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
 		logger.Error(err)
 		return
@@ -31,8 +30,8 @@ func main() {
 	go process.GlobalPubsub.WatchingChain()
 
 	// Highway manager: connect cross shards
-	h := NewHighway(config.supportShards, config.bootstrap, proxyHost.Host)
-	go h.Start()
+	// h := NewHighway(config.supportShards, config.bootstrap, proxyHost.Host)
+	// go h.Start()
 
 	select {}
 }

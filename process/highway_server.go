@@ -144,7 +144,7 @@ type HighwayServer struct {
 	hc *HighwayClient
 }
 
-func RunHighwayServer(h *p2p.Host, chainData *ChainData, hc *HighwayClient) {
+func RunHighwayServer(h *p2p.Host, hc *HighwayClient) {
 	s := &HighwayServer{
 		hc: hc,
 	}
