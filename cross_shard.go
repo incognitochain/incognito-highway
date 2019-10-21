@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"highway/common"
 	logger "highway/customizelog"
 	"highway/p2p"
@@ -56,7 +55,6 @@ func NewHighway(
 }
 
 func (h *Highway) setup(bootstrap []string) {
-	logger.Println("setting up", bootstrap)
 	for _, b := range bootstrap {
 		if len(b) == 0 {
 			continue
@@ -66,15 +64,22 @@ func (h *Highway) setup(bootstrap []string) {
 		ss := []byte{0}
 		id, _ := peer.IDB58Decode("QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv")
 		addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/9330")
-		h.hmap.AddPeer(peer.AddrInfo{
+		addrInfo := peer.AddrInfo{
 			ID:    id,
 			Addrs: []multiaddr.Multiaddr{addr},
-		}, ss)
+		}
+		h.hmap.AddPeer(addrInfo, ss)
 
 		// Get latest committee from bootstrap highways if available
+		err := h.hc.Dial(addrInfo)
+		if err != nil {
+			logger.Warn("Failed dialing to bootstrap node", addrInfo, err)
+			continue
+		}
+
 		cc, err := h.GetChainCommittee(id)
 		if err != nil {
-			logger.Warn("Failed get chain committtee:", err)
+			logger.Warnf("Failed get chain committtee: %+v", err)
 			continue
 		}
 		logger.Info("Received chain committee:", cc)
@@ -84,16 +89,13 @@ func (h *Highway) setup(bootstrap []string) {
 }
 
 func (h *Highway) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, error) {
-	fmt.Println("In GetChainCommittee")
 	c, err := h.hc.GetHWClient(pid)
-	fmt.Println(c, err)
 	if err != nil {
 		return nil, err
 	}
 	resp, err := c.GetChainCommittee(context.Background(), &process.GetChainCommitteeRequest{})
-	fmt.Println(resp, err)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	comm := &incognitokey.ChainCommittee{}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"highway/process"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 )
 
 func (c *HWClient) GetClient(peerID peer.ID) (process.HighwayConnectorServiceClient, error) {
-	fmt.Println("GetClient", peerID)
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for HighwayClient to retry if fail to connect
 	if _, ok := c.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to c.conns
 		conn, err := c.pr.Dial(
@@ -23,7 +21,6 @@ func (c *HWClient) GetClient(peerID peer.ID) (process.HighwayConnectorServiceCli
 			grpc.WithBlock(),
 			grpc.WithTimeout(3*time.Second),
 		)
-		fmt.Println("GetClient", conn, err)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

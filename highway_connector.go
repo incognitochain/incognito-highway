@@ -81,6 +81,14 @@ func (hc *HighwayConnector) ConnectTo(p peer.AddrInfo) error {
 	return nil
 }
 
+func (hc *HighwayConnector) Dial(p peer.AddrInfo) error {
+	err := hc.host.Connect(context.Background(), p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
 func (hc *HighwayConnector) enlistHighways(sub *pubsub.Subscription) {
 	ctx := context.Background()
 	for {
@@ -104,9 +112,9 @@ func (hc *HighwayConnector) enlistHighways(sub *pubsub.Subscription) {
 }
 
 func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
-	err := hc.host.Connect(context.Background(), p)
+	err := hc.Dial(p)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	// Broadcast enlist message
