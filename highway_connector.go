@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	logger "highway/customizelog"
+	"highway/p2p"
 	"highway/process"
 
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -19,6 +20,7 @@ type HighwayConnector struct {
 	host host.Host
 	hmap *HighwayMap
 	ps   *process.PubSubManager
+	hwc  *HWClient
 
 	outPeers chan peer.AddrInfo
 
@@ -26,21 +28,22 @@ type HighwayConnector struct {
 }
 
 func NewHighwayConnector(
-	host host.Host,
+	h *p2p.Host,
 	hmap *HighwayMap,
 	ps *process.PubSubManager,
 	masternode peer.ID,
 ) *HighwayConnector {
 	hc := &HighwayConnector{
-		host:       host,
+		host:       h.Host,
 		hmap:       hmap,
 		ps:         ps,
+		hwc:        NewHWClient(h.GRPC), // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
 	}
 
 	// Register to receive notif when new connection is established
-	host.Network().Notify((*notifiee)(hc))
+	h.Host.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
 	hc.ps.GRPCSpecSub <- process.SubHandler{
@@ -55,6 +58,10 @@ func NewHighwayConnector(
 		Handler: hc.saveNewCommittee,
 	}
 	return hc
+}
+
+func (hc *HighwayConnector) GetHWClient(pid peer.ID) (process.HighwayConnectorServiceClient, error) {
+	return hc.hwc.GetClient(pid)
 }
 
 func (hc *HighwayConnector) Start() {
@@ -144,6 +151,8 @@ func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
 			logger.Error(err)
 			continue
 		}
+
+		// TOOD(@0xbunyip): update chain committee to ChainData here
 	}
 }
 

@@ -13,8 +13,8 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/multiformats/go-multihash v0.0.5
-	github.com/paralin/go-libp2p-grpc v0.0.0-20171228081709-3d5d33466aef // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
 	google.golang.org/grpc v1.20.1
+	stathat.com/c/consistent v1.0.0 // indirect
 )

@@ -45,7 +45,7 @@ func main() {
 		config.supportShards,
 		config.bootstrap,
 		masterPeerID,
-		proxyHost.Host,
+		proxyHost,
 	)
 	go h.Start()
 

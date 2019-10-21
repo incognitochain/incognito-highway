@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"highway/common"
 	logger "highway/customizelog"
+	"highway/p2p"
 	"highway/process"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -24,27 +28,17 @@ func NewHighway(
 	supportShards []byte,
 	bootstrap []string,
 	masternode peer.ID,
-	h host.Host,
+	h *p2p.Host,
 ) *Highway {
 	// TODO(@0xbunyip): use bootstrap to get initial highways
 	p := peer.AddrInfo{
-		ID:    h.ID(),
-		Addrs: h.Addrs(),
+		ID:    h.Host.ID(),
+		Addrs: h.Host.Addrs(),
 	}
 	hmap := NewHighwayMap(p, supportShards)
 
-	if len(bootstrap) > 0 && len(bootstrap[0]) > 0 {
-		ss := []byte{0}
-		id, _ := peer.IDB58Decode("12D3KooW9sbQK4J64Qat5D9vQEhBCnDYD3WPqWmgUZD4M7CJ2rXS")
-		addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/9330")
-		hmap.AddPeer(peer.AddrInfo{
-			ID:    id,
-			Addrs: []multiaddr.Multiaddr{addr},
-		}, ss)
-	}
-
 	hw := &Highway{
-		ID:   h.ID(),
+		ID:   h.Host.ID(),
 		hmap: hmap,
 		hc: NewHighwayConnector(
 			h,
@@ -53,12 +47,65 @@ func NewHighway(
 			masternode,
 		),
 	}
+
+	hw.setup(bootstrap)
+
+	// Start highway connector event loop
 	go hw.hc.Start()
 	return hw
 }
 
+func (h *Highway) setup(bootstrap []string) {
+	logger.Println("setting up", bootstrap)
+	for _, b := range bootstrap {
+		if len(b) == 0 {
+			continue
+		}
+
+		// TODO(@0xbunyip): parse bootstrap nodes
+		ss := []byte{0}
+		id, _ := peer.IDB58Decode("QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv")
+		addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/9330")
+		h.hmap.AddPeer(peer.AddrInfo{
+			ID:    id,
+			Addrs: []multiaddr.Multiaddr{addr},
+		}, ss)
+
+		// Get latest committee from bootstrap highways if available
+		cc, err := h.GetChainCommittee(id)
+		if err != nil {
+			logger.Warn("Failed get chain committtee:", err)
+			continue
+		}
+		logger.Info("Received chain committee:", cc)
+
+		// TOOD(@0xbunyip): update chain committee to ChainData here
+	}
+}
+
+func (h *Highway) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, error) {
+	fmt.Println("In GetChainCommittee")
+	c, err := h.hc.GetHWClient(pid)
+	fmt.Println(c, err)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.GetChainCommittee(context.Background(), &process.GetChainCommitteeRequest{})
+	fmt.Println(resp, err)
+	if err != nil {
+		return nil, err
+	}
+
+	comm := &incognitokey.ChainCommittee{}
+	if err := json.Unmarshal(resp.Data, comm); err != nil {
+		return nil, errors.Wrapf(err, "comm: %s", comm)
+	}
+	return comm, nil
+}
+
 func (h *Highway) Start() {
-	for range time.Tick(5 * time.Second) {
+	// Update connection when new highway comes online or old one goes offline
+	for range time.Tick(5 * time.Second) { // TODO(@xbunyip): move params to config
 		// TODO(@0xbunyip) Check for liveness of connected highways
 
 		// New highways online: update map and reconnect to load-balance
