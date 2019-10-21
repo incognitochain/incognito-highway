@@ -102,3 +102,15 @@ service HighwayService {
     rpc GetBlockCrossShardByHash(GetBlockCrossShardByHashRequest) returns (GetBlockCrossShardByHashResponse) {};
 }
 
+message GetChainCommitteeRequest {
+    int32 Epoch = 1;
+    int32 CommitteeID = 2;
+}
+
+message GetChainCommitteeResponse {
+    bytes Data = 1;
+}
+
+service HighwayConnectorService {
+    rpc GetChainCommittee(GetChainCommitteeRequest) returns (GetChainCommitteeResponse) {};
+}
