@@ -124,5 +124,4 @@ func RunHighwayServer(h *p2p.Host, hc *HighwayClient) {
 		hc: hc,
 	}
 	RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
-	go h.GRPC.Serve() // NOTE: must serve after registering all services
 }

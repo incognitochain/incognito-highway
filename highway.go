@@ -49,5 +49,6 @@ func main() {
 	)
 	go h.Start()
 
+	go proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
 	select {}
 }

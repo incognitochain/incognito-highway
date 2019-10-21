@@ -21,6 +21,7 @@ type HighwayConnector struct {
 	hmap *HighwayMap
 	ps   *process.PubSubManager
 	hwc  *HWClient
+	hws  *HWServer
 
 	outPeers chan peer.AddrInfo
 
@@ -37,6 +38,7 @@ func NewHighwayConnector(
 		host:       h.Host,
 		hmap:       hmap,
 		ps:         ps,
+		hws:        NewHWServer(h.GRPC), // GRPC server serving other highways
 		hwc:        NewHWClient(h.GRPC), // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
