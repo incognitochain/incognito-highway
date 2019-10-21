@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (c *HWClient) GetClient(peerID peer.ID) (process.HighwayConnectorServiceClient, error) {
+func (c *Client) GetClient(peerID peer.ID) (process.HighwayConnectorServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for HighwayClient to retry if fail to connect
 	if _, ok := c.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to c.conns
 		conn, err := c.pr.Dial(
@@ -30,13 +30,13 @@ func (c *HWClient) GetClient(peerID peer.ID) (process.HighwayConnectorServiceCli
 	return client, nil
 }
 
-type HWClient struct {
+type Client struct {
 	pr    *p2pgrpc.GRPCProtocol
 	conns map[peer.ID]*grpc.ClientConn
 }
 
-func NewHWClient(pr *p2pgrpc.GRPCProtocol) *HWClient {
-	return &HWClient{
+func NewClient(pr *p2pgrpc.GRPCProtocol) *Client {
+	return &Client{
 		pr:    pr,
 		conns: map[peer.ID]*grpc.ClientConn{},
 	}

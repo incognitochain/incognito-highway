@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	"context"
@@ -16,30 +16,30 @@ import (
 	"github.com/stathat/consistent"
 )
 
-type Highway struct {
+type Manager struct {
 	ID peer.ID
 
-	hmap *HighwayMap
-	hc   *HighwayConnector
+	hmap *Map
+	hc   *Connector
 }
 
-func NewHighway(
+func NewManager(
 	supportShards []byte,
 	bootstrap []string,
 	masternode peer.ID,
 	h *p2p.Host,
-) *Highway {
+) *Manager {
 	// TODO(@0xbunyip): use bootstrap to get initial highways
 	p := peer.AddrInfo{
 		ID:    h.Host.ID(),
 		Addrs: h.Host.Addrs(),
 	}
-	hmap := NewHighwayMap(p, supportShards)
+	hmap := NewMap(p, supportShards)
 
-	hw := &Highway{
+	hw := &Manager{
 		ID:   h.Host.ID(),
 		hmap: hmap,
-		hc: NewHighwayConnector(
+		hc: NewConnector(
 			h,
 			hmap,
 			&process.GlobalPubsub,
@@ -54,7 +54,7 @@ func NewHighway(
 	return hw
 }
 
-func (h *Highway) setup(bootstrap []string) {
+func (h *Manager) setup(bootstrap []string) {
 	for _, b := range bootstrap {
 		if len(b) == 0 {
 			continue
@@ -88,7 +88,7 @@ func (h *Highway) setup(bootstrap []string) {
 	}
 }
 
-func (h *Highway) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, error) {
+func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, error) {
 	c, err := h.hc.GetHWClient(pid)
 	if err != nil {
 		return nil, err
@@ -105,21 +105,21 @@ func (h *Highway) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 	return comm, nil
 }
 
-func (h *Highway) Start() {
+func (h *Manager) Start() {
 	// Update connection when new highway comes online or old one goes offline
 	for range time.Tick(5 * time.Second) { // TODO(@xbunyip): move params to config
 		// TODO(@0xbunyip) Check for liveness of connected highways
 
 		// New highways online: update map and reconnect to load-balance
-		newHighway := true
-		_ = newHighway
+		newManager := true
+		_ = newManager
 
 		// Connect to other highways if needed
 		h.UpdateConnection()
 	}
 }
 
-func (h *Highway) UpdateConnection() {
+func (h *Manager) UpdateConnection() {
 	for i := byte(0); i < common.NumberOfShard; i++ {
 		if err := h.connectChain(i); err != nil {
 			logger.Error(err)
@@ -132,7 +132,7 @@ func (h *Highway) UpdateConnection() {
 }
 
 // connectChain connects this highway to a peer in a chain (shard or beacon) if it hasn't connected to one yet
-func (h *Highway) connectChain(sid byte) error {
+func (h *Manager) connectChain(sid byte) error {
 	if h.hmap.IsConnectedToShard(sid) {
 		return nil
 	}
@@ -157,7 +157,7 @@ func (h *Highway) connectChain(sid byte) error {
 	return nil
 }
 
-func (h *Highway) connectTo(p peer.AddrInfo) error {
+func (h *Manager) connectTo(p peer.AddrInfo) error {
 	return h.hc.ConnectTo(p)
 }
 

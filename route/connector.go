@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	"context"
@@ -16,30 +16,30 @@ import (
 	"github.com/pkg/errors"
 )
 
-type HighwayConnector struct {
+type Connector struct {
 	host host.Host
-	hmap *HighwayMap
+	hmap *Map
 	ps   *process.PubSubManager
-	hwc  *HWClient
-	hws  *HWServer
+	hwc  *Client
+	hws  *Server
 
 	outPeers chan peer.AddrInfo
 
 	masternode peer.ID
 }
 
-func NewHighwayConnector(
+func NewConnector(
 	h *p2p.Host,
-	hmap *HighwayMap,
+	hmap *Map,
 	ps *process.PubSubManager,
 	masternode peer.ID,
-) *HighwayConnector {
-	hc := &HighwayConnector{
+) *Connector {
+	hc := &Connector{
 		host:       h.Host,
 		hmap:       hmap,
 		ps:         ps,
-		hws:        NewHWServer(h.GRPC), // GRPC server serving other highways
-		hwc:        NewHWClient(h.GRPC), // GRPC clients to other highways
+		hws:        NewServer(h.GRPC), // GRPC server serving other highways
+		hwc:        NewClient(h.GRPC), // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
 	}
@@ -62,11 +62,11 @@ func NewHighwayConnector(
 	return hc
 }
 
-func (hc *HighwayConnector) GetHWClient(pid peer.ID) (process.HighwayConnectorServiceClient, error) {
+func (hc *Connector) GetHWClient(pid peer.ID) (process.HighwayConnectorServiceClient, error) {
 	return hc.hwc.GetClient(pid)
 }
 
-func (hc *HighwayConnector) Start() {
+func (hc *Connector) Start() {
 	for {
 		select {
 		case p := <-hc.outPeers:
@@ -78,12 +78,12 @@ func (hc *HighwayConnector) Start() {
 	}
 }
 
-func (hc *HighwayConnector) ConnectTo(p peer.AddrInfo) error {
+func (hc *Connector) ConnectTo(p peer.AddrInfo) error {
 	hc.outPeers <- p
 	return nil
 }
 
-func (hc *HighwayConnector) Dial(p peer.AddrInfo) error {
+func (hc *Connector) Dial(p peer.AddrInfo) error {
 	err := hc.host.Connect(context.Background(), p)
 	if err != nil {
 		return errors.WithStack(err)
@@ -91,7 +91,7 @@ func (hc *HighwayConnector) Dial(p peer.AddrInfo) error {
 	return nil
 }
 
-func (hc *HighwayConnector) enlistHighways(sub *pubsub.Subscription) {
+func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 	ctx := context.Background()
 	for {
 		msg, err := sub.Next(ctx)
@@ -113,7 +113,7 @@ func (hc *HighwayConnector) enlistHighways(sub *pubsub.Subscription) {
 	}
 }
 
-func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
+func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 	err := hc.Dial(p)
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (hc *HighwayConnector) dialAndEnlist(p peer.AddrInfo) error {
 	return nil
 }
 
-func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
+func (hc *Connector) saveNewCommittee(sub *pubsub.Subscription) {
 	ctx := context.Background()
 	for {
 		msg, err := sub.Next(ctx)
@@ -166,7 +166,7 @@ func (hc *HighwayConnector) saveNewCommittee(sub *pubsub.Subscription) {
 	}
 }
 
-type notifiee HighwayConnector
+type notifiee Connector
 
 func (no *notifiee) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (no *notifiee) ListenClose(network.Network, multiaddr.Multiaddr) {}

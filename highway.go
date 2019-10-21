@@ -6,6 +6,7 @@ import (
 	logger "highway/customizelog"
 	"highway/p2p"
 	"highway/process"
+	"highway/route"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 )
@@ -41,7 +42,7 @@ func main() {
 		logger.Error(err)
 		return
 	}
-	h := NewHighway(
+	h := route.NewManager(
 		config.supportShards,
 		config.bootstrap,
 		masterPeerID,
