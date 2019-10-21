@@ -7,6 +7,7 @@ import (
 	logger "highway/customizelog"
 	"highway/p2p"
 	"highway/process"
+	"highway/proto"
 	"time"
 
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -93,7 +94,7 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.GetChainCommittee(context.Background(), &process.GetChainCommitteeRequest{})
+	resp, err := c.GetChainCommittee(context.Background(), &proto.GetChainCommitteeRequest{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

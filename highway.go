@@ -2,6 +2,7 @@
 package main
 
 import (
+	"highway/chain"
 	"highway/common"
 	logger "highway/customizelog"
 	"highway/p2p"
@@ -21,7 +22,7 @@ func main() {
 
 	// Process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
-	process.RunHighwayServer(proxyHost, process.NewHighwayClient(proxyHost.GRPC))
+	chain.RegisterServer(proxyHost, chain.NewClient(proxyHost.GRPC))
 
 	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
 		logger.Error(err)

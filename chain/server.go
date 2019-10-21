@@ -1,42 +1,39 @@
-package process
+package chain
 
 import (
 	"context"
 	"highway/common"
 	logger "highway/customizelog"
 	"highway/p2p"
-	"sync"
+	"highway/process"
+	"highway/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-var CommitteePubkeyByPeerID map[peer.ID]string
-var IsPublicIP map[peer.ID]bool
-var updatePKbyPIDLocker sync.Mutex
-
-func (s *HighwayServer) Register(
+func (s *Server) Register(
 	ctx context.Context,
-	req *RegisterRequest,
+	req *proto.RegisterRequest,
 ) (
-	*RegisterResponse,
+	*proto.RegisterResponse,
 	error,
 ) {
 	logger.Infof("Receive new request from %v via gRPC", req.GetCommitteePublicKey())
-	pairs := []*MessageTopicPair{}
+	pairs := []*proto.MessageTopicPair{}
 	var err error
-	var pair *MessageTopicPair
+	var pair *proto.MessageTopicPair
 	for _, m := range req.WantedMessages {
-		pair, err = generateResponseTopic(&GlobalPubsub, req.CommitteePublicKey, m)
+		pair, err = process.GenerateResponseTopic(&process.GlobalPubsub, req.CommitteePublicKey, m)
 		if err != nil {
-			logger.Infof("generateResponseTopic failed, error: %v", err.Error())
-			pair = &MessageTopicPair{
+			logger.Infof("GenerateResponseTopic failed, error: %v", err.Error())
+			pair = &proto.MessageTopicPair{
 				Message: m,
 				Topic:   []string{},
-				Act:     []MessageTopicPair_Action{},
+				Act:     []proto.MessageTopicPair_Action{},
 			}
 		}
 		peerid, _ := peer.IDB58Decode(req.GetPeerID())
-		UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &peerid)
+		process.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &peerid)
 		pairs = append(pairs, pair)
 	}
 	logger.Info(pairs)
@@ -51,10 +48,10 @@ func (s *HighwayServer) Register(
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}
-	return &RegisterResponse{Pair: pairs}, nil
+	return &proto.RegisterResponse{Pair: pairs}, nil
 }
 
-func (s *HighwayServer) GetBlockShardByHeight(ctx context.Context, req *GetBlockShardByHeightRequest) (*GetBlockShardByHeightResponse, error) {
+func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
 	// logger.Println("Receive GetBlockShardByHeight request")
 	// TODO(@0xbunyip): check if block in cache
 
@@ -72,15 +69,15 @@ func (s *HighwayServer) GetBlockShardByHeight(ctx context.Context, req *GetBlock
 	}
 
 	// TODO(@0xbunyip): cache blocks
-	return &GetBlockShardByHeightResponse{Data: data}, nil
+	return &proto.GetBlockShardByHeightResponse{Data: data}, nil
 }
 
-func (s *HighwayServer) GetBlockShardByHash(ctx context.Context, req *GetBlockShardByHashRequest) (*GetBlockShardByHashResponse, error) {
+func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
 	logger.Println("Receive GetBlockShardByHash request")
 	return nil, nil
 }
 
-func (s *HighwayServer) GetBlockBeaconByHeight(ctx context.Context, req *GetBlockBeaconByHeightRequest) (*GetBlockBeaconByHeightResponse, error) {
+func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
 	// logger.Println("Receive GetBlockBeaconByHeight request")
 	// TODO(@0xbunyip): check if block in cache
 
@@ -97,31 +94,31 @@ func (s *HighwayServer) GetBlockBeaconByHeight(ctx context.Context, req *GetBloc
 	}
 
 	// TODO(@0xbunyip): cache blocks
-	return &GetBlockBeaconByHeightResponse{Data: data}, nil
+	return &proto.GetBlockBeaconByHeightResponse{Data: data}, nil
 }
 
-func (s *HighwayServer) GetBlockBeaconByHash(ctx context.Context, req *GetBlockBeaconByHashRequest) (*GetBlockBeaconByHashResponse, error) {
+func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
 	logger.Println("Receive GetBlockBeaconByHash request")
 	return nil, nil
 }
 
-func (s *HighwayServer) GetBlockCrossShardByHeight(ctx context.Context, req *GetBlockCrossShardByHeightRequest) (*GetBlockCrossShardByHeightResponse, error) {
+func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
 	logger.Println("Receive GetBlockCrossShardByHeight request")
 	return nil, nil
 }
 
-func (s *HighwayServer) GetBlockCrossShardByHash(ctx context.Context, req *GetBlockCrossShardByHashRequest) (*GetBlockCrossShardByHashResponse, error) {
+func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
 	logger.Println("Receive GetBlockCrossShardByHash request")
 	return nil, nil
 }
 
-type HighwayServer struct {
-	hc *HighwayClient
+type Server struct {
+	hc *Client
 }
 
-func RunHighwayServer(h *p2p.Host, hc *HighwayClient) {
-	s := &HighwayServer{
+func RegisterServer(h *p2p.Host, hc *Client) {
+	s := &Server{
 		hc: hc,
 	}
-	RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
+	proto.RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
 }

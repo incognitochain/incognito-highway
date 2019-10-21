@@ -1,9 +1,10 @@
-package process
+package chain
 
 import (
 	context "context"
 	"highway/common"
 	logger "highway/customizelog"
+	"highway/proto"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -11,7 +12,7 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-func (hc *HighwayClient) GetBlockShardByHeight(
+func (hc *Client) GetBlockShardByHeight(
 	shardID int32,
 	specific bool,
 	from uint64,
@@ -24,7 +25,7 @@ func (hc *HighwayClient) GetBlockShardByHeight(
 	}
 	reply, err := client.GetBlockShardByHeight(
 		context.Background(),
-		&GetBlockShardByHeightRequest{
+		&proto.GetBlockShardByHeightRequest{
 			Shard:      shardID,
 			Specific:   specific,
 			FromHeight: from,
@@ -40,7 +41,7 @@ func (hc *HighwayClient) GetBlockShardByHeight(
 	return reply.Data, nil
 }
 
-func (hc *HighwayClient) GetBlockBeaconByHeight(
+func (hc *Client) GetBlockBeaconByHeight(
 	specific bool,
 	from uint64,
 	to uint64,
@@ -52,7 +53,7 @@ func (hc *HighwayClient) GetBlockBeaconByHeight(
 	}
 	reply, err := client.GetBlockBeaconByHeight(
 		context.Background(),
-		&GetBlockBeaconByHeightRequest{
+		&proto.GetBlockBeaconByHeightRequest{
 			Specific:   specific,
 			FromHeight: from,
 			ToHeight:   to,
@@ -67,12 +68,12 @@ func (hc *HighwayClient) GetBlockBeaconByHeight(
 	return reply.Data, nil
 }
 
-func (hc *HighwayClient) getClientWithBlock(
+func (hc *Client) getClientWithBlock(
 	cid int,
 	specific bool,
 	to uint64,
 	heights []uint64,
-) (HighwayServiceClient, error) {
+) (proto.HighwayServiceClient, error) {
 	peerID := peer.ID("")
 	maxHeight := to
 	if specific {
@@ -91,7 +92,7 @@ func (hc *HighwayClient) getClientWithBlock(
 	return client, nil
 }
 
-func (hc *HighwayClient) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
+func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	// TODO(0xakk0r0kamui): choose client from peer state
 	if len(hc.peers[int(cid)]) < 1 {
 		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
@@ -104,15 +105,15 @@ type PeerInfo struct {
 	CID int // CommitteeID
 }
 
-type HighwayClient struct {
+type Client struct {
 	NewPeers chan PeerInfo
 
 	cc    *ClientConnector
 	peers map[int][]peer.ID
 }
 
-func NewHighwayClient(pr *p2pgrpc.GRPCProtocol) *HighwayClient {
-	hc := &HighwayClient{
+func NewClient(pr *p2pgrpc.GRPCProtocol) *Client {
+	hc := &Client{
 		NewPeers: make(chan PeerInfo, 1000),
 		cc:       NewClientConnector(pr),
 		peers:    map[int][]peer.ID{},
@@ -121,7 +122,7 @@ func NewHighwayClient(pr *p2pgrpc.GRPCProtocol) *HighwayClient {
 	return hc
 }
 
-func (hc *HighwayClient) start() {
+func (hc *Client) start() {
 	for {
 		select {
 		case p := <-hc.NewPeers:
@@ -131,8 +132,8 @@ func (hc *HighwayClient) start() {
 	}
 }
 
-func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (HighwayServiceClient, error) {
-	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for HighwayClient to retry if fail to connect
+func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
+	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
 	if _, ok := cc.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to cc.conns
 		conn, err := cc.pr.Dial(
 			context.Background(),
@@ -145,7 +146,7 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (HighwayServiceClien
 		}
 		cc.conns[peerID] = conn
 	}
-	client := NewHighwayServiceClient(cc.conns[peerID])
+	client := proto.NewHighwayServiceClient(cc.conns[peerID])
 	return client, nil
 }
 

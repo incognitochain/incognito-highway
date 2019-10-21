@@ -6,6 +6,7 @@ import (
 	logger "highway/customizelog"
 	"highway/p2p"
 	"highway/process"
+	"highway/proto"
 
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -62,7 +63,7 @@ func NewConnector(
 	return hc
 }
 
-func (hc *Connector) GetHWClient(pid peer.ID) (process.HighwayConnectorServiceClient, error) {
+func (hc *Connector) GetHWClient(pid peer.ID) (proto.HighwayConnectorServiceClient, error) {
 	return hc.hwc.GetClient(pid)
 }
 
