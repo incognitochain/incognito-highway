@@ -25,6 +25,11 @@ const (
 )
 
 const (
+	NODEPUB = "-nodepub"
+	NODESUB = "-nodesub"
+)
+
+const (
 	CmdGetBlockBeacon     = "getblkbeacon"
 	CmdGetBlockShard      = "getblkshard"
 	CmdGetCrossShard      = "getcrossshd"

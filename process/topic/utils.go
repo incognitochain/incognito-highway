@@ -2,6 +2,8 @@ package topic
 
 import (
 	"encoding/hex"
+	"fmt"
+	"highway/common"
 	"sort"
 	"strings"
 )
@@ -42,7 +44,7 @@ func InitTypeOfProcessor() {
 
 func IsJustPubOrSubMsg(msg string) bool {
 	switch msg {
-	case CmdPeerState, CmdBlkShardToBeacon, CmdBlockBeacon, CmdCrossShard:
+	case CmdPeerState, CmdBlkShardToBeacon, CmdBlockBeacon, CmdCrossShard, CmdBlockShard:
 		return true
 	default:
 		return false
@@ -74,4 +76,26 @@ func GetCommitteeIDOfTopic(topic string) byte {
 	}
 	bytesDecoded, _ := hex.DecodeString(topicElements[1])
 	return bytesDecoded[0]
+}
+
+func GetTopicForPubSub(msgType string, cID byte) string {
+	return fmt.Sprintf("%s-%x-%s", msgType, cID, common.SelfID)
+}
+
+func GetTopicForPub(isHighway bool, msgType string, cID byte) string {
+	commonTopic := GetTopicForPubSub(msgType, cID)
+	if isHighway {
+		return commonTopic + NODESUB
+	} else {
+		return commonTopic + NODEPUB
+	}
+}
+
+func GetTopicForSub(isHighway bool, msgType string, cID byte) string {
+	commonTopic := GetTopicForPubSub(msgType, cID)
+	if !isHighway {
+		return commonTopic + NODESUB
+	} else {
+		return commonTopic + NODEPUB
+	}
 }

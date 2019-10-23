@@ -3,7 +3,6 @@ package process
 import (
 	"context"
 	"errors"
-	fmt "fmt"
 	"highway/common"
 	logger "highway/customizelog"
 	"highway/p2p"
@@ -201,9 +200,12 @@ func (s *HighwayServer) generateResponseTopic(
 		actOfTopic[common.NumberOfShard] = MessageTopicPair_SUB
 		for committeeID := common.NumberOfShard - 1; committeeID >= 0; committeeID-- {
 			topicGenerator.CommitteeID = byte(committeeID)
-			fmt.Println(committeeID, len(responseTopic))
-			responseTopic[committeeID] = topicGenerator.GetTopic4ProxySub()
-			pubsubManager.GRPCMessage <- responseTopic[committeeID]
+			logger.Info(committeeID, len(responseTopic))
+			topic4HighwaySub := topicGenerator.GetTopic4ProxySub()
+			responseTopic[committeeID] = topic4HighwaySub
+			if !pubsubManager.hasTopic(topic4HighwaySub) {
+				pubsubManager.GRPCMessage <- topic4HighwaySub
+			}
 			actOfTopic[committeeID] = MessageTopicPair_PUB
 		}
 	case topic.CmdBFT:
@@ -213,8 +215,11 @@ func (s *HighwayServer) generateResponseTopic(
 		if err != nil {
 			return nil, err
 		}
-		responseTopic[0] = topicGenerator.ToString()
-		pubsubManager.GRPCMessage <- responseTopic[0]
+		topic4HighwaySub := topicGenerator.ToString()
+		responseTopic[0] = topic4HighwaySub
+		if !pubsubManager.hasTopic(topic4HighwaySub) {
+			pubsubManager.GRPCMessage <- topic4HighwaySub
+		}
 		actOfTopic[0] = MessageTopicPair_PUBSUB
 	case topic.CmdPeerState, topic.CmdBlockBeacon, topic.CmdBlkShardToBeacon, topic.CmdBlockShard:
 		responseTopic = make([]string, 2)
@@ -223,12 +228,14 @@ func (s *HighwayServer) generateResponseTopic(
 		if err != nil {
 			return nil, err
 		}
-		responseTopic[0] = topicGenerator.GetTopic4ProxySub()
+		topic4HighwaySub := topicGenerator.GetTopic4ProxySub()
+		responseTopic[0] = topic4HighwaySub
 		actOfTopic[0] = MessageTopicPair_PUB
-		pubsubManager.GRPCMessage <- topicGenerator.GetTopic4ProxySub()
+		if !pubsubManager.hasTopic(topic4HighwaySub) {
+			pubsubManager.GRPCMessage <- topic4HighwaySub
+		}
 		responseTopic[1] = topicGenerator.GetTopic4ProxyPub()
 		actOfTopic[1] = MessageTopicPair_SUB
-
 	default:
 		return nil, errors.New("Unknown message type: " + msg)
 	}
