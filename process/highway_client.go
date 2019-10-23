@@ -6,7 +6,7 @@ import (
 	logger "highway/customizelog"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 )
@@ -177,7 +177,7 @@ func (hc *HighwayClient) getClientWithBlock(
 		maxHeight = heights[len(heights)-1]
 	}
 	peerID, err := hc.choosePeerIDWithBlock(cid, maxHeight)
-	logger.Infof("Chosen peer: %v", peerID)
+	// logger.Infof("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, err
 	}

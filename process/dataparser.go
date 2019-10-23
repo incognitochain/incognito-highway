@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	fmt "fmt"
-	"reflect"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/wire"
@@ -48,8 +47,8 @@ func ParsePeerStateData(dataStr string) (*wire.MessagePeerState, error) {
 		fmt.Println(err)
 		return nil, errors.WithStack(err)
 	}
-	realType := reflect.TypeOf(message)
-	fmt.Printf("Cmd message type of struct %s", realType.String())
+	// realType := reflect.TypeOf(message)
+	// fmt.Printf("Cmd message type of struct %s", realType.String())
 
 	// // cache message hash
 	// if peerConn.listenerPeer != nil {

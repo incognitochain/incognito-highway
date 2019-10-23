@@ -7,12 +7,9 @@ import (
 	"github.com/incognitochain/incognito-chain/common/base58"
 )
 
-// type CommitteePublicKey struct {
-// 	IncPubKey    []byte
-// 	MiningPubKey map[string][]byte
-// }
+// func GetListMsgForProxySubOfCommittee(committeeID byte) []string {
 
-// type MiningPublicKey map[string][]byte
+// }
 
 func (pubKey *CommitteePublicKey) FromString(keyString string) error {
 	keyBytes, ver, err := base58.Base58Check{}.Decode(keyString)

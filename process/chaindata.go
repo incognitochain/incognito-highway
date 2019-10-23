@@ -3,7 +3,6 @@ package process
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	fmt "fmt"
 	"highway/common"
 	logger "highway/customizelog"
@@ -11,7 +10,10 @@ import (
 	"os"
 	"sync"
 
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/wire"
+	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 )
 
 type ChainData struct {
@@ -32,9 +34,6 @@ func (chainData *ChainData) Init(
 	logger.Info("Init chaindata")
 	chainData.ListMsgPeerStateOfShard = map[byte]CommitteeState{}
 	chainData.Locker = &sync.RWMutex{}
-	for i := 0; i < numberOfShard; i++ {
-		chainData.ListMsgPeerStateOfShard[byte(i)] = map[string][]byte{}
-	}
 	for i := 0; i < numberOfShard; i++ {
 		chainData.ListMsgPeerStateOfShard[byte(i)] = map[string][]byte{}
 	}
@@ -182,7 +181,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	if filename != "" {
 		jsonFile, err := os.Open(filename)
 		if err != nil {
-			fmt.Println(err)
+			logger.Error(err)
 			return err
 		}
 		fmt.Printf("Successfully Opened %v\n", filename)
@@ -228,7 +227,23 @@ func (chainData *ChainData) UpdateCommitteeState(
 	committeeID byte,
 	committeeState *CommitteeState,
 ) error {
+
 	chainData.Locker.Lock()
+	for key, peerState := range *committeeState {
+		// logger.Infof(key)
+		msgPeerState, err := ParsePeerStateData(string(peerState))
+		if err != nil {
+			logger.Error(errors.Wrapf(err, "Parse PeerState for committee %v false", committeeID))
+			return err
+		} else {
+			// logger.Info(msgPeerState)
+		}
+		if committeeID == common.BEACONID {
+			chainData.CurrentNetworkState.BeaconState[key] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
+		} else {
+			chainData.CurrentNetworkState.ShardState[committeeID][key] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
+		}
+	}
 	defer chainData.Locker.Unlock()
 	return nil
 }
@@ -238,9 +253,13 @@ func (chainData *ChainData) UpdatePeerState(publisher string, data []byte) error
 	committeeID, err := chainData.GetCommitteeIDOfValidator(publisher)
 	if err != nil {
 		logger.Infof("This publisher not belong to current committee -%v- %v %v %v", publisher, common.BEACONID, common.NumberOfShard, committeeID)
+		logger.Error(err)
 		return err
 	}
 	chainData.Locker.Lock()
+	if chainData.ListMsgPeerStateOfShard[byte(committeeID)] == nil {
+		chainData.ListMsgPeerStateOfShard[byte(committeeID)] = map[string][]byte{}
+	}
 	if !bytes.Equal(chainData.ListMsgPeerStateOfShard[byte(committeeID)][publisher], data) {
 		chainData.ListMsgPeerStateOfShard[byte(committeeID)][publisher] = data
 	}
@@ -254,4 +273,23 @@ func (chainData *ChainData) UpdatePeerState(publisher string, data []byte) error
 		}
 	}
 	return nil
+}
+
+func newChainStateFromMsgPeerState(
+	msgPeerState *wire.MessagePeerState,
+	committeeID byte,
+	// candidateKey string,
+) ChainState {
+	var blkChainState blockchain.ChainState
+	if committeeID == common.BEACONID {
+		blkChainState = msgPeerState.Beacon
+	} else {
+		blkChainState = msgPeerState.Shards[committeeID]
+	}
+	return ChainState{
+		Height:        blkChainState.Height,
+		Timestamp:     blkChainState.Timestamp,
+		BestStateHash: blkChainState.BestStateHash,
+		BlockHash:     blkChainState.BlockHash,
+	}
 }
