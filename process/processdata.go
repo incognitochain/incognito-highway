@@ -32,21 +32,22 @@ func PublishDataWithTopic(
 				return err
 			}
 		case OneTopicOneData:
-			logger.Infof("Publish Topic %v mode %v", pubTopics[0], mode)
 			if len(pubTopics) != len(listData) {
 				logger.Errorf("Wrong input, in mode OneTopicOneData len of list Topic (%v) must equal len of list Data (%v).", pubTopics, listData)
 				return errors.New(fmt.Sprintf("Wrong input, in mode OneTopicOneData len of list Topic (%v) must equal len of list Data (%v).", pubTopics, listData))
 			}
+			logger.Infof("Publish Topic %v mode OneTopicOneData", pubTopics[i])
 			err := pubMachine.Publish(pubTopics[i], data)
 			if err != nil {
-				logger.Error(err)
+				logger.Errorf("Publish topic %v return err %v", pubTopics[i], err)
 				return err
 			}
 		case NTopicOneData:
+			logger.Infof("Publish Topic %v mode NTopicOneData", pubTopics)
 			for _, pubTopic := range pubTopics {
-				logger.Infof("Publish Topic %v mode %v", pubTopic, mode)
 				err := pubMachine.Publish(pubTopic, data)
 				if err != nil {
+					logger.Errorf("Publish topic %v return err %v", pubTopic, err)
 					return err
 				}
 			}

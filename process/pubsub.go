@@ -102,14 +102,14 @@ func (pubsub *PubSubManager) handleNewMsg(
 				continue
 			case topic.ProcessAndPublishAfter:
 				//#region Just logging information
-				if topic.GetMsgTypeOfTopic(sub.Topic()) == topic.CmdPeerState {
-					x, err := ParsePeerStateData(string(data.GetData()))
-					if err != nil {
-						logger.Error(err)
-					} else {
-						logger.Infof("PeerState data:\n Beacon: %v\n Shard: %v\n", x.Beacon, x.Shards)
-					}
-				}
+				// if topic.GetMsgTypeOfTopic(sub.Topic()) == topic.CmdPeerState {
+				// 	x, err := ParsePeerStateData(string(data.GetData()))
+				// 	if err != nil {
+				// 		logger.Error(err)
+				// 	} else {
+				// 		logger.Infof("PeerState data:\n Beacon: %v\n Shard: %v\n", x.Beacon, x.Shards)
+				// 	}
+				// }
 				//#endregion Just logging information
 				go pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.CommitteePubkeyByPeerID[data.GetFrom()], data.GetData())
 			case topic.ProcessAndPublish:
@@ -131,7 +131,7 @@ func (pubsub *PubSubManager) handleNewMsg(
 	}
 }
 
-func (pubsub *PubSubManager) hasTopic(receivedTopic string) bool {
+func (pubsub *PubSubManager) HasTopic(receivedTopic string) bool {
 	for _, flTopic := range pubsub.followedTopic {
 		if receivedTopic == flTopic {
 			return true

@@ -4,6 +4,7 @@ import (
 	context "context"
 	"highway/common"
 	logger "highway/customizelog"
+	"highway/process"
 	"highway/proto"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -12,7 +13,7 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-func (hc *HighwayClient) GetBlockByHeight(
+func (hc *Client) GetBlockByHeight(
 	shardID int32,
 	specific bool,
 	from uint64,
@@ -27,7 +28,7 @@ func (hc *HighwayClient) GetBlockByHeight(
 	if shardID != -1 {
 		reply, err := client.GetBlockShardByHeight(
 			context.Background(),
-			&GetBlockShardByHeightRequest{
+			&proto.GetBlockShardByHeightRequest{
 				Shard:      shardID,
 				Specific:   specific,
 				FromHeight: from,
@@ -46,7 +47,7 @@ func (hc *HighwayClient) GetBlockByHeight(
 
 	reply, err := client.GetBlockBeaconByHeight(
 		context.Background(),
-		&GetBlockBeaconByHeightRequest{
+		&proto.GetBlockBeaconByHeightRequest{
 			Specific:   specific,
 			FromHeight: from,
 			ToHeight:   to,
@@ -62,9 +63,9 @@ func (hc *HighwayClient) GetBlockByHeight(
 	}
 }
 
-func (hc *HighwayClient) getClientWithPublicKey(
+func (hc *Client) getClientWithPublicKey(
 	committeePublicKey string,
-) (HighwayServiceClient, error) {
+) (proto.HighwayServiceClient, error) {
 	peerID, exist := hc.chainData.PeerIDByCommitteePubkey[committeePublicKey]
 	if !exist {
 		logger.Infof("Committee Publickey %v", committeePublicKey)
@@ -123,7 +124,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
 		context.Background(),
-		&GetBlockShardToBeaconByHeightRequest{
+		&proto.GetBlockShardToBeaconByHeightRequest{
 			FromShard:  shardID,
 			Specific:   specific,
 			FromHeight: from,
@@ -210,12 +211,12 @@ type PeerInfo struct {
 
 type Client struct {
 	NewPeers  chan PeerInfo
-	chainData *ChainData
+	chainData *process.ChainData
 	cc        *ClientConnector
 	peers     map[int][]peer.ID
 }
 
-func NewClient(pr *p2pgrpc.GRPCProtocol, incChainData *ChainData) *Client {
+func NewClient(pr *p2pgrpc.GRPCProtocol, incChainData *process.ChainData) *Client {
 	hc := &Client{
 		NewPeers:  make(chan PeerInfo, 1000),
 		chainData: incChainData,

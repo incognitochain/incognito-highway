@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/incognitochain/incognito-chain/common/base58"
 )
@@ -14,7 +15,7 @@ import (
 func (pubKey *CommitteePublicKey) FromString(keyString string) error {
 	keyBytes, ver, err := base58.Base58Check{}.Decode(keyString)
 	if (ver != 0x00) || (err != nil) {
-		return errors.New("Decode key error")
+		return errors.New(fmt.Sprintf("Decode key error %v -%v-", err, keyString))
 	}
 	err = json.Unmarshal(keyBytes, pubKey)
 	if err != nil {
