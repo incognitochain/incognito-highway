@@ -20,6 +20,7 @@ type ProxyConfig struct {
 	bootstrap     []string
 	version       string
 	host          string
+	masternode    string
 }
 
 var proxyConfig *ProxyConfig
@@ -37,6 +38,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	bootstrap := flag.String("bootstrap", "", "specify other proxy node to join proxy network as bootstrap node")
 	version := flag.String("version", "0.1", "proxy version")
 	host := flag.String("host", "0.0.0.0", "listenning address")
+	masternode := flag.String("masternode", "QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV", "libp2p PeerID of master node")
 	flag.Parse()
 
 	ss, err := parseSupportShards(*supportShards)
@@ -53,6 +55,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		bootstrap:     strings.Split(*bootstrap, ","),
 		version:       *version,
 		host:          *host,
+		masternode:    *masternode,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()

@@ -1,4 +1,4 @@
-package main
+package route
 
 import (
 	logger "highway/customizelog"
@@ -6,15 +6,15 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-type HighwayMap struct {
+type Map struct {
 	Peers    map[byte][]peer.AddrInfo // shard => peers
 	Supports map[peer.ID][]byte       // peerID => shards supported
 
 	connected []byte // keep track of connected shards
 }
 
-func NewHighwayMap(p peer.AddrInfo, supportShards []byte) *HighwayMap {
-	m := &HighwayMap{
+func NewMap(p peer.AddrInfo, supportShards []byte) *Map {
+	m := &Map{
 		Peers:     map[byte][]peer.AddrInfo{},
 		Supports:  map[peer.ID][]byte{},
 		connected: supportShards,
@@ -23,7 +23,7 @@ func NewHighwayMap(p peer.AddrInfo, supportShards []byte) *HighwayMap {
 	return m
 }
 
-func (h *HighwayMap) IsConnectedToShard(s byte) bool {
+func (h *Map) IsConnectedToShard(s byte) bool {
 	for _, c := range h.connected {
 		if c == s {
 			return true
@@ -32,23 +32,23 @@ func (h *HighwayMap) IsConnectedToShard(s byte) bool {
 	return false
 }
 
-func (h *HighwayMap) ConnectToShard(s byte) {
+func (h *Map) ConnectToShard(s byte) {
 	h.connected = append(h.connected, s)
 }
 
-func (h *HighwayMap) ConnectToShardOfPeer(p peer.AddrInfo) {
+func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
 	for _, s := range h.Supports[p.ID] {
 		h.ConnectToShard(s)
 	}
 }
 
 // IsEnlisted checks if a peer has already registered as a valid highway
-func (h *HighwayMap) IsEnlisted(p peer.AddrInfo) bool {
+func (h *Map) IsEnlisted(p peer.AddrInfo) bool {
 	_, ok := h.Supports[p.ID]
 	return ok
 }
 
-func (h *HighwayMap) AddPeer(p peer.AddrInfo, supportShards []byte) {
+func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
 	// TODO(@0xbunyip): serialize all access to prevent race condition
 
 	mcopy := func(b []byte) []byte { // Create new slice and copy

@@ -76,7 +76,7 @@ func ProcessNPublishDataFromTopic(
 ) error {
 	// logger.Info("ProcessNPublishDataFromTopic")
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
-	logger.Info(topicReceived, msgType)
+	// logger.Info(topicReceived, msgType)
 	switch msgType {
 	case topic.CmdBlockBeacon: //, topic.CmdBlockShard, topic.CmdBlkShardToBeacon: //, topic.CmdAddr:
 		// logger.Infof("Process and publish blockbeacon to shards %v", supportCommittee)
@@ -86,7 +86,7 @@ func ProcessNPublishDataFromTopic(
 			}
 		}
 	case /*topic.CmdBlockShard, */ topic.CmdBlkShardToBeacon:
-		logger.Infof("Process and publish shard to beacon")
+		// logger.Infof("Process and publish shard to beacon")
 		go PeriodicalPublish(pubMachine, topic.CmdBlkShardToBeacon, common.BEACONID, data)
 	case topic.CmdCrossShard:
 		dstCommitteeID := topic.GetCommitteeIDOfTopic(topicReceived)
