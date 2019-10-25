@@ -45,10 +45,18 @@ type Host struct {
 }
 
 func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
-	b, err := crypto.ConfigDecodeKey(privKeyStr)
-	catchError(err)
-	privKey, err := crypto.UnmarshalPrivateKey(b)
-	catchError(err)
+	var privKey crypto.PrivKey
+	if len(privKeyStr) == 0 {
+		privKey, _, _ = crypto.GenerateKeyPair(crypto.ECDSA, 2048)
+		m, _ := crypto.MarshalPrivateKey(privKey)
+		encoded := crypto.ConfigEncodeKey(m)
+		fmt.Println("encoded libp2p key:", encoded)
+	} else {
+		b, err := crypto.ConfigDecodeKey(privKeyStr)
+		catchError(err)
+		privKey, err = crypto.UnmarshalPrivateKey(b)
+		catchError(err)
+	}
 
 	listenAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", pubIP, port))
 	catchError(err)

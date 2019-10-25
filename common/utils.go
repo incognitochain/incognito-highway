@@ -47,6 +47,12 @@ func (pubKey *CommitteePublicKey) MiningPublicKey() (string, error) {
 }
 
 func GetCommitteeIDOfValidator(validator string) int {
+	// TODO(0xbunyip): remove hardcode here (testing)
+	st1 := "1Eh5UZjDSUsdofnToKSELNz24rUfKgdsf3JubsetDQYscHHWERnQcVUxee2SsN4W1D8kdBwGdxmHM8FKUJieTEeowQBi4XJmAYhMc7Kmu19QeovmbLg9uvqch7Mh9ZDZ2vLBBi2iLzy6UQc4Bn5rRS9VdQC4jzrUrCFQqgjoL7QHnDascP7jNBB4iucn55gJgPVGsBAP3BuZcTkphpriLpZYk3f6hdWwb2P8EG5WpY8xWzSHGTxgoNZVgJTXVA78iK8d4ZJpVt3zHqTN9TXjpsJ7rRtHZrvK588meLUkk55kdbQnpm4Xg8fYWJ8jV7BiMmDGFWdYqhKiqvMNPgZ7MPNUbwiv6ugtABqGHJWcoYomQXAaaLz5EQ"
+	if validator == st1 {
+		return 0
+	}
+
 	if id, exist := CommitteeGenesis[validator]; exist {
 		return int(id)
 	} else {
@@ -111,7 +117,7 @@ func InitGenesisCommitteeFromFile(filename string, numberOfShard, numberOfCandid
 			logger.Info(err)
 		} else {
 			pkString, _ := committeePK.MiningPublicKey()
-			MiningKeyByCommitteeKey[pkString] = key
+			MiningKeyByCommitteeKey[pkString] = key // TODO(@0xakk0r0kamui): MiningKeyByCommitteeKey => CommitteeKeyByMiningKey???
 		}
 	}
 	return nil

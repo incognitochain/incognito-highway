@@ -101,7 +101,7 @@ func (pubsub *PubSubManager) handleNewMsg(sub *p2pPubSub.Subscription, typeOfPro
 		if (err == nil) && (data != nil) {
 			switch typeOfProcessor {
 			case topic.DoNothing:
-				logger.Infof("Receive data from topic %v DoNothing", sub.Topic())
+				// logger.Infof("Receive data from topic %v DoNothing", sub.Topic())
 				continue
 			case topic.ProcessAndPublishAfter:
 				// logger.Infof("Receive data ProcessAndPublishAfter")
