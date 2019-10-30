@@ -4,11 +4,11 @@ import (
 	"context"
 	"highway/common"
 	logger "highway/customizelog"
-	"highway/p2p"
 	"highway/process"
 	"highway/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	grpc "google.golang.org/grpc"
 )
 
 func (s *Server) Register(
@@ -116,9 +116,7 @@ type Server struct {
 	hc *Client
 }
 
-func RegisterServer(h *p2p.Host, hc *Client) {
-	s := &Server{
-		hc: hc,
-	}
-	proto.RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
+func RegisterServer(gs *grpc.Server, hc *Client) {
+	s := &Server{hc: hc}
+	proto.RegisterHighwayServiceServer(gs, s)
 }

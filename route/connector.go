@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	logger "highway/customizelog"
-	"highway/p2p"
 	"highway/process"
 	"highway/proto"
 
+	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -30,23 +30,24 @@ type Connector struct {
 }
 
 func NewConnector(
-	h *p2p.Host,
+	h host.Host,
+	prtc *p2pgrpc.GRPCProtocol,
 	hmap *Map,
 	ps *process.PubSubManager,
 	masternode peer.ID,
 ) *Connector {
 	hc := &Connector{
-		host:       h.Host,
+		host:       h,
 		hmap:       hmap,
 		ps:         ps,
-		hws:        NewServer(h.GRPC), // GRPC server serving other highways
-		hwc:        NewClient(h.GRPC), // GRPC clients to other highways
+		hws:        NewServer(prtc), // GRPC server serving other highways
+		hwc:        NewClient(prtc), // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
 	}
 
 	// Register to receive notif when new connection is established
-	h.Host.Network().Notify((*notifiee)(hc))
+	h.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
 	hc.ps.GRPCSpecSub <- process.SubHandler{
