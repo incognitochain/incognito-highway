@@ -6,6 +6,7 @@ import (
 	logger "highway/customizelog"
 	"highway/process"
 	"highway/proto"
+	"log"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -174,6 +175,7 @@ func (no *notifiee) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (no *notifiee) ListenClose(network.Network, multiaddr.Multiaddr) {}
 func (no *notifiee) Connected(n network.Network, c network.Conn) {
 	// TODO(@0xbunyip): check if highway or node connection
+	log.Println("route/manager: new conn")
 }
 func (no *notifiee) Disconnected(network.Network, network.Conn)   {}
 func (no *notifiee) OpenedStream(network.Network, network.Stream) {}

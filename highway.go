@@ -23,6 +23,7 @@ func main() {
 	// Process proxy stream
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
 	chain.RegisterServer(proxyHost.GRPC.GetGRPCServer(), chain.NewClient(proxyHost.GRPC))
+	chain.RegisterNotification(proxyHost.Host)
 
 	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
 		logger.Error(err)
