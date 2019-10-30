@@ -31,7 +31,7 @@ func ManageChainConnections(h host.Host, prtc *p2pgrpc.GRPCProtocol) {
 	// Server and client instance to communicate to Incognito nodes
 	RegisterServer(m, prtc.GetGRPCServer(), NewClient(m, prtc))
 
-	h.Network().Notify((*notifiee)(m))
+	h.Network().Notify(m)
 	m.start()
 }
 
@@ -58,15 +58,27 @@ func (m *Manager) start() {
 	}
 }
 
-type notifiee Manager
+func (m *Manager) Listen(network.Network, multiaddr.Multiaddr)      {}
+func (m *Manager) ListenClose(network.Network, multiaddr.Multiaddr) {}
+func (m *Manager) Connected(n network.Network, c network.Conn)      {}
+func (m *Manager) OpenedStream(network.Network, network.Stream)     {}
+func (m *Manager) ClosedStream(network.Network, network.Stream)     {}
 
-func (no *notifiee) Listen(network.Network, multiaddr.Multiaddr)      {}
-func (no *notifiee) ListenClose(network.Network, multiaddr.Multiaddr) {}
-func (no *notifiee) Connected(n network.Network, c network.Conn)      {}
-func (no *notifiee) OpenedStream(network.Network, network.Stream)     {}
-func (no *notifiee) ClosedStream(network.Network, network.Stream)     {}
+func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
+	m.peers.Lock()
+	defer m.peers.Unlock()
 
-func (no *notifiee) Disconnected(network.Network, network.Conn) {
+	// Remove from m.peers to prevent Client from requesting later
+	for cid, peers := range m.peers.ids {
+		for i, pid := range peers {
+			if pid == conn.RemotePeer() {
+				l := len(peers)
+				peers[i], peers[l-1] = peers[l-1], peers[i]
+				m.peers.ids[cid] = peers
+				return
+			}
+		}
+	}
 }
 
 type PeerInfo struct {
