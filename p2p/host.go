@@ -1,11 +1,9 @@
 package p2p
 
 import (
-	"bufio"
 	"context"
 	crypto2 "crypto"
 	"fmt"
-	"log"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p"
@@ -13,14 +11,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
 )
-
-type PeerConn struct {
-	RemotePeer *Peer
-	RW         *bufio.ReadWriter
-}
 
 type Peer struct {
 	IP            string
@@ -86,18 +78,6 @@ func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
 
 	fmt.Println(selfPeer)
 	return node
-}
-
-func processPrint(sub *pubsub.Subscription) {
-	ctx := context.Background()
-	for {
-		msg, err := sub.Next(ctx)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		fmt.Println("[db] Receive message", msg)
-	}
 }
 
 func catchError(err error) {
