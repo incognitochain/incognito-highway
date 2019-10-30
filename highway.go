@@ -20,10 +20,11 @@ func main() {
 	}
 	config.printConfig()
 
-	// Process proxy stream
+	// New libp2p host
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
-	chain.RegisterServer(proxyHost.GRPC.GetGRPCServer(), chain.NewClient(proxyHost.GRPC))
-	chain.RegisterNotification(proxyHost.Host)
+
+	// Chain-facing connections
+	go chain.ManageChainConnections(proxyHost.Host, proxyHost.GRPC)
 
 	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
 		logger.Error(err)
@@ -38,7 +39,7 @@ func main() {
 
 	go process.GlobalPubsub.WatchingChain()
 
-	// Highway manager: connect cross shards
+	// Highway manager: connect cross highways
 	masterPeerID, err := peer.IDB58Decode(config.masternode)
 	if err != nil {
 		logger.Error(err)

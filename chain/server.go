@@ -44,7 +44,7 @@ func (s *Server) Register(
 	cid := common.GetCommitteeIDOfValidator(req.CommitteePublicKey)
 
 	if err == nil {
-		s.hc.NewPeers <- PeerInfo{ID: pid, CID: cid}
+		s.m.newPeers <- PeerInfo{ID: pid, CID: cid}
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}
@@ -113,10 +113,11 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 }
 
 type Server struct {
+	m  *Manager
 	hc *Client
 }
 
-func RegisterServer(gs *grpc.Server, hc *Client) {
-	s := &Server{hc: hc}
+func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
+	s := &Server{hc: hc, m: m}
 	proto.RegisterHighwayServiceServer(gs, s)
 }

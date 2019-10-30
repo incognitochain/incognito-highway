@@ -3,7 +3,6 @@ package chain
 import (
 	context "context"
 	"highway/common"
-	logger "highway/customizelog"
 	"highway/proto"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -94,42 +93,24 @@ func (hc *Client) getClientWithBlock(
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	// TODO(0xakk0r0kamui): choose client from peer state
-	if len(hc.peers[int(cid)]) < 1 {
+	peers := hc.m.GetPeers(cid)
+	if len(peers) < 1 {
 		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
 	}
-	return hc.peers[int(cid)][0], nil
-}
-
-type PeerInfo struct {
-	ID  peer.ID
-	CID int // CommitteeID
+	return peers[0], nil
 }
 
 type Client struct {
-	NewPeers chan PeerInfo
-
-	cc    *ClientConnector
-	peers map[int][]peer.ID
+	m  *Manager
+	cc *ClientConnector
 }
 
-func NewClient(pr *p2pgrpc.GRPCProtocol) *Client {
+func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol) *Client {
 	hc := &Client{
-		NewPeers: make(chan PeerInfo, 1000),
-		cc:       NewClientConnector(pr),
-		peers:    map[int][]peer.ID{},
+		m:  m,
+		cc: NewClientConnector(pr),
 	}
-	go hc.start()
 	return hc
-}
-
-func (hc *Client) start() {
-	for {
-		select {
-		case p := <-hc.NewPeers:
-			logger.Infof("Append new peer: cid = %v, pid = %v", p.CID, p.ID)
-			hc.peers[p.CID] = append(hc.peers[p.CID], p.ID)
-		}
-	}
 }
 
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
