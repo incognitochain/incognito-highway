@@ -79,6 +79,9 @@ func GetCommitteeIDOfTopic(topic string) byte {
 }
 
 func GetTopicForPubSub(msgType string, cID byte) string {
+	if isBroadcastMessage(msgType) {
+		return fmt.Sprintf("%s-%d-", msgType, cID)
+	}
 	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
 }
 

@@ -28,7 +28,6 @@ type PubSubManager struct {
 	OutSideMessage       chan string
 	followedTopic        []string
 	ForwardNow           chan p2pPubSub.Message
-	Msgs                 []*p2pPubSub.Subscription
 	SpecialPublishTicker *time.Ticker
 	BlockChainData       *ChainData
 }
@@ -47,7 +46,6 @@ func InitPubSub(
 	GlobalPubsub.GRPCMessage = make(chan string)
 	GlobalPubsub.GRPCSpecSub = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
-	GlobalPubsub.Msgs = make([]*p2pPubSub.Subscription, 0)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
 	GlobalPubsub.SupportShards = supportShards
 	GlobalPubsub.BlockChainData = chainData

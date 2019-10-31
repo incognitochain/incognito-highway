@@ -169,6 +169,9 @@ func (s *Server) generateResponseTopic(
 	*proto.MessageTopicPair,
 	error,
 ) {
+
+	// TODO Update this stupid code and the way to check duplicate sub message
+
 	var responseTopic []string
 	var actOfTopic []proto.MessageTopicPair_Action
 	topicGenerator := new(topic.InsideTopic)
@@ -181,12 +184,13 @@ func (s *Server) generateResponseTopic(
 		if err != nil {
 			return nil, err
 		}
-		responseTopic[common.NumberOfShard] = topicGenerator.GetTopic4ProxyPub()
+		// responseTopic[common.NumberOfShard] = topicGenerator.GetTopic4ProxyPub()
+		responseTopic[common.NumberOfShard] = topic.GetTopicForSub(false, msg, common.NumberOfShard)
 		actOfTopic[common.NumberOfShard] = proto.MessageTopicPair_SUB
 		for committeeID := common.NumberOfShard - 1; committeeID >= 0; committeeID-- {
 			topicGenerator.CommitteeID = byte(committeeID)
 			logger.Info(committeeID, len(responseTopic))
-			topic4HighwaySub := topicGenerator.GetTopic4ProxySub()
+			topic4HighwaySub := topic.GetTopicForSub(true, msg, byte(committeeID))
 			responseTopic[committeeID] = topic4HighwaySub
 			if !pubsubManager.HasTopic(topic4HighwaySub) {
 				pubsubManager.GRPCMessage <- topic4HighwaySub
@@ -200,7 +204,7 @@ func (s *Server) generateResponseTopic(
 		if err != nil {
 			return nil, err
 		}
-		topic4HighwaySub := topicGenerator.ToString()
+		topic4HighwaySub := topic.GetTopicForPubSub(msg, committeeID)
 		responseTopic[0] = topic4HighwaySub
 		if !pubsubManager.HasTopic(topic4HighwaySub) {
 			pubsubManager.GRPCMessage <- topic4HighwaySub
@@ -213,13 +217,14 @@ func (s *Server) generateResponseTopic(
 		if err != nil {
 			return nil, err
 		}
-		topic4HighwaySub := topicGenerator.GetTopic4ProxySub()
+		// topic4HighwaySub := topicGenerator.GetTopic4ProxySub()
+		topic4HighwaySub := topic.GetTopicForSub(true, msg, byte(committeeID))
 		responseTopic[0] = topic4HighwaySub
 		actOfTopic[0] = proto.MessageTopicPair_PUB
 		if !pubsubManager.HasTopic(topic4HighwaySub) {
 			pubsubManager.GRPCMessage <- topic4HighwaySub
 		}
-		responseTopic[1] = topicGenerator.GetTopic4ProxyPub()
+		responseTopic[1] = topic.GetTopicForSub(false, msg, byte(committeeID))
 		actOfTopic[1] = proto.MessageTopicPair_SUB
 	default:
 		return nil, errors.New("Unknown message type: " + msg)
