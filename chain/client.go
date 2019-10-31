@@ -3,13 +3,84 @@ package chain
 import (
 	context "context"
 	"highway/common"
+	logger "highway/customizelog"
+	"highway/process"
 	"highway/proto"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
 )
+
+func (hc *Client) GetBlockByHeight(
+	shardID int32,
+	specific bool,
+	from uint64,
+	to uint64,
+	heights []uint64,
+	fromCandidate string,
+) ([][]byte, error) {
+	client, err := hc.getClientWithPublicKey(fromCandidate)
+	if err != nil {
+		return nil, err
+	}
+	if shardID != -1 {
+		reply, err := client.GetBlockShardByHeight(
+			context.Background(),
+			&proto.GetBlockShardByHeightRequest{
+				Shard:      shardID,
+				Specific:   specific,
+				FromHeight: from,
+				ToHeight:   to,
+				Heights:    heights,
+				FromPool:   false,
+			},
+		)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			logger.Infof("Reply: %v", reply)
+			return reply.GetData(), nil
+		}
+	}
+
+	reply, err := client.GetBlockBeaconByHeight(
+		context.Background(),
+		&proto.GetBlockBeaconByHeightRequest{
+			Specific:   specific,
+			FromHeight: from,
+			ToHeight:   to,
+			Heights:    heights,
+			FromPool:   false,
+		},
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	} else {
+		logger.Infof("Reply: %v", reply)
+		return reply.GetData(), nil
+	}
+}
+
+func (hc *Client) getClientWithPublicKey(
+	committeePublicKey string,
+) (proto.HighwayServiceClient, error) {
+	peerID, exist := hc.chainData.PeerIDByCommitteePubkey[committeePublicKey]
+	if !exist {
+		logger.Infof("Committee Publickey %v", committeePublicKey)
+		PK := common.CommitteePublicKey{}
+		PK.FromString(committeePublicKey)
+		pkstring, _ := PK.MiningPublicKey()
+		logger.Infof("Committee Publickey by mining key %v", hc.chainData.CommitteeKeyByMiningKey[pkstring])
+		return nil, errors.Errorf("Can not find PeerID of this committee PublicKey %v", committeePublicKey)
+	}
+	client, err := hc.cc.GetServiceClient(peerID)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
 
 func (hc *Client) GetBlockShardByHeight(
 	shardID int32,
@@ -34,6 +105,35 @@ func (hc *Client) GetBlockShardByHeight(
 		},
 	)
 	// logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
+func (hc *Client) GetBlockShardToBeaconByHeight(
+	shardID int32,
+	specific bool,
+	from uint64,
+	to uint64,
+	heights []uint64,
+) ([][]byte, error) {
+	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
+	if err != nil {
+		return nil, err
+	}
+	reply, err := client.GetBlockShardToBeaconByHeight(
+		context.Background(),
+		&proto.GetBlockShardToBeaconByHeightRequest{
+			FromShard:  shardID,
+			Specific:   specific,
+			FromHeight: from,
+			ToHeight:   to,
+			Heights:    heights,
+			FromPool:   false,
+		},
+	)
+	logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -92,23 +192,27 @@ func (hc *Client) getClientWithBlock(
 }
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
-	// TODO(0xakk0r0kamui): choose client from peer state
 	peers := hc.m.GetPeers(cid)
 	if len(peers) < 1 {
 		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
 	}
+
+	// TODO(0xbunyip): choose connected peer that has blk
+	// peerID, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
 	return peers[0], nil
 }
 
 type Client struct {
-	m  *Manager
-	cc *ClientConnector
+	m         *Manager
+	cc        *ClientConnector
+	chainData *process.ChainData
 }
 
-func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol) *Client {
+func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol, incChainData *process.ChainData) *Client {
 	hc := &Client{
-		m:  m,
-		cc: NewClientConnector(pr),
+		m:         m,
+		cc:        NewClientConnector(pr),
+		chainData: incChainData,
 	}
 	return hc
 }

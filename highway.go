@@ -21,18 +21,16 @@ func main() {
 	}
 	config.printConfig()
 
+	chainData := new(process.ChainData)
+	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize)
+
 	// New libp2p host
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
 
 	// Chain-facing connections
-	go chain.ManageChainConnections(proxyHost.Host, proxyHost.GRPC)
+	go chain.ManageChainConnections(proxyHost.Host, proxyHost.GRPC, chainData)
 
-	if err := common.InitGenesisCommitteeFromFile("keylist.json", common.NumberOfShard+1, common.CommitteeSize); err != nil {
-		logger.Error(err)
-		return
-	}
-
-	if err := process.InitPubSub(proxyHost.Host, config.supportShards); err != nil {
+	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
 		logger.Error(err)
 		return
 	}

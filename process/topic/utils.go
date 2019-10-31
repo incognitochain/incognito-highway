@@ -1,10 +1,14 @@
 package topic
 
 import (
-	"encoding/hex"
+	"fmt"
+	"highway/common"
 	"sort"
+	"strconv"
 	"strings"
 )
+
+var TypeOfTopicProcessor map[string]byte
 
 func isBroadcastMessage(message string) bool {
 	if message == CmdBFT {
@@ -30,7 +34,7 @@ func InitTypeOfProcessor() {
 		switch mess {
 		case CmdPeerState:
 			TypeOfTopicProcessor[mess] = ProcessAndPublishAfter
-		case CmdBlockBeacon, CmdBlkShardToBeacon:
+		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard:
 			TypeOfTopicProcessor[mess] = ProcessAndPublish
 		default:
 			TypeOfTopicProcessor[mess] = DoNothing
@@ -40,7 +44,7 @@ func InitTypeOfProcessor() {
 
 func IsJustPubOrSubMsg(msg string) bool {
 	switch msg {
-	case CmdPeerState, CmdBlkShardToBeacon, CmdBlockBeacon, CmdCrossShard:
+	case CmdPeerState, CmdBlkShardToBeacon, CmdBlockBeacon, CmdCrossShard, CmdBlockShard:
 		return true
 	default:
 		return false
@@ -64,12 +68,37 @@ func GetMsgTypeOfTopic(topic string) string {
 	return topicElements[0]
 }
 
-// GetCommitteeIDOfTopic handle error later
+// GetCommitteeIDOfTopic handle error later TODO handle error pls
 func GetCommitteeIDOfTopic(topic string) byte {
 	topicElements := strings.Split(topic, "-")
 	if len(topicElements) == 0 {
 		return 0x00
 	}
-	bytesDecoded, _ := hex.DecodeString(topicElements[1])
-	return bytesDecoded[0]
+	bytesDecoded, _ := strconv.Atoi(topicElements[1])
+	return byte(bytesDecoded)
+}
+
+func GetTopicForPubSub(msgType string, cID byte) string {
+	if isBroadcastMessage(msgType) {
+		return fmt.Sprintf("%s-%d-", msgType, cID)
+	}
+	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
+}
+
+func GetTopicForPub(isHighway bool, msgType string, cID byte) string {
+	commonTopic := GetTopicForPubSub(msgType, cID)
+	if isHighway {
+		return commonTopic + NODESUB
+	} else {
+		return commonTopic + NODEPUB
+	}
+}
+
+func GetTopicForSub(isHighway bool, msgType string, cID byte) string {
+	commonTopic := GetTopicForPubSub(msgType, cID)
+	if !isHighway {
+		return commonTopic + NODESUB
+	} else {
+		return commonTopic + NODEPUB
+	}
 }

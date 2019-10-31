@@ -25,6 +25,11 @@ const (
 )
 
 const (
+	NODEPUB = "-nodepub"
+	NODESUB = "-nodesub"
+)
+
+const (
 	CmdGetBlockBeacon     = "getblkbeacon"
 	CmdGetBlockShard      = "getblkshard"
 	CmdGetCrossShard      = "getcrossshd"
@@ -73,5 +78,4 @@ var (
 		"bft",
 		"peerstate",
 	}
-	TypeOfTopicProcessor map[string]byte
 )
