@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	logger.SetConfFile("customizelog/config.conf")
 	config, err := GetProxyConfig()
 	if err != nil {
 		logger.Errorf("%+v", err)

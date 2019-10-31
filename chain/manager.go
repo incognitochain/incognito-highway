@@ -60,13 +60,16 @@ func (m *Manager) start() {
 
 func (m *Manager) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (m *Manager) ListenClose(network.Network, multiaddr.Multiaddr) {}
-func (m *Manager) Connected(n network.Network, c network.Conn)      {}
-func (m *Manager) OpenedStream(network.Network, network.Stream)     {}
-func (m *Manager) ClosedStream(network.Network, network.Stream)     {}
+func (m *Manager) Connected(n network.Network, c network.Conn) {
+	// logger.Println("chain/manager: new conn")
+}
+func (m *Manager) OpenedStream(network.Network, network.Stream) {}
+func (m *Manager) ClosedStream(network.Network, network.Stream) {}
 
 func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	m.peers.Lock()
 	defer m.peers.Unlock()
+	logger.Info("Peer disconnected:", conn.RemotePeer().String())
 
 	// Remove from m.peers to prevent Client from requesting later
 	for cid, peers := range m.peers.ids {
@@ -74,7 +77,8 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 			if pid == conn.RemotePeer() {
 				l := len(peers)
 				peers[i], peers[l-1] = peers[l-1], peers[i]
-				m.peers.ids[cid] = peers
+				m.peers.ids[cid] = peers[:l-1]
+				logger.Infof("Removed peer %s from shard %d, remaining %d peers", conn.RemotePeer().String(), cid, l-1)
 				return
 			}
 		}
