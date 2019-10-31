@@ -50,12 +50,42 @@ func (m *Manager) start() {
 	for {
 		select {
 		case p := <-m.newPeers:
-			logger.Infof("Append new peer: cid = %v, pid = %v", p.CID, p.ID)
-			m.peers.Lock()
-			m.peers.ids[p.CID] = append(m.peers.ids[p.CID], p.ID)
-			m.peers.Unlock()
+			m.addNewPeer(p.ID, p.CID)
 		}
 	}
+}
+
+func (m *Manager) addNewPeer(pid peer.ID, cid int) {
+	m.peers.Lock()
+	defer m.peers.Unlock()
+
+	// Remove from previous lists
+	m.peers.ids = remove(m.peers.ids, pid)
+
+	// Append to list
+	m.peers.ids[cid] = append(m.peers.ids[cid], pid)
+	logger.Infof("Appended new peer to shard %d, pid = %v", cid, pid)
+}
+
+func remove(ids map[int][]peer.ID, rid peer.ID) map[int][]peer.ID {
+	for cid, peers := range ids {
+		k := 0
+		for _, pid := range peers {
+			if pid == rid {
+				continue
+			}
+			peers[k] = pid
+			k++
+		}
+
+		if k < len(peers) {
+			logger.Infof("Removed peer %s from shard %d, remaining %d peers", rid.String(), cid, k)
+		}
+
+		ids[cid] = peers[:k]
+
+	}
+	return ids
 }
 
 func (m *Manager) Listen(network.Network, multiaddr.Multiaddr)      {}
@@ -69,20 +99,11 @@ func (m *Manager) ClosedStream(network.Network, network.Stream) {}
 func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	m.peers.Lock()
 	defer m.peers.Unlock()
-	logger.Info("Peer disconnected:", conn.RemotePeer().String())
+	pid := conn.RemotePeer()
+	logger.Info("Peer disconnected:", pid.String())
 
 	// Remove from m.peers to prevent Client from requesting later
-	for cid, peers := range m.peers.ids {
-		for i, pid := range peers {
-			if pid == conn.RemotePeer() {
-				l := len(peers)
-				peers[i], peers[l-1] = peers[l-1], peers[i]
-				m.peers.ids[cid] = peers[:l-1]
-				logger.Infof("Removed peer %s from shard %d, remaining %d peers", conn.RemotePeer().String(), cid, l-1)
-				return
-			}
-		}
-	}
+	m.peers.ids = remove(m.peers.ids, pid)
 }
 
 type PeerInfo struct {
