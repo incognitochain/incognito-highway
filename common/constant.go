@@ -10,8 +10,8 @@ type MiningPublicKey map[string][]byte
 var (
 	SelfID string = "aaaaa"
 	//Remove soon
-	CommitteeGenesis        map[string]byte
-	MiningKeyByCommitteeKey map[string]string
+	// CommitteeGenesis        map[string]byte
+	// CommitteeKeyByMiningKey map[string]string
 )
 
 const (
