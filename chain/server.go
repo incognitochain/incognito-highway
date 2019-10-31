@@ -18,7 +18,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	logger.Infof("Receive new request from %v via gRPC", req.GetCommitteePublicKey())
+	logger.Infof("Receive new request from %v via gRPC", req.GetPeerID())
 	pairs := []*proto.MessageTopicPair{}
 	var err error
 	var pair *proto.MessageTopicPair
@@ -36,7 +36,7 @@ func (s *Server) Register(
 		process.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &peerid)
 		pairs = append(pairs, pair)
 	}
-	logger.Info(pairs)
+	// logger.Info(pairs)
 	//	return &ProxyRegisterResponse{Pair: pairs}, nil
 
 	// Notify HighwayClient of a new peer to request data later if possible

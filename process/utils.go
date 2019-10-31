@@ -2,7 +2,6 @@ package process
 
 import (
 	"errors"
-	fmt "fmt"
 	"highway/common"
 	"highway/process/topic"
 	"highway/proto"
@@ -40,7 +39,7 @@ func GenerateResponseTopic(pubsubManager *PubSubManager, nodePK, msg string) (*p
 		actOfTopic[common.NumberOfShard] = proto.MessageTopicPair_SUB
 		for committeeID := common.NumberOfShard - 1; committeeID >= 0; committeeID-- {
 			topicGenerator.CommitteeID = byte(committeeID)
-			fmt.Println(committeeID, len(responseTopic))
+			// fmt.Println(committeeID, len(responseTopic))
 			responseTopic[committeeID] = topicGenerator.GetTopic4ProxySub()
 			pubsubManager.GRPCMessage <- responseTopic[committeeID]
 			actOfTopic[committeeID] = proto.MessageTopicPair_PUB
