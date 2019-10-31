@@ -1,6 +1,7 @@
 package process
 
 import (
+	"bytes"
 	"context"
 	"highway/common"
 	logger "highway/customizelog"
@@ -65,9 +66,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 				continue
 			}
 			typeOfProcessor := topic.GetTypeOfProcess(newTopic)
-			logger.Infof("Topic %v, Type of processor %v", newTopic, typeOfProcessor)
 			logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
-			pubsub.Msgs = append(pubsub.Msgs, subch)
 			go pubsub.handleNewMsg(subch, typeOfProcessor)
 		case newGRPCSpecSub := <-pubsub.GRPCSpecSub:
 			subch, err := pubsub.FloodMachine.Subscribe(newGRPCSpecSub.Topic)
@@ -76,11 +75,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 				logger.Info(err)
 				continue
 			}
-			// typeOfProcessor := topic.GetTypeOfProcess(newTopic)
 			logger.Infof("Received new special sub from GRPC, topic: %v", newGRPCSpecSub.Topic)
-
-			// logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
-			// pubsub.Msgs = append(pubsub.Msgs, subch)
 			go newGRPCSpecSub.Handler(subch)
 		case <-pubsub.SpecialPublishTicker.C:
 			go pubsub.PublishPeerStateToNode()
@@ -167,6 +162,9 @@ func (pubsub *PubSubManager) genPubTopicFromReceivedTopic(topicReceived string) 
 func (pubsub *PubSubManager) PublishPeerStateToNode() {
 	listStateData := [][]byte{}
 	for cID, committeeState := range pubsub.BlockChainData.ListMsgPeerStateOfShard {
+		if bytes.IndexByte(pubsub.SupportShards, cID) == -1 {
+			continue
+		}
 		pubTopic := topic.GetTopicForPub(true, topic.CmdPeerState, cID)
 		for _, stateData := range committeeState {
 			listStateData = append(listStateData, stateData)

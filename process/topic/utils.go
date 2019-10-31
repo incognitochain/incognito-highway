@@ -1,10 +1,10 @@
 package topic
 
 import (
-	"encoding/hex"
 	"fmt"
 	"highway/common"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -34,7 +34,7 @@ func InitTypeOfProcessor() {
 		switch mess {
 		case CmdPeerState:
 			TypeOfTopicProcessor[mess] = ProcessAndPublishAfter
-		case CmdBlockBeacon, CmdBlkShardToBeacon:
+		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard:
 			TypeOfTopicProcessor[mess] = ProcessAndPublish
 		default:
 			TypeOfTopicProcessor[mess] = DoNothing
@@ -68,18 +68,18 @@ func GetMsgTypeOfTopic(topic string) string {
 	return topicElements[0]
 }
 
-// GetCommitteeIDOfTopic handle error later
+// GetCommitteeIDOfTopic handle error later TODO handle error pls
 func GetCommitteeIDOfTopic(topic string) byte {
 	topicElements := strings.Split(topic, "-")
 	if len(topicElements) == 0 {
 		return 0x00
 	}
-	bytesDecoded, _ := hex.DecodeString(topicElements[1])
-	return bytesDecoded[0]
+	bytesDecoded, _ := strconv.Atoi(topicElements[1])
+	return byte(bytesDecoded)
 }
 
 func GetTopicForPubSub(msgType string, cID byte) string {
-	return fmt.Sprintf("%s-%x-%s", msgType, cID, common.SelfID)
+	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
 }
 
 func GetTopicForPub(isHighway bool, msgType string, cID byte) string {

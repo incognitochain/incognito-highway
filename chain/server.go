@@ -154,14 +154,9 @@ func (s *Server) processListWantedMessageOfPeer(
 		pair, err := s.generateResponseTopic(&process.GlobalPubsub, committeeID, m)
 		if err != nil {
 			logger.Infof("generateResponseTopic failed, error: %v", err.Error())
-			pair = &proto.MessageTopicPair{
-				Message: m,
-				Topic:   []string{},
-				Act:     []proto.MessageTopicPair_Action{},
-			}
-			return nil, err
+		} else {
+			pairs = append(pairs, pair)
 		}
-		pairs = append(pairs, pair)
 	}
 	return pairs, nil
 }

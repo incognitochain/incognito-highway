@@ -72,7 +72,7 @@ func (hc *Client) getClientWithPublicKey(
 		PK := common.CommitteePublicKey{}
 		PK.FromString(committeePublicKey)
 		pkstring, _ := PK.MiningPublicKey()
-		logger.Infof("Committee Publickey by mining key %v", common.MiningKeyByCommitteeKey[pkstring])
+		logger.Infof("Committee Publickey by mining key %v", hc.chainData.CommitteeKeyByMiningKey[pkstring])
 		return nil, errors.Errorf("Can not find PeerID of this committee PublicKey %v", committeePublicKey)
 	}
 	client, err := hc.cc.GetServiceClient(peerID)

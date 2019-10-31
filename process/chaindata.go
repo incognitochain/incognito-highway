@@ -22,7 +22,7 @@ type ChainData struct {
 	CommitteePubkeyByPeerID   map[peer.ID]string
 	PeerIDByCommitteePubkey   map[string]peer.ID
 	ShardByCommitteePublicKey map[string]byte
-	MiningKeyByCommitteeKey   map[string]string
+	CommitteeKeyByMiningKey   map[string]string
 	Locker                    *sync.RWMutex
 }
 
@@ -41,7 +41,7 @@ func (chainData *ChainData) Init(
 	chainData.CommitteePubkeyByPeerID = map[peer.ID]string{}
 	chainData.PeerIDByCommitteePubkey = map[string]peer.ID{}
 	chainData.ShardByCommitteePublicKey = map[string]byte{}
-	chainData.MiningKeyByCommitteeKey = map[string]string{}
+	chainData.CommitteeKeyByMiningKey = map[string]string{}
 	err := chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
 	if err != nil {
 		return err
@@ -70,16 +70,16 @@ func (chainData *ChainData) GetCommitteeIDOfValidator(
 			return 0, errors.New("Candidate " + validator + " not found 1")
 		}
 
-		if fullKey, ok := chainData.MiningKeyByCommitteeKey[validatorMiningPK]; ok {
+		if fullKey, ok := chainData.CommitteeKeyByMiningKey[validatorMiningPK]; ok {
 			if fullKeyID, isExist := chainData.ShardByCommitteePublicKey[fullKey]; isExist {
 				return fullKeyID, nil
 			} else {
-				logger.Infof("MiningKeyByCommitteeKey %v", chainData.ShardByCommitteePublicKey)
+				logger.Infof("CommitteeKeyByMiningKey %v", chainData.ShardByCommitteePublicKey)
 			}
 		} else {
-			logger.Infof("MiningKeyOfUser %v, len MiningKeyByCommitteeKey %v", validatorMiningPK, len(chainData.MiningKeyByCommitteeKey))
+			logger.Infof("MiningKeyOfUser %v, len CommitteeKeyByMiningKey %v", validatorMiningPK, len(chainData.CommitteeKeyByMiningKey))
 			i := 0
-			for key, value := range chainData.MiningKeyByCommitteeKey {
+			for key, value := range chainData.CommitteeKeyByMiningKey {
 				i++
 				logger.Infof("First 4 candidate in keylist:\n MiningKey:%v \nCommitteeKey: %v", key, value)
 				if i == 5 {
@@ -115,7 +115,7 @@ func (chainData *ChainData) GetPeerHasBlk(
 			if peerID, ok := chainData.PeerIDByCommitteePubkey[committeePublicKey]; ok {
 				return &peerID, nil
 			} else {
-				return nil, errors.New("Committee publickey not found in PeerID map")
+				logger.Warnf("Committee publickey %v not found in PeerID map", committeePublicKey)
 			}
 		}
 
@@ -146,7 +146,7 @@ func (chainData *ChainData) GetPeerIDOfValidator(
 		if err != nil {
 			return nil, errors.New("Peer ID for this candidate " + validator + " not found")
 		}
-		if fullKey, ok := chainData.MiningKeyByCommitteeKey[validatorMiningPK]; ok {
+		if fullKey, ok := chainData.CommitteeKeyByMiningKey[validatorMiningPK]; ok {
 
 			if peerID, exist := chainData.PeerIDByCommitteePubkey[fullKey]; exist {
 				return &peerID, nil
@@ -175,7 +175,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	chainData.Locker.Lock()
 	defer chainData.Locker.Unlock()
 	chainData.ShardByCommitteePublicKey = map[string]byte{}
-	chainData.MiningKeyByCommitteeKey = map[string]string{}
+	chainData.CommitteeKeyByMiningKey = map[string]string{}
 	//#region Reading genesis committee key from keylist.json
 	keyListFromFile := common.KeyList{}
 	if filename != "" {
@@ -216,10 +216,10 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 		} else {
 			pkString, _ := committeePK.MiningPublicKey()
 			logger.Info(pkString)
-			chainData.MiningKeyByCommitteeKey[pkString] = key
+			chainData.CommitteeKeyByMiningKey[pkString] = key
 		}
 	}
-	logger.Info("Result of init key %v", len(chainData.MiningKeyByCommitteeKey))
+	logger.Info("Result of init key %v", len(chainData.CommitteeKeyByMiningKey))
 	return nil
 }
 
@@ -265,13 +265,14 @@ func (chainData *ChainData) UpdatePeerState(publisher string, data []byte) error
 	}
 	chainData.Locker.Unlock()
 
-	for committeeID, committeeState := range chainData.ListMsgPeerStateOfShard {
-		err := chainData.UpdateCommitteeState(committeeID, &committeeState)
-		if err != nil {
-			logger.Error(err)
-			return nil
-		}
+	committeeState := chainData.ListMsgPeerStateOfShard[committeeID]
+	err = chainData.UpdateCommitteeState(committeeID, &committeeState)
+	if err != nil {
+		logger.Error(err)
+		return nil
 	}
+	// for committeeID, committeeState := range chainData.ListMsgPeerStateOfShard {
+	// }
 	return nil
 }
 
