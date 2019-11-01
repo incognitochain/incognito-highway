@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	fmt "fmt"
 	"highway/common"
@@ -10,8 +11,10 @@ import (
 	"sync"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/wire"
 	peer "github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 )
 
@@ -23,12 +26,15 @@ type ChainData struct {
 	ShardByCommitteePublicKey map[string]byte
 	CommitteeKeyByMiningKey   map[string]string
 	Locker                    *sync.RWMutex
+
+	masternode peer.ID
 }
 
 func (chainData *ChainData) Init(
 	filename string,
 	numberOfShard,
 	numberOfCandidate int,
+	masternode peer.ID,
 ) error {
 	logger.Info("Init chaindata")
 	chainData.ListMsgPeerStateOfShard = map[byte]CommitteeState{}
@@ -41,6 +47,7 @@ func (chainData *ChainData) Init(
 	chainData.PeerIDByCommitteePubkey = map[string]peer.ID{}
 	chainData.ShardByCommitteePublicKey = map[string]byte{}
 	chainData.CommitteeKeyByMiningKey = map[string]string{}
+	chainData.masternode = masternode
 	err := chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
 	if err != nil {
 		return err
@@ -172,10 +179,8 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	numberOfShard,
 	numberOfCandidate int,
 ) error {
-	chainData.Locker.Lock()
-	defer chainData.Locker.Unlock()
-	chainData.ShardByCommitteePublicKey = map[string]byte{}
-	chainData.CommitteeKeyByMiningKey = map[string]string{}
+	logger.Infof("NumberOfShard %v, NumberOfCandidate %v", numberOfShard, numberOfCandidate)
+
 	//#region Reading genesis committee key from keylist.json
 	keyListFromFile := common.KeyList{}
 	if filename != "" {
@@ -192,22 +197,38 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 			return err
 		}
 	}
-
-	for i := 0; i < numberOfCandidate; i++ {
-		if i < len(keyListFromFile.Bc) {
-			chainData.ShardByCommitteePublicKey[keyListFromFile.Bc[i].CommitteePubKey] = common.BEACONID
-		}
-	}
-	logger.Infof("NumberOfShard %v, NumberOfCandidate %v", numberOfShard, numberOfCandidate)
-	for j := 0; j < numberOfShard; j++ {
-		for i := 0; i < numberOfCandidate; i++ {
-			if i < len(keyListFromFile.Sh[j]) {
-				chainData.ShardByCommitteePublicKey[keyListFromFile.Sh[j][i].CommitteePubKey] = byte(j)
-			}
-		}
-	}
 	//#endregion Reading genesis committee key from keylist.json
+
+	// Cut off keylist.json and update
+	keyListFromFile.Bc = keyListFromFile.Bc[:numberOfCandidate]
+	for k := range keyListFromFile.Sh {
+		if k >= numberOfShard {
+			delete(keyListFromFile.Sh, k)
+		}
+	}
+	for j := range keyListFromFile.Sh {
+		keyListFromFile.Sh[j] = keyListFromFile.Sh[j][:numberOfCandidate]
+	}
+	chainData.updateCommitteePublicKey(&keyListFromFile)
+
 	logger.Infof("Result of reading from file:\nLen of keyListFromFile:\n\tBeacon %v\n\tShard: %v\nlen of ShardByCommittee %v", len(keyListFromFile.Bc), len(keyListFromFile.Sh[0]), len(chainData.ShardByCommitteePublicKey))
+	logger.Info("Result of init key %v", len(chainData.CommitteeKeyByMiningKey))
+	return nil
+}
+
+// updateCommitteePublicKey saves the publickeys of all validators and update
+// the mapping from miningkey to publickey
+func (chainData *ChainData) updateCommitteePublicKey(keys *common.KeyList) {
+	chainData.Locker.Lock()
+	defer chainData.Locker.Unlock()
+	for _, val := range keys.Bc {
+		chainData.ShardByCommitteePublicKey[val.CommitteePubKey] = common.BEACONID
+	}
+	for j, vals := range keys.Sh {
+		for _, val := range vals {
+			chainData.ShardByCommitteePublicKey[val.CommitteePubKey] = byte(j)
+		}
+	}
 	for key := range chainData.ShardByCommitteePublicKey {
 		committeePK := new(common.CommitteePublicKey)
 		err := committeePK.FromString(key)
@@ -219,8 +240,6 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 			chainData.CommitteeKeyByMiningKey[pkString] = key
 		}
 	}
-	logger.Info("Result of init key %v", len(chainData.CommitteeKeyByMiningKey))
-	return nil
 }
 
 func (chainData *ChainData) UpdateCommitteeState(
@@ -293,4 +312,52 @@ func newChainStateFromMsgPeerState(
 		BestStateHash: blkChainState.BestStateHash,
 		BlockHash:     blkChainState.BlockHash,
 	}
+}
+
+// ProcessChainCommittee receives all messages containing the new
+// committee published by masternode and update the list of committee members
+func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
+	ctx := context.Background()
+	for {
+		msg, err := sub.Next(ctx)
+		logger.Info("Received new committee")
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+
+		// TODO(@0xbunyip): check if msg.From can be manipulated by forwarder
+		if peer.ID(msg.From) != chainData.masternode {
+			from := peer.IDB58Encode(peer.ID(msg.From))
+			exp := peer.IDB58Encode(chainData.masternode)
+			logger.Warnf("Received NewCommittee from unauthorized source, expect from %+v, got from %+v, data %+v", from, exp, msg.Data)
+			continue
+		}
+
+		logger.Info("Saving new committee")
+		comm := &incognitokey.ChainCommittee{}
+		if err := json.Unmarshal(msg.Data, comm); err != nil {
+			logger.Error(err)
+			continue
+		}
+
+		// Update chain committee
+		keys := getKeyListFromMessage(comm)
+		chainData.updateCommitteePublicKey(keys)
+	}
+}
+
+func getKeyListFromMessage(comm *incognitokey.ChainCommittee) *common.KeyList {
+	// TODO(@0xbunyip): handle epoch
+	keys := &common.KeyList{Sh: map[int][]common.Key{}}
+	for _, k := range comm.BeaconCommittee {
+		keys.Bc = append(keys.Bc, common.Key{CommitteePubKey: k.IncPubKey})
+	}
+
+	for s, vals := range comm.AllShardCommittee {
+		for _, val := range vals {
+			keys.Sh[int(s)] = append(keys.Sh[int(s)], common.Key{CommitteePubKey: val.IncPubKey})
+		}
+	}
+	return keys
 }

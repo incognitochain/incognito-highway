@@ -21,9 +21,14 @@ func main() {
 		return
 	}
 	config.printConfig()
+	masterPeerID, err := peer.IDB58Decode(config.masternode)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
 
 	chainData := new(process.ChainData)
-	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize)
+	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize, masterPeerID)
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
@@ -39,12 +44,13 @@ func main() {
 
 	go process.GlobalPubsub.WatchingChain()
 
-	// Highway manager: connect cross highways
-	masterPeerID, err := peer.IDB58Decode(config.masternode)
-	if err != nil {
-		logger.Error(err)
-		return
+	// Subscribe to receive new committee
+	process.GlobalPubsub.GRPCSpecSub <- process.SubHandler{
+		Topic:   "chain_committee",
+		Handler: chainData.ProcessChainCommitteeMsg,
 	}
+
+	// Highway manager: connect cross highways
 	h := route.NewManager(
 		config.supportShards,
 		config.bootstrap,
