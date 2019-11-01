@@ -4,7 +4,6 @@ package main
 import (
 	"highway/chain"
 	"highway/common"
-	logger "highway/customizelog"
 	"highway/p2p"
 	"highway/process"
 	"highway/route"
@@ -13,7 +12,9 @@ import (
 )
 
 func main() {
-	logger.SetConfFile("customizelog/config.conf")
+	// Setup logging
+	initLogger()
+
 	config, err := GetProxyConfig()
 	if err != nil {
 		logger.Errorf("%+v", err)
@@ -34,7 +35,7 @@ func main() {
 		logger.Error(err)
 		return
 	}
-	logger.Println("Init pubsub ok")
+	logger.Info("Init pubsub ok")
 
 	go process.GlobalPubsub.WatchingChain()
 

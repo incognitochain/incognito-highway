@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"highway/common"
-	logger "highway/customizelog"
 	"highway/process"
 	"highway/proto"
 	"time"
