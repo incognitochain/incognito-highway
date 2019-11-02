@@ -166,9 +166,11 @@ func (pubsub *PubSubManager) PublishPeerStateToNode() {
 		for _, stateData := range committeeState {
 			listStateData = append(listStateData, stateData)
 		}
-		err := PublishDataWithTopic(pubsub.FloodMachine, []string{pubTopic}, listStateData, OneTopicNData)
-		if err != nil {
-			logger.Errorf("Publish Peer state to Committee %v return error %v", cID, err)
+		if len(listStateData) > 0 {
+			err := PublishDataWithTopic(pubsub.FloodMachine, []string{pubTopic}, listStateData, OneTopicNData)
+			if err != nil {
+				logger.Errorf("Publish Peer state to Committee %v return error %v", cID, err)
+			}
 		}
 	}
 }

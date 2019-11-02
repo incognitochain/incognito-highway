@@ -76,7 +76,6 @@ func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
 		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost),
 	}
 
-	fmt.Println(selfPeer)
 	return node
 }
 

@@ -212,7 +212,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	chainData.updateCommitteePublicKey(&keyListFromFile)
 
 	logger.Infof("Result of reading from file:\nLen of keyListFromFile:\n\tBeacon %v\n\tShard: %v\nlen of ShardByCommittee %v", len(keyListFromFile.Bc), len(keyListFromFile.Sh[0]), len(chainData.ShardByCommitteePublicKey))
-	logger.Info("Result of init key %v", len(chainData.CommitteeKeyByMiningKey))
+	logger.Infof("Result of init key %v", len(chainData.CommitteeKeyByMiningKey))
 	return nil
 }
 

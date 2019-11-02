@@ -3,13 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"highway/common"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
 )
-
-const NumShards = 8
 
 type ProxyConfig struct {
 	proxyPort     int
@@ -70,13 +69,13 @@ func parseSupportShards(s string) ([]byte, error) {
 	switch s {
 	case "all":
 		sup = append(sup, 255) // beacon
-		for i := byte(0); i < NumShards; i++ {
+		for i := byte(0); i < common.NumberOfShard; i++ {
 			sup = append(sup, i)
 		}
 	case "beacon":
 		sup = append(sup, 255) // beacon
 	case "shard":
-		for i := byte(0); i < NumShards; i++ {
+		for i := byte(0); i < common.NumberOfShard; i++ {
 			sup = append(sup, i)
 		}
 	default:
@@ -85,7 +84,7 @@ func parseSupportShards(s string) ([]byte, error) {
 			if err != nil {
 				return nil, errors.Wrapf(err, "invalid support shard: %v", v)
 			}
-			if j > NumShards || j < 0 {
+			if j > common.NumberOfShard || j < 0 {
 				return nil, errors.Errorf("invalid support shard: %v", v)
 			}
 			sup = append(sup, byte(j))

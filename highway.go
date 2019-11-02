@@ -28,7 +28,7 @@ func main() {
 	}
 
 	chainData := new(process.ChainData)
-	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize, masterPeerID)
+	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)

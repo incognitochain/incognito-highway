@@ -100,7 +100,7 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	m.peers.Lock()
 	defer m.peers.Unlock()
 	pid := conn.RemotePeer()
-	logger.Info("Peer disconnected:", pid.String())
+	logger.Infof("Peer disconnected: %s", pid.String())
 
 	// Remove from m.peers to prevent Client from requesting later
 	m.peers.ids = remove(m.peers.ids, pid)
