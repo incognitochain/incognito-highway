@@ -98,6 +98,7 @@ func (chainData *ChainData) GetPeerHasBlk(
 	*peer.ID,
 	error,
 ) {
+	// TODO(@0xakk0r0kamui): return list of peers
 	var exist bool
 	var committeeState map[string]ChainState
 	chainData.Locker.RLock()

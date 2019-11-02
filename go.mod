@@ -9,7 +9,6 @@ require (
 	github.com/incognitochain/incognito-chain v0.0.0-20191017044111-5fdcf578d845
 	github.com/libp2p/go-libp2p v0.3.1
 	github.com/libp2p/go-libp2p-core v0.2.2
-	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/multiformats/go-multihash v0.0.5

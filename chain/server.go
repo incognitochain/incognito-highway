@@ -2,15 +2,15 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"highway/common"
 	logger "highway/customizelog"
-	"highway/p2p"
 	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 func (s *Server) Register(
@@ -20,13 +20,13 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	logger.Infof("Receive new request from %v via gRPC", req.GetCommitteePublicKey())
+	logger.Infof("Receive new request from %v via gRPC", req.GetPeerID())
 	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
 	if err != nil {
 		return nil, err
 	}
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), committeeID, req.GetPeerID())
-	logger.Info(pairs)
+	// logger.Info(pairs)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *Server) Register(
 	cid := int(committeeID)
 
 	if err == nil {
-		s.hc.NewPeers <- PeerInfo{ID: pid, CID: cid}
+		s.m.newPeers <- PeerInfo{ID: pid, CID: cid}
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}
@@ -131,14 +131,13 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 }
 
 type Server struct {
+	m  *Manager
 	hc *Client
 }
 
-func RegisterServer(h *p2p.Host, hc *Client) {
-	s := &Server{
-		hc: hc,
-	}
-	proto.RegisterHighwayServiceServer(h.GRPC.GetGRPCServer(), s)
+func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
+	s := &Server{hc: hc, m: m}
+	proto.RegisterHighwayServiceServer(gs, s)
 }
 
 func (s *Server) processListWantedMessageOfPeer(

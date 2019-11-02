@@ -64,7 +64,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 				continue
 			}
 			typeOfProcessor := topic.GetTypeOfProcess(newTopic)
-			logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
+			// logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
 			go pubsub.handleNewMsg(subch, typeOfProcessor)
 		case newGRPCSpecSub := <-pubsub.GRPCSpecSub:
 			subch, err := pubsub.FloodMachine.Subscribe(newGRPCSpecSub.Topic)
@@ -73,7 +73,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 				logger.Info(err)
 				continue
 			}
-			logger.Infof("Received new special sub from GRPC, topic: %v", newGRPCSpecSub.Topic)
+			// logger.Infof("Received new special sub from GRPC, topic: %v", newGRPCSpecSub.Topic)
 			go newGRPCSpecSub.Handler(subch)
 		case <-pubsub.SpecialPublishTicker.C:
 			go pubsub.PublishPeerStateToNode()

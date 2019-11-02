@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"highway/common"
 	logger "highway/customizelog"
-	"highway/p2p"
 	"highway/process"
 	"highway/proto"
 	"time"
 
+	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
@@ -28,20 +29,22 @@ func NewManager(
 	supportShards []byte,
 	bootstrap []string,
 	masternode peer.ID,
-	h *p2p.Host,
+	h host.Host,
+	prtc *p2pgrpc.GRPCProtocol,
 ) *Manager {
 	// TODO(@0xbunyip): use bootstrap to get initial highways
 	p := peer.AddrInfo{
-		ID:    h.Host.ID(),
-		Addrs: h.Host.Addrs(),
+		ID:    h.ID(),
+		Addrs: h.Addrs(),
 	}
 	hmap := NewMap(p, supportShards)
 
 	hw := &Manager{
-		ID:   h.Host.ID(),
+		ID:   h.ID(),
 		hmap: hmap,
 		hc: NewConnector(
 			h,
+			prtc,
 			hmap,
 			&process.GlobalPubsub,
 			masternode,

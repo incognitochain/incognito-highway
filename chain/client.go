@@ -192,49 +192,29 @@ func (hc *Client) getClientWithBlock(
 }
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
-	// TODO(0xakk0r0kamui): choose client from peer state
-	if len(hc.peers[int(cid)]) < 1 {
+	peers := hc.m.GetPeers(cid)
+	if len(peers) < 1 {
 		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
 	}
-	peerID, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
-	if err != nil {
-		return peer.ID(""), err
-	}
-	return *peerID, nil
-	// return hc.peers[int(cid)][0], nil
-}
 
-type PeerInfo struct {
-	ID  peer.ID
-	CID int // CommitteeID
+	// TODO(0xbunyip): choose connected peer that has blk
+	// peerID, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
+	return peers[0], nil
 }
 
 type Client struct {
-	NewPeers  chan PeerInfo
-	chainData *process.ChainData
+	m         *Manager
 	cc        *ClientConnector
-	peers     map[int][]peer.ID
+	chainData *process.ChainData
 }
 
-func NewClient(pr *p2pgrpc.GRPCProtocol, incChainData *process.ChainData) *Client {
+func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol, incChainData *process.ChainData) *Client {
 	hc := &Client{
-		NewPeers:  make(chan PeerInfo, 1000),
-		chainData: incChainData,
+		m:         m,
 		cc:        NewClientConnector(pr),
-		peers:     map[int][]peer.ID{},
+		chainData: incChainData,
 	}
-	go hc.start()
 	return hc
-}
-
-func (hc *Client) start() {
-	for {
-		select {
-		case p := <-hc.NewPeers:
-			logger.Infof("Append new peer: cid = %v, pid = %v", p.CID, p.ID)
-			hc.peers[p.CID] = append(hc.peers[p.CID], p.ID)
-		}
-	}
 }
 
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {

@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	logger.SetConfFile("customizelog/config.conf")
 	config, err := GetProxyConfig()
 	if err != nil {
 		logger.Errorf("%+v", err)
@@ -22,10 +23,13 @@ func main() {
 
 	chainData := new(process.ChainData)
 	chainData.Init("keylist.json", common.NumberOfShard+1, common.CommitteeSize)
-	// Process proxy stream
+
+	// New libp2p host
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
-	// process.RunHighwayServer(proxyHost, process.NewHighwayClient(proxyHost.GRPC, chainData))
-	chain.RegisterServer(proxyHost, chain.NewClient(proxyHost.GRPC, chainData))
+
+	// Chain-facing connections
+	go chain.ManageChainConnections(proxyHost.Host, proxyHost.GRPC, chainData)
+
 	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
 		logger.Error(err)
 		return
@@ -34,7 +38,7 @@ func main() {
 
 	go process.GlobalPubsub.WatchingChain()
 
-	// Highway manager: connect cross shards
+	// Highway manager: connect cross highways
 	masterPeerID, err := peer.IDB58Decode(config.masternode)
 	if err != nil {
 		logger.Error(err)
@@ -44,7 +48,8 @@ func main() {
 		config.supportShards,
 		config.bootstrap,
 		masterPeerID,
-		proxyHost,
+		proxyHost.Host,
+		proxyHost.GRPC,
 	)
 	go h.Start()
 
