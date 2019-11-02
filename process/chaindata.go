@@ -83,15 +83,15 @@ func (chainData *ChainData) GetCommitteeIDOfValidator(
 				logger.Infof("CommitteeKeyByMiningKey %v", chainData.ShardByCommitteePublicKey)
 			}
 		} else {
-			logger.Infof("MiningKeyOfUser %v, len CommitteeKeyByMiningKey %v", validatorMiningPK, len(chainData.CommitteeKeyByMiningKey))
-			i := 0
-			for key, value := range chainData.CommitteeKeyByMiningKey {
-				i++
-				logger.Infof("First 4 candidate in keylist:\n MiningKey:%v \nCommitteeKey: %v", key, value)
-				if i == 5 {
-					break
-				}
-			}
+			// logger.Infof("MiningKeyOfUser %v, len CommitteeKeyByMiningKey %v", validatorMiningPK, len(chainData.CommitteeKeyByMiningKey))
+			// i := 0
+			// for key, value := range chainData.CommitteeKeyByMiningKey {
+			// 	i++
+			// 	logger.Debugf("First 4 candidate in keylist:\n MiningKey:%v \nCommitteeKey: %v", key, value)
+			// 	if i == 5 {
+			// 		break
+			// 	}
+			// }
 		}
 	}
 	return 0, errors.New("Candidate " + validator + " not found 2")
@@ -233,7 +233,7 @@ func (chainData *ChainData) updateCommitteePublicKey(keys *common.KeyList) {
 		committeePK := new(common.CommitteePublicKey)
 		err := committeePK.FromString(key)
 		if err != nil {
-			logger.Info(err)
+			logger.Error(err)
 		} else {
 			pkString, _ := committeePK.MiningPublicKey()
 			// logger.Debug(pkString)
@@ -342,22 +342,34 @@ func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
 		}
 
 		// Update chain committee
-		keys := getKeyListFromMessage(comm)
+		keys, err := getKeyListFromMessage(comm)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
 		chainData.updateCommitteePublicKey(keys)
 	}
 }
 
-func getKeyListFromMessage(comm *incognitokey.ChainCommittee) *common.KeyList {
+func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, error) {
 	// TODO(@0xbunyip): handle epoch
 	keys := &common.KeyList{Sh: map[int][]common.Key{}}
 	for _, k := range comm.BeaconCommittee {
-		keys.Bc = append(keys.Bc, common.Key{CommitteePubKey: k.IncPubKey})
+		cpk, err := k.ToBase58()
+		if err != nil {
+			return nil, errors.Wrapf(err, "key: %+v", k)
+		}
+		keys.Bc = append(keys.Bc, common.Key{CommitteePubKey: cpk})
 	}
 
 	for s, vals := range comm.AllShardCommittee {
 		for _, val := range vals {
-			keys.Sh[int(s)] = append(keys.Sh[int(s)], common.Key{CommitteePubKey: val.IncPubKey})
+			cpk, err := val.ToBase58()
+			if err != nil {
+				return nil, errors.Wrapf(err, "key: %+v", val)
+			}
+			keys.Sh[int(s)] = append(keys.Sh[int(s)], common.Key{CommitteePubKey: cpk})
 		}
 	}
-	return keys
+	return keys, nil
 }
