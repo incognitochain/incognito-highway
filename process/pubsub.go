@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"highway/common"
-	logger "highway/customizelog"
 	"highway/process/topic"
 	"time"
 

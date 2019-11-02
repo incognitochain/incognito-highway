@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"highway/common"
-	logger "highway/customizelog"
 	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
@@ -20,7 +19,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	logger.Infof("Receive new request from %v via gRPC", req.GetPeerID())
+	logger.Debugf("Receive new request from %v via gRPC", req.GetPeerID())
 	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
 	if err != nil {
 		return nil, err
@@ -67,12 +66,12 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	logger.Println("Receive GetBlockShardByHash request")
+	logger.Debug("Receive GetBlockShardByHash request")
 	return nil, nil
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
-	// logger.Println("Receive GetBlockBeaconByHeight request")
+	// logger.Debug("Receive GetBlockBeaconByHeight request")
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -98,7 +97,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
-	logger.Println("Receive GetBlockCrossShardByHeight request")
+	logger.Debug("Receive GetBlockCrossShardByHeight request")
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
@@ -116,17 +115,17 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	logger.Println("Receive GetBlockBeaconByHash request")
+	logger.Debug("Receive GetBlockBeaconByHash request")
 	return nil, nil
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	logger.Println("Receive GetBlockCrossShardByHeight request")
+	logger.Debug("Receive GetBlockCrossShardByHeight request")
 	return nil, nil
 }
 
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
-	logger.Println("Receive GetBlockCrossShardByHash request")
+	logger.Debug("Receive GetBlockCrossShardByHash request")
 	return nil, nil
 }
 
@@ -188,7 +187,7 @@ func (s *Server) generateResponseTopic(
 		actOfTopic[common.NumberOfShard] = proto.MessageTopicPair_SUB
 		for committeeID := common.NumberOfShard - 1; committeeID >= 0; committeeID-- {
 			topicGenerator.CommitteeID = byte(committeeID)
-			logger.Info(committeeID, len(responseTopic))
+			// logger.Info(committeeID, len(responseTopic))
 			topic4HighwaySub := topic.GetTopicForSub(true, msg, byte(committeeID))
 			responseTopic[committeeID] = topic4HighwaySub
 			if !pubsubManager.HasTopic(topic4HighwaySub) {

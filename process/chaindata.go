@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	fmt "fmt"
 	"highway/common"
-	logger "highway/customizelog"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -216,7 +215,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 			logger.Info(err)
 		} else {
 			pkString, _ := committeePK.MiningPublicKey()
-			logger.Info(pkString)
+			// logger.Debug(pkString)
 			chainData.CommitteeKeyByMiningKey[pkString] = key
 		}
 	}

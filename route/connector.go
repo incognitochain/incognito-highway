@@ -3,7 +3,6 @@ package route
 import (
 	"context"
 	"encoding/json"
-	logger "highway/customizelog"
 	"highway/process"
 	"highway/proto"
 	"log"
@@ -144,7 +143,7 @@ func (hc *Connector) saveNewCommittee(sub *pubsub.Subscription) {
 	ctx := context.Background()
 	for {
 		msg, err := sub.Next(ctx)
-		logger.Println("Received new committee")
+		logger.Info("Received new committee")
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -158,7 +157,7 @@ func (hc *Connector) saveNewCommittee(sub *pubsub.Subscription) {
 			continue
 		}
 
-		logger.Println("Saving new committee")
+		logger.Info("Saving new committee")
 		comm := &incognitokey.ChainCommittee{}
 		if err := json.Unmarshal(msg.Data, comm); err != nil {
 			logger.Error(err)

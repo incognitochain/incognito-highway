@@ -1,7 +1,6 @@
 package chain
 
 import (
-	logger "highway/customizelog"
 	"highway/process"
 	"sync"
 

@@ -3,7 +3,6 @@ package topic
 import (
 	"errors"
 	"highway/common"
-	logger "highway/customizelog"
 )
 
 //TODO remove this file soon

@@ -2,7 +2,6 @@ package process
 
 import (
 	"fmt"
-	logger "highway/customizelog"
 
 	"github.com/pkg/errors"
 

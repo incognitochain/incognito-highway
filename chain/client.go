@@ -3,7 +3,6 @@ package chain
 import (
 	context "context"
 	"highway/common"
-	logger "highway/customizelog"
 	"highway/process"
 	"highway/proto"
 
