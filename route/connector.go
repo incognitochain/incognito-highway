@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"highway/process"
 	"highway/proto"
-	"log"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
-	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -53,13 +51,6 @@ func NewConnector(
 	hc.ps.GRPCSpecSub <- process.SubHandler{
 		Topic:   "highway_enlist",
 		Handler: hc.enlistHighways,
-	}
-
-	// Subscribe to receive new committee
-	// TODO(@0xbunyip): move logic updating committee to another object
-	hc.ps.GRPCSpecSub <- process.SubHandler{
-		Topic:   "chain_committee",
-		Handler: hc.saveNewCommittee,
 	}
 	return hc
 }
@@ -139,42 +130,13 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 	return nil
 }
 
-func (hc *Connector) saveNewCommittee(sub *pubsub.Subscription) {
-	ctx := context.Background()
-	for {
-		msg, err := sub.Next(ctx)
-		logger.Info("Received new committee")
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-
-		// TODO(@0xbunyip): check if msg.From can be manipulated by forwarder
-		if peer.ID(msg.From) != hc.masternode {
-			from := peer.IDB58Encode(peer.ID(msg.From))
-			exp := peer.IDB58Encode(hc.masternode)
-			logger.Warnf("Received NewCommittee from unauthorized source, expect from %+v, got from %+v, data %+v", from, exp, msg.Data)
-			continue
-		}
-
-		logger.Info("Saving new committee")
-		comm := &incognitokey.ChainCommittee{}
-		if err := json.Unmarshal(msg.Data, comm); err != nil {
-			logger.Error(err)
-			continue
-		}
-
-		// TOOD(@0xbunyip): update chain committee to ChainData here
-	}
-}
-
 type notifiee Connector
 
 func (no *notifiee) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (no *notifiee) ListenClose(network.Network, multiaddr.Multiaddr) {}
 func (no *notifiee) Connected(n network.Network, c network.Conn) {
 	// TODO(@0xbunyip): check if highway or node connection
-	log.Println("route/manager: new conn")
+	// log.Println("route/manager: new conn")
 }
 func (no *notifiee) Disconnected(network.Network, network.Conn)   {}
 func (no *notifiee) OpenedStream(network.Network, network.Stream) {}
