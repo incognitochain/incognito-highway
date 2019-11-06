@@ -5,10 +5,12 @@ import (
 	"highway/common"
 	"highway/process"
 	"highway/proto"
+	"sync"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/log"
 	grpc "google.golang.org/grpc"
 )
 
@@ -90,6 +92,7 @@ func (hc *Client) GetBlockShardByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
+		log.Warn("No client with blockshard, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardByHeight(
@@ -119,6 +122,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
+		log.Warn("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
@@ -132,7 +136,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 			FromPool:   false,
 		},
 	)
-	logger.Infof("Reply: %v", reply)
+	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -147,6 +151,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(common.BEACONID), specific, to, heights)
 	if err != nil {
+		log.Warn("No client with blockbeacon, from %v to %v", from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockBeaconByHeight(
@@ -218,7 +223,12 @@ func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol, incChainData *process.Chain
 
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
-	if _, ok := cc.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to cc.conns
+	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
+	cc.conns.Lock()
+	defer cc.conns.Unlock()
+	_, ok := cc.conns.connMap[peerID]
+
+	if !ok {
 		conn, err := cc.pr.Dial(
 			context.Background(),
 			peerID,
@@ -228,20 +238,24 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		cc.conns[peerID] = conn
+
+		cc.conns.connMap[peerID] = conn
 	}
-	client := proto.NewHighwayServiceClient(cc.conns[peerID])
+	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
 	return client, nil
 }
 
 type ClientConnector struct {
 	pr    *p2pgrpc.GRPCProtocol
-	conns map[peer.ID]*grpc.ClientConn
+	conns struct {
+		connMap map[peer.ID]*grpc.ClientConn
+		sync.RWMutex
+	}
 }
 
 func NewClientConnector(pr *p2pgrpc.GRPCProtocol) *ClientConnector {
-	return &ClientConnector{
-		pr:    pr,
-		conns: map[peer.ID]*grpc.ClientConn{},
-	}
+	connector := &ClientConnector{pr: pr}
+	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	connector.conns.RWMutex = sync.RWMutex{}
+	return connector
 }

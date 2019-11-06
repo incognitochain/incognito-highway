@@ -97,7 +97,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
-	logger.Debug("Receive GetBlockCrossShardByHeight request")
+	logger.Debug("Receive GetBlockShardToBeaconByHeight request")
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
@@ -111,7 +111,6 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 
 	// TODO(@0xbunyip): cache blocks
 	return &proto.GetBlockShardToBeaconByHeightResponse{Data: data}, nil
-	return nil, nil
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
