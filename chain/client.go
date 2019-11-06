@@ -10,7 +10,6 @@ import (
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	grpc "google.golang.org/grpc"
 )
 
@@ -92,7 +91,7 @@ func (hc *Client) GetBlockShardByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
-		log.Warn("No client with blockshard, shardID = %v, from %v to %v", shardID, from, to)
+		logger.Warnf("No client with blockshard, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardByHeight(
@@ -122,7 +121,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
-		log.Warn("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
+		logger.Warnf("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
@@ -143,6 +142,42 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	return reply.Data, nil
 }
 
+func (hc *Client) GetBlockCrossShardByHeight(
+	fromShard int32,
+	toShard int32,
+	specific bool,
+	fromHeight uint64,
+	toHeight uint64,
+	heights []uint64,
+	fromPool bool,
+) ([][]byte, error) {
+	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
+	// => request from peer of shard `fromShard`
+	client, err := hc.getClientWithBlock(int(fromShard), specific, toHeight, heights)
+	logger.Debugf("Requesting CrossShard block shard %v -> %v, height %v -> %v, %v, pool: %v", fromShard, toShard, fromHeight, toHeight, heights, fromPool)
+	if err != nil {
+		logger.Warnf("No client with blockCS, shard from = %v, to = %v, height from = %v, to = %v, heights = %v", fromShard, toShard, fromHeight, toHeight, heights)
+		return nil, err
+	}
+	reply, err := client.GetBlockCrossShardByHeight(
+		context.Background(),
+		&proto.GetBlockCrossShardByHeightRequest{
+			FromShard:  fromShard,
+			ToShard:    toShard,
+			Specific:   specific,
+			FromHeight: fromHeight,
+			ToHeight:   toHeight,
+			Heights:    heights,
+			FromPool:   fromPool,
+		},
+	)
+	// logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
 func (hc *Client) GetBlockBeaconByHeight(
 	specific bool,
 	from uint64,
@@ -151,7 +186,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(common.BEACONID), specific, to, heights)
 	if err != nil {
-		log.Warn("No client with blockbeacon, from %v to %v", from, to)
+		logger.Warnf("No client with blockbeacon, from %v to %v", from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockBeaconByHeight(
