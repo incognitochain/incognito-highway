@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package="process";
+option go_package="proto";
 
 message RegisterRequest {
     string CommitteePublicKey = 1;

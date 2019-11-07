@@ -5,6 +5,7 @@ import (
 	"highway/common"
 	"highway/process"
 	"highway/proto"
+	"sync"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -90,6 +91,7 @@ func (hc *Client) GetBlockShardByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
+		logger.Warnf("No client with blockshard, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardByHeight(
@@ -119,6 +121,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
+		logger.Warnf("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
@@ -132,7 +135,43 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 			FromPool:   false,
 		},
 	)
-	logger.Infof("Reply: %v", reply)
+	// logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
+func (hc *Client) GetBlockCrossShardByHeight(
+	fromShard int32,
+	toShard int32,
+	specific bool,
+	fromHeight uint64,
+	toHeight uint64,
+	heights []uint64,
+	fromPool bool,
+) ([][]byte, error) {
+	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
+	// => request from peer of shard `fromShard`
+	client, err := hc.getClientWithBlock(int(fromShard), specific, toHeight, heights)
+	logger.Debugf("Requesting CrossShard block shard %v -> %v, height %v -> %v, %v, pool: %v", fromShard, toShard, fromHeight, toHeight, heights, fromPool)
+	if err != nil {
+		logger.Warnf("No client with blockCS, shard from = %v, to = %v, height from = %v, to = %v, heights = %v", fromShard, toShard, fromHeight, toHeight, heights)
+		return nil, err
+	}
+	reply, err := client.GetBlockCrossShardByHeight(
+		context.Background(),
+		&proto.GetBlockCrossShardByHeightRequest{
+			FromShard:  fromShard,
+			ToShard:    toShard,
+			Specific:   specific,
+			FromHeight: fromHeight,
+			ToHeight:   toHeight,
+			Heights:    heights,
+			FromPool:   fromPool,
+		},
+	)
+	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -147,6 +186,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(common.BEACONID), specific, to, heights)
 	if err != nil {
+		logger.Warnf("No client with blockbeacon, from %v to %v", from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockBeaconByHeight(
@@ -218,7 +258,12 @@ func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol, incChainData *process.Chain
 
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
-	if _, ok := cc.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to cc.conns
+	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
+	cc.conns.Lock()
+	defer cc.conns.Unlock()
+	_, ok := cc.conns.connMap[peerID]
+
+	if !ok {
 		conn, err := cc.pr.Dial(
 			context.Background(),
 			peerID,
@@ -228,20 +273,24 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		cc.conns[peerID] = conn
+
+		cc.conns.connMap[peerID] = conn
 	}
-	client := proto.NewHighwayServiceClient(cc.conns[peerID])
+	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
 	return client, nil
 }
 
 type ClientConnector struct {
 	pr    *p2pgrpc.GRPCProtocol
-	conns map[peer.ID]*grpc.ClientConn
+	conns struct {
+		connMap map[peer.ID]*grpc.ClientConn
+		sync.RWMutex
+	}
 }
 
 func NewClientConnector(pr *p2pgrpc.GRPCProtocol) *ClientConnector {
-	return &ClientConnector{
-		pr:    pr,
-		conns: map[peer.ID]*grpc.ClientConn{},
-	}
+	connector := &ClientConnector{pr: pr}
+	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	connector.conns.RWMutex = sync.RWMutex{}
+	return connector
 }
