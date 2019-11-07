@@ -196,7 +196,7 @@ func (s *Server) generateResponseTopic(
 			return nil, err
 		}
 		// responseTopic[common.NumberOfShard] = topicGenerator.GetTopic4ProxyPub()
-		responseTopic[common.NumberOfShard] = topic.GetTopicForSub(false, msg, common.NumberOfShard)
+		responseTopic[common.NumberOfShard] = topic.GetTopicForSub(false, msg, committeeID)
 		actOfTopic[common.NumberOfShard] = proto.MessageTopicPair_SUB
 		for committeeID := common.NumberOfShard - 1; committeeID >= 0; committeeID-- {
 			topicGenerator.CommitteeID = byte(committeeID)
