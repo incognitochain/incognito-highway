@@ -6,6 +6,7 @@ import (
 	"highway/common"
 	"highway/p2p"
 	"highway/process"
+	"highway/process/topic"
 	"highway/route"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -21,6 +22,7 @@ func main() {
 		return
 	}
 	config.printConfig()
+	topic.Handler.UpdateSupportShards(config.supportShards)
 	masterPeerID, err := peer.IDB58Decode(config.masternode)
 	if err != nil {
 		logger.Error(err)

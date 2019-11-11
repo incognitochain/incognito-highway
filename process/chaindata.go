@@ -26,8 +26,7 @@ type ChainData struct {
 	ShardByCommitteePublicKey map[string]byte
 	CommitteeKeyByMiningKey   map[string]string
 	Locker                    *sync.RWMutex
-
-	masternode peer.ID
+	masternode                peer.ID
 }
 
 func (chainData *ChainData) Init(
@@ -317,6 +316,9 @@ func newChainStateFromMsgPeerState(
 // ProcessChainCommittee receives all messages containing the new
 // committee published by masternode and update the list of committee members
 func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
+
+	//Message just contains CommitteeKey, Pending, so, how about waiting?
+
 	ctx := context.Background()
 	for {
 		msg, err := sub.Next(ctx)
@@ -326,7 +328,7 @@ func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
 			continue
 		}
 
-		// TODO(@0xbunyip): check if msg.From can be manipulated by forwarder
+		// TODO(@0xbunyip): check if msg.From can be maniconfiguration: driver=usbhid maxpower=200mA speed=12Mbit/s
 		if peer.ID(msg.From) != chainData.masternode {
 			from := peer.IDB58Encode(peer.ID(msg.From))
 			exp := peer.IDB58Encode(chainData.masternode)
@@ -372,4 +374,20 @@ func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, 
 		}
 	}
 	return keys, nil
+}
+
+// GetCommitteeInfoOfPublicKey With input public key, return role of it, if the role is CANDIDATE, return committee ID of it.
+// ROLE value is defined in common/constant.go
+// TODO Add pending list into Chaindata, update this function
+func (chainData *ChainData) GetCommitteeInfoOfPublicKey(
+	pk string,
+) (
+	role byte,
+	cID byte,
+) {
+	cID, err := chainData.GetCommitteeIDOfValidator(pk)
+	if err != nil {
+		return common.NORMAL, 0
+	}
+	return common.CANDIDATE, cID
 }
