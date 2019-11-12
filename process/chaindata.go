@@ -384,6 +384,7 @@ func GetUserRole(cid int) *proto.UserRole {
 	if cid == int(common.BEACONID) {
 		layer = ic.BeaconRole
 		role = ic.CommitteeRole
+		shard = -1
 	} else {
 		layer = ic.ShardRole
 		role = ic.CommitteeRole
