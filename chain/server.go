@@ -19,6 +19,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
+	// TODO(@akk0r0kamui): auth committee pubkey and peerID
 	logger.Debugf("Receive new request from %v via gRPC", req.GetPeerID())
 	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
 	if err != nil {
@@ -41,7 +42,10 @@ func (s *Server) Register(
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}
-	return &proto.RegisterResponse{Pair: pairs}, nil
+
+	// Return response to node
+	role := process.GetUserRole(cid)
+	return &proto.RegisterResponse{Pair: pairs, Role: role}, nil
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {

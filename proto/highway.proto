@@ -8,8 +8,15 @@ message RegisterRequest {
     string PeerID = 3;
 }
 
+message UserRole {
+    string Layer = 1;
+    string Role = 2;
+    int32 Shard = 3;
+}
+
 message RegisterResponse {
     repeated MessageTopicPair Pair = 1;
+    UserRole Role = 2;
 }
 
 message MessageTopicPair {
