@@ -5,6 +5,7 @@ import (
 	"highway/common"
 	"highway/process"
 	"highway/proto"
+	"math/rand"
 	"sync"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -218,7 +219,7 @@ func (hc *Client) getClientWithBlock(
 		maxHeight = heights[len(heights)-1]
 	}
 	peerID, err := hc.choosePeerIDWithBlock(cid, maxHeight)
-	// logger.Infof("Chosen peer: %v", peerID)
+	logger.Debugf("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, err
 	}
@@ -231,14 +232,53 @@ func (hc *Client) getClientWithBlock(
 }
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
-	peers := hc.m.GetPeers(cid)
-	if len(peers) < 1 {
-		return peer.ID(""), errors.Errorf("empty peer list for cid %v, block %v", cid, blk)
+	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
+	logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
+	if err != nil {
+		return peer.ID(""), err
 	}
 
-	// TODO(0xbunyip): choose connected peer that has blk
-	// peerID, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
-	return peers[0], nil
+	// Filter out disconnected peers
+	connectedPeers := hc.m.GetPeers(cid)
+	logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
+	var peers []process.PeerWithBlk
+	for _, p := range peersHasBlk {
+		for _, cp := range connectedPeers {
+			if p.ID == cp {
+				peers = append(peers, p)
+			}
+		}
+	}
+	logger.Debugf("PeersLeft: %+v", peers)
+
+	// Pick randomly
+	p, err := pickWeightedRandomPeer(peers, blk)
+	if err != nil {
+		return peer.ID(""), err
+	}
+	logger.Debugf("Peer picked: %+v", p)
+	return p.ID, nil
+}
+
+func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
+	if len(peers) == 0 {
+		return process.PeerWithBlk{}, errors.Errorf("empty peer list")
+	}
+
+	// Find peers have all the blocks
+	last := -1
+	for i, p := range peers {
+		if p.Height < blk {
+			break
+		}
+		last = i
+	}
+
+	end := last + 1 // Pick only from peers with all the blocks
+	if last <= 0 {
+		end = len(peers) // Otherwise, pick randomly from all peers
+	}
+	return peers[rand.Intn(end)], nil
 }
 
 type Client struct {
