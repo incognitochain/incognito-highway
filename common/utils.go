@@ -2,11 +2,13 @@ package common
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 
 	"github.com/incognitochain/incognito-chain/common/base58"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
 )
 
 // func GetListMsgForProxySubOfCommittee(committeeID byte) []string {
@@ -61,4 +63,16 @@ func HasValuesAt(
 		}
 	}
 	return -1
+}
+
+func StringToAddrInfo(ma string) (*peer.AddrInfo, error) {
+	addr, err := multiaddr.NewMultiaddr(ma)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	addrInfo, err := peer.AddrInfoFromP2pAddr(addr)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return addrInfo, nil
 }

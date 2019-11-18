@@ -58,7 +58,11 @@ func NewManager(
 }
 
 func (h *Manager) setup(bootstrap []string) {
-	// TODO(@0xbunyip): grpc to get list of hws and supShards
+	if len(bootstrap) == 0 || len(bootstrap[0]) == 0 {
+		return
+	}
+	// h.getListHighways(bootstrap[0])
+
 	for _, b := range bootstrap {
 		if len(b) == 0 {
 			continue
@@ -104,6 +108,14 @@ func (h *Manager) setup(bootstrap []string) {
 
 		// TOOD(@0xbunyip): update chain committee to ChainData here
 	}
+}
+
+func (h *Manager) getListHighways(ma string) ([]string, error) {
+	addrInfo, err := common.StringToAddrInfo(ma)
+	if err != nil {
+		return nil, addrInfo
+	}
+	return nil, nil
 }
 
 func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, error) {

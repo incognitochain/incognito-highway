@@ -131,6 +131,18 @@ message GetChainCommitteeResponse {
     bytes Data = 1;
 }
 
+message GetHighwayInfosRequest {}
+
+message HighwayInfo {
+    string PeerInfo = 1;
+    repeated int32 SupportShards = 2;
+}
+
+message GetHighwayInfosResponse {
+    repeated HighwayInfo Highways = 1;
+}
+
 service HighwayConnectorService {
     rpc GetChainCommittee(GetChainCommitteeRequest) returns (GetChainCommitteeResponse) {};
+    rpc GetHighwayInfos(GetHighwayInfosRequest) returns (GetHighwayInfosResponse) {};
 }
