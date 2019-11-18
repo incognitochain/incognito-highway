@@ -125,7 +125,7 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 
 func (h *Manager) Start() {
 	// Update connection when new highway comes online or old one goes offline
-	for range time.Tick(30 * time.Second) { // TODO(@xbunyip): move params to config
+	for range time.Tick(10 * time.Second) { // TODO(@xbunyip): move params to config
 		// TODO(@0xbunyip) Check for liveness of connected highways
 
 		// New highways online: update map and reconnect to load-balance
@@ -194,4 +194,21 @@ func choosePeer(peers []peer.AddrInfo, id peer.ID) (peer.AddrInfo, error) {
 		}
 	}
 	return peer.AddrInfo{}, errors.New("failed choosing peer to connect")
+}
+
+// GetRouteClientWithBlock returns the grpc client with connection to a highway
+// supporting a specific shard
+func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, error) {
+	// TODO(@0xbunyip): make sure peer is still connected
+	peers := h.hmap.Peers[byte(cid)]
+	if len(peers) == 0 {
+		return nil, errors.Errorf("no route client with block for cid = %v", cid)
+	}
+
+	conn, err := h.hc.hwc.GetConnection(peers[0].ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return proto.NewHighwayServiceClient(conn), nil
 }

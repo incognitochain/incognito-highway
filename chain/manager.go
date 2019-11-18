@@ -2,6 +2,7 @@ package chain
 
 import (
 	"highway/process"
+	"highway/route"
 	"sync"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -20,7 +21,13 @@ type Manager struct {
 	}
 }
 
-func ManageChainConnections(h host.Host, prtc *p2pgrpc.GRPCProtocol, chainData *process.ChainData) {
+func ManageChainConnections(
+	h host.Host,
+	rman *route.Manager,
+	prtc *p2pgrpc.GRPCProtocol,
+	chainData *process.ChainData,
+	supportShards []byte,
+) {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
@@ -29,7 +36,8 @@ func ManageChainConnections(h host.Host, prtc *p2pgrpc.GRPCProtocol, chainData *
 	m.peers.RWMutex = sync.RWMutex{}
 
 	// Server and client instance to communicate to Incognito nodes
-	RegisterServer(m, prtc.GetGRPCServer(), NewClient(m, prtc, chainData))
+	client := NewClient(m, rman, prtc, chainData, supportShards)
+	RegisterServer(m, prtc.GetGRPCServer(), client)
 
 	h.Network().Notify(m)
 	m.start()

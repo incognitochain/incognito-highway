@@ -13,6 +13,14 @@ import (
 
 func (c *Client) GetClient(peerID peer.ID) (proto.HighwayConnectorServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for HighwayClient to retry if fail to connect
+	conn, err := c.GetConnection(peerID)
+	if err != nil {
+		return nil, err
+	}
+	return proto.NewHighwayConnectorServiceClient(conn), nil
+}
+
+func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 	if _, ok := c.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to c.conns
 		conn, err := c.pr.Dial(
 			context.Background(),
@@ -26,8 +34,7 @@ func (c *Client) GetClient(peerID peer.ID) (proto.HighwayConnectorServiceClient,
 		}
 		c.conns[peerID] = conn
 	}
-	client := proto.NewHighwayConnectorServiceClient(c.conns[peerID])
-	return client, nil
+	return c.conns[peerID], nil
 }
 
 type Client struct {
