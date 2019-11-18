@@ -31,6 +31,7 @@ func (h *Map) IsConnectedToShard(s byte) bool {
 }
 
 func (h *Map) ConnectToShard(s byte) {
+	logger.Debugf("Connected to shard %d", s)
 	h.connected = append(h.connected, s)
 }
 

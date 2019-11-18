@@ -58,29 +58,44 @@ func NewManager(
 }
 
 func (h *Manager) setup(bootstrap []string) {
+	// TODO(@0xbunyip): grpc to get list of hws and supShards
 	for _, b := range bootstrap {
 		if len(b) == 0 {
 			continue
 		}
 
-		// TODO(@0xbunyip): parse bootstrap nodes
-		ss := []byte{0}
-		id, _ := peer.IDB58Decode("QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv")
-		addr, _ := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/9330")
-		addrInfo := peer.AddrInfo{
-			ID:    id,
-			Addrs: []multiaddr.Multiaddr{addr},
-		}
-		h.hmap.AddPeer(addrInfo, ss)
-
-		// Get latest committee from bootstrap highways if available
-		err := h.hc.Dial(addrInfo)
+		// Get peer info
+		addr, err := multiaddr.NewMultiaddr(b)
 		if err != nil {
-			logger.Warn("Failed dialing to bootstrap node", addrInfo, err)
+			logger.Warnf("Invalid bootstrap highway: %v", b)
+			continue
+		}
+		pInfo, err := peer.AddrInfoFromP2pAddr(addr)
+		if err != nil {
+			logger.Warnf("Invalid bootstrap highway: %v", b)
 			continue
 		}
 
-		cc, err := h.GetChainCommittee(id)
+		// Remember this highway
+		ss := []byte{} // TODO(@0xbunyip): parse from grpc result
+		switch pInfo.ID.String() {
+		case "QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv":
+			ss = []byte{255}
+		case "QmWoKWHPGjUNbjohYS2MySNDBiCXA2tDs3jT6P3MXDgb9D":
+			ss = []byte{0}
+		case "QmSZGxdbG1AfuDX1ia6kRyewrVbBNkjd6NU4AbZUCE2ZyG":
+			ss = []byte{1}
+		}
+		h.hmap.AddPeer(*pInfo, ss)
+
+		// Get latest committee from bootstrap highways if available
+		err = h.hc.Dial(*pInfo)
+		if err != nil {
+			logger.Warn("Failed dialing to bootstrap node", pInfo, err)
+			continue
+		}
+
+		cc, err := h.GetChainCommittee(pInfo.ID)
 		if err != nil {
 			logger.Warnf("Failed get chain committtee: %+v", err)
 			continue
@@ -110,7 +125,7 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 
 func (h *Manager) Start() {
 	// Update connection when new highway comes online or old one goes offline
-	for range time.Tick(5 * time.Second) { // TODO(@xbunyip): move params to config
+	for range time.Tick(30 * time.Second) { // TODO(@xbunyip): move params to config
 		// TODO(@0xbunyip) Check for liveness of connected highways
 
 		// New highways online: update map and reconnect to load-balance
@@ -140,10 +155,10 @@ func (h *Manager) connectChain(sid byte) error {
 		return nil
 	}
 
-	logger.Info("connect chain", sid)
+	logger.Info("Connecting to chain ", sid)
 	highways := h.hmap.Peers[sid]
 	if len(highways) == 0 {
-		return errors.Errorf("found no highway supporting shard %d", sid)
+		return errors.Errorf("found no highway supporting chain %d", sid)
 	}
 
 	// TODO(@0xbunyip): repick if fail to connect
@@ -154,9 +169,6 @@ func (h *Manager) connectChain(sid byte) error {
 	if err := h.connectTo(p); err != nil {
 		return err
 	}
-
-	// Update list of connected shards
-	h.hmap.ConnectToShardOfPeer(p)
 	return nil
 }
 
