@@ -49,7 +49,7 @@ func (s *Server) Register(
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
-	// logger.Println("Receive GetBlockShardByHeight request")
+	logger.Debugf("Receive GetBlockShardByHeight request, shard %v, from height %v to %v", req.Shard, req.FromHeight, req.ToHeight)
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -75,7 +75,7 @@ func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockSha
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
-	// logger.Debug("Receive GetBlockBeaconByHeight request")
+	logger.Debugf("Receive GetBlockBeaconByHeight request, from height %v to %v", req.FromHeight, req.ToHeight)
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -101,7 +101,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
-	logger.Debug("Receive GetBlockShardToBeaconByHeight request")
+	logger.Debugf("Receive GetBlockShardToBeaconByHeight request, from shard = %v, from height %v to %v", req.FromShard, req.FromHeight, req.ToHeight)
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
@@ -123,7 +123,7 @@ func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBe
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	logger.Debug("Receive GetBlockCrossShardByHeight request")
+	logger.Debugf("Receive GetBlockCrossShardByHeight request, from Shard %v to shard %v, from height %v to %v", req.FromShard, req.ToShard, req.FromHeight, req.ToHeight)
 	data, err := s.hc.GetBlockCrossShardByHeight(
 		req.FromShard,
 		req.ToShard,

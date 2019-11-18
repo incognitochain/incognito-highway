@@ -3,6 +3,7 @@ package route
 import (
 	"context"
 	"highway/proto"
+	"sync"
 	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -21,7 +22,10 @@ func (c *Client) GetClient(peerID peer.ID) (proto.HighwayConnectorServiceClient,
 }
 
 func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
-	if _, ok := c.conns[peerID]; !ok { // TODO(@0xbunyip): lock access to c.conns
+	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
+	c.conns.Lock()
+	defer c.conns.Unlock()
+	if _, ok := c.conns.connMap[peerID]; !ok {
 		conn, err := c.pr.Dial(
 			context.Background(),
 			peerID,
@@ -32,19 +36,22 @@ func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		c.conns[peerID] = conn
+		c.conns.connMap[peerID] = conn
 	}
-	return c.conns[peerID], nil
+	return c.conns.connMap[peerID], nil
 }
 
 type Client struct {
 	pr    *p2pgrpc.GRPCProtocol
-	conns map[peer.ID]*grpc.ClientConn
+	conns struct {
+		connMap map[peer.ID]*grpc.ClientConn
+		*sync.RWMutex
+	}
 }
 
 func NewClient(pr *p2pgrpc.GRPCProtocol) *Client {
-	return &Client{
-		pr:    pr,
-		conns: map[peer.ID]*grpc.ClientConn{},
-	}
+	client := &Client{pr: pr}
+	client.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	client.conns.RWMutex = &sync.RWMutex{}
+	return client
 }
