@@ -40,7 +40,7 @@ func ManageChainConnections(
 	RegisterServer(m, prtc.GetGRPCServer(), client)
 
 	h.Network().Notify(m)
-	m.start()
+	go m.start()
 }
 
 func (m *Manager) GetPeers(cid int) []peer.ID {

@@ -56,7 +56,7 @@ func main() {
 	go rman.Start()
 
 	// Chain-facing connections
-	go chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, config.supportShards)
+	chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, config.supportShards)
 
 	// Subscribe to receive new committee
 	process.GlobalPubsub.GRPCSpecSub <- process.SubHandler{
@@ -64,6 +64,6 @@ func main() {
 		Handler: chainData.ProcessChainCommitteeMsg,
 	}
 
-	time.Sleep(1 * time.Second)
+	logger.Info("Serving...")
 	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
 }
