@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"highway/common"
+	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
@@ -68,7 +69,7 @@ func (s *Server) Register(
 	} else {
 		cIDs = append(cIDs, cID)
 	}
-	logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
+	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
 		return nil, err
@@ -86,7 +87,9 @@ func (s *Server) Register(
 		}
 	}
 
-	return &proto.RegisterResponse{Pair: pairs}, nil
+	// Return response to node
+	r := process.GetUserRole(cID)
+	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
