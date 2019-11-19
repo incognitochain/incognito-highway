@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"highway/common"
+	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
@@ -18,6 +19,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
+	// TODO(@akk0r0kamui): auth committee pubkey and peerID
 	logger.Debugf("Receive new request from %v via gRPC", req.GetPeerID())
 	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
 	isValidator := true
@@ -42,7 +44,10 @@ func (s *Server) Register(
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}
-	return &proto.RegisterResponse{Pair: pairs}, nil
+
+	// Return response to node
+	role := process.GetUserRole(cid)
+	return &proto.RegisterResponse{Pair: pairs, Role: role}, nil
 }
 */
 
@@ -64,7 +69,7 @@ func (s *Server) Register(
 	} else {
 		cIDs = append(cIDs, cID)
 	}
-	logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
+	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
 		return nil, err
@@ -82,7 +87,9 @@ func (s *Server) Register(
 		}
 	}
 
-	return &proto.RegisterResponse{Pair: pairs}, nil
+	// Return response to node
+	r := process.GetUserRole(cID)
+	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {

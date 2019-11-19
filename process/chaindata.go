@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	fmt "fmt"
 	"highway/common"
+	"highway/proto"
 	"io/ioutil"
 	"os"
 	"sync"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
+	ic "github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/wire"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -126,7 +128,7 @@ func (chainData *ChainData) GetPeerHasBlk(
 		}
 
 	}
-	return nil, fmt.Errorf("Can not find any peer who has this block height: %v of committee %v", blkHeight, committeeID)
+	return nil, errors.Errorf("Can not find any peer who has this block height: %v of committee %v", blkHeight, committeeID)
 }
 
 func (chainData *ChainData) GetPeerIDOfValidator(
@@ -374,6 +376,31 @@ func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, 
 		}
 	}
 	return keys, nil
+}
+
+func GetUserRole(cid int) *proto.UserRole {
+	// TODO(@0xbunyip): support pending, waiting and normal role
+	layer := ""
+	role := ""
+	shard := int(common.BEACONID)
+	if cid == int(common.BEACONID) {
+		layer = ic.BeaconRole
+		role = ic.CommitteeRole
+		shard = -1
+	} else if cid != -1 { // other than NORMAL
+		layer = ic.ShardRole
+		role = ic.CommitteeRole
+		shard = cid
+	} else {
+		layer = ""
+		role = ""
+		shard = -2
+	}
+	return &proto.UserRole{
+		Layer: layer,
+		Role:  role,
+		Shard: int32(shard),
+	}
 }
 
 // GetCommitteeInfoOfPublicKey With input public key, return role of it, if the role is COMMITTEE, return committee ID of it.
