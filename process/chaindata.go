@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	fmt "fmt"
+	"fmt"
 	"highway/common"
 	"highway/proto"
 	"io/ioutil"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
@@ -29,6 +30,11 @@ type ChainData struct {
 	CommitteeKeyByMiningKey   map[string]string
 	Locker                    *sync.RWMutex
 	masternode                peer.ID
+}
+
+type PeerWithBlk struct {
+	ID     peer.ID
+	Height uint64
 }
 
 func (chainData *ChainData) Init(
@@ -102,10 +108,9 @@ func (chainData *ChainData) GetPeerHasBlk(
 	blkHeight uint64,
 	committeeID byte,
 ) (
-	*peer.ID,
+	[]PeerWithBlk,
 	error,
 ) {
-	// TODO(@0xakk0r0kamui): return list of peers
 	var exist bool
 	var committeeState map[string]ChainState
 	chainData.Locker.RLock()
@@ -114,21 +119,26 @@ func (chainData *ChainData) GetPeerHasBlk(
 		committeeState = chainData.CurrentNetworkState.BeaconState
 	} else {
 		if committeeState, exist = chainData.CurrentNetworkState.ShardState[committeeID]; !exist {
-			return nil, errors.New("CommitteeID " + string(committeeID) + " not found")
+			return nil, errors.New("committeeID " + string(committeeID) + " not found")
 		}
 	}
+	peers := []PeerWithBlk{}
 	for committeePublicKey, nodeState := range committeeState {
-		//TODO get random
-		if nodeState.Height > blkHeight {
-			if peerID, ok := chainData.PeerIDByCommitteePubkey[committeePublicKey]; ok {
-				return &peerID, nil
-			} else {
-				logger.Warnf("Committee publickey %v not found in PeerID map", committeePublicKey)
-			}
+		if peerID, ok := chainData.PeerIDByCommitteePubkey[committeePublicKey]; ok {
+			peers = append(peers, PeerWithBlk{
+				ID:     peerID,
+				Height: nodeState.Height,
+			})
+		} else {
+			logger.Warnf("Committee publickey %v not found in PeerID map", committeePublicKey)
 		}
-
 	}
-	return nil, errors.Errorf("Can not find any peer who has this block height: %v of committee %v", blkHeight, committeeID)
+
+	// Sort based on block height
+	sort.Slice(peers, func(i, j int) bool {
+		return peers[i].Height > peers[j].Height
+	})
+	return peers, nil
 }
 
 func (chainData *ChainData) GetPeerIDOfValidator(

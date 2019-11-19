@@ -8,11 +8,15 @@ import (
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
+	"math/rand"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// Setup logging
 	initLogger()
 
