@@ -34,7 +34,7 @@ func InitTypeOfProcessor() {
 		switch mess {
 		case CmdPeerState:
 			TypeOfTopicProcessor[mess] = ProcessAndPublishAfter
-		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard:
+		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard, CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken:
 			TypeOfTopicProcessor[mess] = ProcessAndPublish
 		default:
 			TypeOfTopicProcessor[mess] = DoNothing
@@ -108,13 +108,3 @@ func getTopicForSub(side, msgType string, cID int) string {
 		return commonTopic + NODEPUB
 	}
 }
-
-// func GetListMsgForRole(role, layer string) []string {
-
-// 	switch role {
-// 	case common.NormalNode:
-// 		return []string{CmdBlockBeacon, CmdBlockShard, CmdTx}
-// 	case
-// 	}
-// 	return []string{}
-// }

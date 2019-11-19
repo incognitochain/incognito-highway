@@ -103,9 +103,10 @@ func (pubsub *PubSubManager) handleNewMsg(
 				//#endregion Just logging information
 				go pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.CommitteePubkeyByPeerID[data.GetFrom()], data.GetData())
 			case topic.ProcessAndPublish:
-				pubTopic := topic.Handler.GetHWPubTopicsFromHWSub(sub.Topic())
-				logger.Infof("Publish Topic %v when received topic %v", pubTopic, sub.Topic())
-				go pubsub.FloodMachine.Publish(pubTopic, data.GetData())
+				pubTopics := topic.Handler.GetHWPubTopicsFromHWSub(sub.Topic())
+				for _, pubTopic := range pubTopics {
+					go pubsub.FloodMachine.Publish(pubTopic, data.GetData())
+				}
 			default:
 				return
 			}
@@ -124,12 +125,14 @@ func (pubsub *PubSubManager) HasTopic(receivedTopic string) bool {
 
 func (pubsub *PubSubManager) PublishPeerStateToNode() {
 	for _, cID := range pubsub.SupportShards {
-		pubTopic := topic.Handler.GetHWPubTopicsFromMsg(topic.CmdPeerState, int(cID))
+		pubTopics := topic.Handler.GetHWPubTopicsFromMsg(topic.CmdPeerState, int(cID))
 		pubsub.BlockChainData.Locker.RLock()
 		for _, stateData := range pubsub.BlockChainData.ListMsgPeerStateOfShard[cID] {
-			err := pubsub.FloodMachine.Publish(pubTopic, stateData)
-			if err != nil {
-				logger.Errorf("Publish Peer state to Committee %v return error %v", cID, err)
+			for _, pubTopic := range pubTopics {
+				err := pubsub.FloodMachine.Publish(pubTopic, stateData)
+				if err != nil {
+					logger.Errorf("Publish Peer state to Committee %v return error %v", cID, err)
+				}
 			}
 		}
 		pubsub.BlockChainData.Locker.RUnlock()

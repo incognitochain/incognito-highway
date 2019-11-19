@@ -199,7 +199,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	//#endregion Reading genesis committee key from keylist.json
 
 	// Cut off keylist.json and update
-	keyListFromFile.Bc = keyListFromFile.Bc[:numberOfCandidate]
+	keyListFromFile.Bc = keyListFromFile.Bc[:]
 	for k := range keyListFromFile.Sh {
 		if k >= numberOfShard {
 			delete(keyListFromFile.Sh, k)
@@ -376,18 +376,18 @@ func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, 
 	return keys, nil
 }
 
-// GetCommitteeInfoOfPublicKey With input public key, return role of it, if the role is CANDIDATE, return committee ID of it.
+// GetCommitteeInfoOfPublicKey With input public key, return role of it, if the role is COMMITTEE, return committee ID of it.
 // ROLE value is defined in common/constant.go
 // TODO Add pending list into Chaindata, update this function
 func (chainData *ChainData) GetCommitteeInfoOfPublicKey(
 	pk string,
 ) (
-	role byte,
-	cID byte,
+	byte,
+	int,
 ) {
 	cID, err := chainData.GetCommitteeIDOfValidator(pk)
 	if err != nil {
-		return common.NORMAL, 0
+		return common.NORMAL, -1
 	}
-	return common.CANDIDATE, cID
+	return common.COMMITTEE, int(cID)
 }

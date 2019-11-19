@@ -16,8 +16,8 @@ var (
 
 const (
 	BEACONID      byte = 255
-	NumberOfShard      = 2
-	CommitteeSize      = 8
+	NumberOfShard      = 6
+	CommitteeSize      = 32
 	BeaconRole         = "beacon"
 	ShardRole          = "shard"
 
@@ -28,7 +28,7 @@ const (
 )
 
 const (
-	CANDIDATE byte = iota
+	COMMITTEE byte = iota
 	PENDING
 	NORMAL
 )

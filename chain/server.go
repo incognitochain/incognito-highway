@@ -55,20 +55,33 @@ func (s *Server) Register(
 ) {
 	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
 	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
-	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cID)
+	cIDs := []int{}
+	if role == common.NORMAL {
+		reqCIDs := req.GetCommitteeID()
+		for _, cid := range reqCIDs {
+			cIDs = append(cIDs, int(cid))
+		}
+	} else {
+		cIDs = append(cIDs, cID)
+	}
+	logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
+	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	// Notify HighwayClient of a new peer to request data later if possible
-	pid, err := peer.IDB58Decode(req.PeerID)
-	s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
+	if role == common.COMMITTEE {
+		// Notify HighwayClient of a new peer to request data later if possible
+		pid, err := peer.IDB58Decode(req.PeerID)
+		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
 
-	if err == nil {
-		s.m.newPeers <- PeerInfo{ID: pid, CID: int(cID)}
-	} else {
-		logger.Errorf("Invalid peerID: %v", req.PeerID)
+		if err == nil {
+			s.m.newPeers <- PeerInfo{ID: pid, CID: int(cID)}
+		} else {
+			logger.Errorf("Invalid peerID: %v", req.PeerID)
+		}
 	}
+
 	return &proto.RegisterResponse{Pair: pairs}, nil
 }
 
@@ -88,7 +101,6 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 	if err != nil {
 		return nil, err
 	}
-
 	// TODO(@0xbunyip): cache blocks
 	return &proto.GetBlockShardByHeightResponse{Data: data}, nil
 }
@@ -183,7 +195,7 @@ func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
 func (s *Server) processListWantedMessageOfPeer(
 	msgs []string,
 	role byte,
-	committeeID byte,
+	committeeIDs []int,
 ) (
 	[]*proto.MessageTopicPair,
 	error,
@@ -191,14 +203,7 @@ func (s *Server) processListWantedMessageOfPeer(
 	pairs := []*proto.MessageTopicPair{}
 	msgAndCID := map[string][]int{}
 	for _, m := range msgs {
-		cIDs := []int{}
-		if role != common.CANDIDATE {
-			// TODO Support non-validator, add list wanted shard into register request
-			cIDs = []int{0}
-		} else {
-			cIDs = []int{int(committeeID)}
-		}
-		msgAndCID[m] = cIDs
+		msgAndCID[m] = committeeIDs
 	}
 	// TODO handle error here
 	pairs = topic.Handler.GetListTopicPairForNode(role, msgAndCID)

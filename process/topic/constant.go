@@ -46,27 +46,27 @@ var (
 	}
 
 	lvlAllowPubOfMsg = map[string]byte{
-		"blockshard":   common.CANDIDATE,
-		"blockbeacon":  common.CANDIDATE,
-		"crossshard":   common.CANDIDATE,
-		"blkshdtobcn":  common.CANDIDATE,
+		"blockshard":   common.COMMITTEE,
+		"blockbeacon":  common.COMMITTEE,
+		"crossshard":   common.COMMITTEE,
+		"blkshdtobcn":  common.COMMITTEE,
 		"tx":           common.NORMAL,
 		"txtoken":      common.NORMAL,
 		"txprivacytok": common.NORMAL,
-		"ping":         common.CANDIDATE,
-		"bft":          common.CANDIDATE,
-		"peerstate":    common.CANDIDATE,
+		"ping":         common.COMMITTEE,
+		"bft":          common.COMMITTEE,
+		"peerstate":    common.COMMITTEE,
 	}
 	lvlAllowSubOfMsg = map[string]byte{
 		"blockshard":   common.NORMAL,
 		"blockbeacon":  common.NORMAL,
-		"crossshard":   common.CANDIDATE,
-		"blkshdtobcn":  common.CANDIDATE,
+		"crossshard":   common.COMMITTEE,
+		"blkshdtobcn":  common.COMMITTEE,
 		"tx":           common.NORMAL,
 		"txtoken":      common.NORMAL,
 		"txprivacytok": common.NORMAL,
-		"ping":         common.CANDIDATE,
-		"bft":          common.CANDIDATE,
-		"peerstate":    common.PENDING,
+		"ping":         common.COMMITTEE,
+		"bft":          common.COMMITTEE,
+		"peerstate":    common.NORMAL,
 	}
 )

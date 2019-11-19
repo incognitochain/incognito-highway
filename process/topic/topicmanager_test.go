@@ -68,7 +68,7 @@ func TestTopicManager_GetHWPubTopicsFromMsg(t *testing.T) {
 		fmt.Printf("List Topic of Msg %v for HW Pub:\n", msg)
 		for _, cID := range tm.allCommitteeID {
 			tp := tm.GetHWPubTopicsFromMsg(msg, int(cID))
-			if tp != "" {
+			if len(tp) != 0 {
 				fmt.Printf("\t%v\n", tp)
 			}
 		}
@@ -82,7 +82,7 @@ func TestTopicManager_GetHWPubTopicsFromHWSub(t *testing.T) {
 	fmt.Printf("Highway supports cIDs: %v\n", tm.supportShards)
 	listHWSub := tm.GetListSubTopicForHW()
 	for _, subTopic := range listHWSub {
-		pubFromSubTopic := tm.GetHWPubTopicsFromHWSub(subTopic)
-		fmt.Printf("HW pub %v if receive %v\n", pubFromSubTopic, subTopic)
+		pubFromSubTopics := tm.GetHWPubTopicsFromHWSub(subTopic)
+		fmt.Printf("HW pub %v if receive %v\n", pubFromSubTopics, subTopic)
 	}
 }
