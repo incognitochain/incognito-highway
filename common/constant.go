@@ -16,8 +16,8 @@ var (
 
 const (
 	BEACONID      byte = 255
-	NumberOfShard      = 6
-	CommitteeSize      = 32
+	NumberOfShard      = 1
+	CommitteeSize      = 4
 	BeaconRole         = "beacon"
 	ShardRole          = "shard"
 
