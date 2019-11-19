@@ -5,7 +5,8 @@ option go_package="proto";
 message RegisterRequest {
     string CommitteePublicKey = 1;
     repeated string WantedMessages = 2;
-    string PeerID = 3;
+    bytes CommitteeID = 3;
+    string PeerID = 4;
 }
 
 message UserRole {
