@@ -1,21 +1,6 @@
 package topic
 
-const (
-	MessBFT byte = iota
-	//
-	MessGetBlockBeacon
-	MessGetBlockShard
-	MessGetCrossShard
-	MessGetShardToBeacon
-	MessBlockShard
-	MessBlockBeacon
-	MessCrossShard
-	MessBlkShardToBeacon
-	MessGetAddr
-	MessAddr
-	MessPing
-	MessPeerState
-)
+import "highway/common"
 
 const (
 	DoNothing byte = iota
@@ -25,15 +10,14 @@ const (
 )
 
 const (
-	NODEPUB = "-nodepub"
-	NODESUB = "-nodesub"
+	NODEPUB      = "-nodepub"
+	NODESUB      = "-nodesub"
+	NODESIDE     = "incnode"
+	HIGHWAYSIDE  = "highway"
+	noCIDInTopic = -1
 )
 
 const (
-	CmdGetBlockBeacon     = "getblkbeacon"
-	CmdGetBlockShard      = "getblkshard"
-	CmdGetCrossShard      = "getcrossshd"
-	CmdGetShardToBeacon   = "getshdtobcn"
 	CmdBlockShard         = "blockshard"
 	CmdBlockBeacon        = "blockbeacon"
 	CmdCrossShard         = "crossshard"
@@ -41,28 +25,14 @@ const (
 	CmdTx                 = "tx"
 	CmdCustomToken        = "txtoken"
 	CmdPrivacyCustomToken = "txprivacytok"
-	CmdVersion            = "version"
-	CmdVerack             = "verack"
-	CmdGetAddr            = "getaddr"
-	CmdAddr               = "addr"
 	CmdPing               = "ping"
 
-	// POS Cmd
 	CmdBFT       = "bft"
 	CmdPeerState = "peerstate"
-
-	// heavy message check cmd
-	CmdMsgCheck     = "msgcheck"
-	CmdMsgCheckResp = "msgcheckresp"
 )
 
 var (
 	Message4Process = []string{
-		"a",
-		"getblkbeacon",
-		"getblkshard",
-		"getcrossshd",
-		"getshdtobcn",
 		"blockshard",
 		"blockbeacon",
 		"crossshard",
@@ -70,12 +40,33 @@ var (
 		"tx",
 		"txtoken",
 		"txprivacytok",
-		"version",
-		"verack",
-		"getaddr",
-		"addr",
 		"ping",
 		"bft",
 		"peerstate",
+	}
+
+	lvlAllowPubOfMsg = map[string]byte{
+		"blockshard":   common.COMMITTEE,
+		"blockbeacon":  common.COMMITTEE,
+		"crossshard":   common.COMMITTEE,
+		"blkshdtobcn":  common.COMMITTEE,
+		"tx":           common.NORMAL,
+		"txtoken":      common.NORMAL,
+		"txprivacytok": common.NORMAL,
+		"ping":         common.COMMITTEE,
+		"bft":          common.COMMITTEE,
+		"peerstate":    common.COMMITTEE,
+	}
+	lvlAllowSubOfMsg = map[string]byte{
+		"blockshard":   common.NORMAL,
+		"blockbeacon":  common.NORMAL,
+		"crossshard":   common.COMMITTEE,
+		"blkshdtobcn":  common.COMMITTEE,
+		"tx":           common.NORMAL,
+		"txtoken":      common.NORMAL,
+		"txprivacytok": common.NORMAL,
+		"ping":         common.COMMITTEE,
+		"bft":          common.COMMITTEE,
+		"peerstate":    common.NORMAL,
 	}
 )

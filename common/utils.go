@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/incognitochain/incognito-chain/common/base58"
 )
@@ -56,7 +55,19 @@ func HasValuesAt(
 	value byte,
 ) int {
 	for i, v := range slice {
-		if reflect.DeepEqual(v, value) {
+		if v == value {
+			return i
+		}
+	}
+	return -1
+}
+
+func HasStringAt(
+	slice []string,
+	value string,
+) int {
+	for i, v := range slice {
+		if v == value {
 			return i
 		}
 	}

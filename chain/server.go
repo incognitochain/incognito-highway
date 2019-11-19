@@ -2,16 +2,15 @@ package chain
 
 import (
 	"context"
-	"errors"
 	"highway/common"
-	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
-	"github.com/libp2p/go-libp2p-core/peer"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"google.golang.org/grpc"
 )
 
+/*
 func (s *Server) Register(
 	ctx context.Context,
 	req *proto.RegisterRequest,
@@ -21,10 +20,12 @@ func (s *Server) Register(
 ) {
 	logger.Debugf("Receive new request from %v via gRPC", req.GetPeerID())
 	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
+	isValidator := true
 	if err != nil {
-		return nil, err
+		// return nil, err
+		isValidator = false
 	}
-	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), committeeID, req.GetPeerID())
+	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), isValidator, committeeID, req.GetPeerID())
 	// logger.Info(pairs)
 	if err != nil {
 		return nil, err
@@ -41,6 +42,46 @@ func (s *Server) Register(
 	} else {
 		logger.Errorf("Invalid peerID: %v", req.PeerID)
 	}
+	return &proto.RegisterResponse{Pair: pairs}, nil
+}
+*/
+
+func (s *Server) Register(
+	ctx context.Context,
+	req *proto.RegisterRequest,
+) (
+	*proto.RegisterResponse,
+	error,
+) {
+	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
+	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
+	cIDs := []int{}
+	if role == common.NORMAL {
+		reqCIDs := req.GetCommitteeID()
+		for _, cid := range reqCIDs {
+			cIDs = append(cIDs, int(cid))
+		}
+	} else {
+		cIDs = append(cIDs, cID)
+	}
+	logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
+	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if role == common.COMMITTEE {
+		// Notify HighwayClient of a new peer to request data later if possible
+		pid, err := peer.IDB58Decode(req.PeerID)
+		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
+
+		if err == nil {
+			s.m.newPeers <- PeerInfo{ID: pid, CID: int(cID)}
+		} else {
+			logger.Errorf("Invalid peerID: %v", req.PeerID)
+		}
+	}
+
 	return &proto.RegisterResponse{Pair: pairs}, nil
 }
 
@@ -60,7 +101,6 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 	if err != nil {
 		return nil, err
 	}
-
 	// TODO(@0xbunyip): cache blocks
 	return &proto.GetBlockShardByHeightResponse{Data: data}, nil
 }
@@ -154,95 +194,18 @@ func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
 
 func (s *Server) processListWantedMessageOfPeer(
 	msgs []string,
-	committeeID byte,
-	peerID string,
+	role byte,
+	committeeIDs []int,
 ) (
 	[]*proto.MessageTopicPair,
 	error,
 ) {
 	pairs := []*proto.MessageTopicPair{}
+	msgAndCID := map[string][]int{}
 	for _, m := range msgs {
-		pair, err := s.generateResponseTopic(&process.GlobalPubsub, committeeID, m)
-		if err != nil {
-			logger.Infof("generateResponseTopic failed, error: %v", err.Error())
-		} else {
-			pairs = append(pairs, pair)
-		}
+		msgAndCID[m] = committeeIDs
 	}
+	// TODO handle error here
+	pairs = topic.Handler.GetListTopicPairForNode(role, msgAndCID)
 	return pairs, nil
-}
-
-func (s *Server) generateResponseTopic(
-	pubsubManager *process.PubSubManager,
-	committeeID byte,
-	msg string,
-) (
-	*proto.MessageTopicPair,
-	error,
-) {
-
-	// TODO Update this stupid code and the way to check duplicate sub message
-
-	var responseTopic []string
-	var actOfTopic []proto.MessageTopicPair_Action
-	topicGenerator := new(topic.InsideTopic)
-	switch msg {
-	case topic.CmdCrossShard:
-		// handle error later
-		responseTopic = make([]string, common.NumberOfShard+1)
-		actOfTopic = make([]proto.MessageTopicPair_Action, common.NumberOfShard+1)
-		err := topicGenerator.FromMessageType(int(committeeID), msg)
-		if err != nil {
-			return nil, err
-		}
-		// responseTopic[common.NumberOfShard] = topicGenerator.GetTopic4ProxyPub()
-		responseTopic[common.NumberOfShard] = topic.GetTopicForSub(false, msg, committeeID)
-		actOfTopic[common.NumberOfShard] = proto.MessageTopicPair_SUB
-		for committeeID := common.NumberOfShard - 1; committeeID >= 0; committeeID-- {
-			topicGenerator.CommitteeID = byte(committeeID)
-			// logger.Info(committeeID, len(responseTopic))
-			topic4HighwaySub := topic.GetTopicForSub(true, msg, byte(committeeID))
-			responseTopic[committeeID] = topic4HighwaySub
-			if !pubsubManager.HasTopic(topic4HighwaySub) {
-				pubsubManager.GRPCMessage <- topic4HighwaySub
-			}
-			actOfTopic[committeeID] = proto.MessageTopicPair_PUB
-		}
-	case topic.CmdBFT:
-		responseTopic = make([]string, 1)
-		actOfTopic = make([]proto.MessageTopicPair_Action, 1)
-		err := topicGenerator.FromMessageType(int(committeeID), msg)
-		if err != nil {
-			return nil, err
-		}
-		topic4HighwaySub := topic.GetTopicForPubSub(msg, committeeID)
-		responseTopic[0] = topic4HighwaySub
-		if !pubsubManager.HasTopic(topic4HighwaySub) {
-			pubsubManager.GRPCMessage <- topic4HighwaySub
-		}
-		actOfTopic[0] = proto.MessageTopicPair_PUBSUB
-	case topic.CmdPeerState, topic.CmdBlockBeacon, topic.CmdBlkShardToBeacon, topic.CmdBlockShard:
-		responseTopic = make([]string, 2)
-		actOfTopic = make([]proto.MessageTopicPair_Action, 2)
-		err := topicGenerator.FromMessageType(int(committeeID), msg)
-		if err != nil {
-			return nil, err
-		}
-		// topic4HighwaySub := topicGenerator.GetTopic4ProxySub()
-		topic4HighwaySub := topic.GetTopicForSub(true, msg, byte(committeeID))
-		responseTopic[0] = topic4HighwaySub
-		actOfTopic[0] = proto.MessageTopicPair_PUB
-		if !pubsubManager.HasTopic(topic4HighwaySub) {
-			pubsubManager.GRPCMessage <- topic4HighwaySub
-		}
-		responseTopic[1] = topic.GetTopicForSub(false, msg, byte(committeeID))
-		actOfTopic[1] = proto.MessageTopicPair_SUB
-	default:
-		return nil, errors.New("Unknown message type: " + msg)
-	}
-	return &proto.MessageTopicPair{
-		Message: msg,
-		Topic:   responseTopic,
-		Act:     actOfTopic,
-	}, nil
 }

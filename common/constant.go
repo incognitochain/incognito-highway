@@ -16,6 +16,19 @@ var (
 
 const (
 	BEACONID      byte = 255
-	NumberOfShard      = 2
-	CommitteeSize      = 4
+	NumberOfShard      = 6
+	CommitteeSize      = 32
+	BeaconRole         = "beacon"
+	ShardRole          = "shard"
+
+	CommitteeRole = "committee"
+	PendingRole   = "pending"
+	WaitingRole   = "waiting"
+	NormalNode    = ""
+)
+
+const (
+	COMMITTEE byte = iota
+	PENDING
+	NORMAL
 )
