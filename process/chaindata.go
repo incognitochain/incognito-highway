@@ -35,7 +35,6 @@ type ChainData struct {
 type PeerWithBlk struct {
 	ID     peer.ID
 	Height uint64
-	CID    byte
 }
 
 func (chainData *ChainData) Init(
@@ -129,7 +128,6 @@ func (chainData *ChainData) GetPeerHasBlk(
 			peers = append(peers, PeerWithBlk{
 				ID:     peerID,
 				Height: nodeState.Height,
-				CID:    committeeID,
 			})
 		} else {
 			logger.Warnf("Committee publickey %v not found in PeerID map", committeePublicKey)
