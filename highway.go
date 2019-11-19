@@ -6,6 +6,7 @@ import (
 	"highway/common"
 	"highway/p2p"
 	"highway/process"
+	"highway/process/topic"
 	"highway/route"
 	"math/rand"
 	"time"
@@ -25,6 +26,7 @@ func main() {
 		return
 	}
 	config.printConfig()
+	topic.Handler.UpdateSupportShards(config.supportShards)
 	masterPeerID, err := peer.IDB58Decode(config.masternode)
 	if err != nil {
 		logger.Error(err)

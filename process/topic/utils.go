@@ -34,7 +34,7 @@ func InitTypeOfProcessor() {
 		switch mess {
 		case CmdPeerState:
 			TypeOfTopicProcessor[mess] = ProcessAndPublishAfter
-		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard:
+		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard, CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken:
 			TypeOfTopicProcessor[mess] = ProcessAndPublish
 		default:
 			TypeOfTopicProcessor[mess] = DoNothing
@@ -69,34 +69,40 @@ func GetMsgTypeOfTopic(topic string) string {
 }
 
 // GetCommitteeIDOfTopic handle error later TODO handle error pls
-func GetCommitteeIDOfTopic(topic string) byte {
+func GetCommitteeIDOfTopic(topic string) int {
 	topicElements := strings.Split(topic, "-")
 	if len(topicElements) == 0 {
-		return 0x00
+		return -1
 	}
-	bytesDecoded, _ := strconv.Atoi(topicElements[1])
-	return byte(bytesDecoded)
+	if topicElements[1] == "" {
+		return -1
+	}
+	cID, _ := strconv.Atoi(topicElements[1])
+	return cID
 }
 
-func GetTopicForPubSub(msgType string, cID byte) string {
+func getTopicForPubSub(msgType string, cID int) string {
 	if isBroadcastMessage(msgType) {
 		return fmt.Sprintf("%s-%d-", msgType, cID)
+	}
+	if cID == noCIDInTopic {
+		return fmt.Sprintf("%s--%s", msgType, common.SelfID)
 	}
 	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
 }
 
-func GetTopicForPub(isHighway bool, msgType string, cID byte) string {
-	commonTopic := GetTopicForPubSub(msgType, cID)
-	if isHighway {
+func getTopicForPub(side, msgType string, cID int) string {
+	commonTopic := getTopicForPubSub(msgType, cID)
+	if side == HIGHWAYSIDE {
 		return commonTopic + NODESUB
 	} else {
 		return commonTopic + NODEPUB
 	}
 }
 
-func GetTopicForSub(isHighway bool, msgType string, cID byte) string {
-	commonTopic := GetTopicForPubSub(msgType, cID)
-	if !isHighway {
+func getTopicForSub(side, msgType string, cID int) string {
+	commonTopic := getTopicForPubSub(msgType, cID)
+	if side == NODESIDE {
 		return commonTopic + NODESUB
 	} else {
 		return commonTopic + NODEPUB
