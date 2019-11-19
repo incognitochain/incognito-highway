@@ -61,61 +61,66 @@ func (h *Manager) setup(bootstrap []string) {
 	if len(bootstrap) == 0 || len(bootstrap[0]) == 0 {
 		return
 	}
-	// h.getListHighways(bootstrap[0])
+	hInfos, err := h.getListHighwaysFromPeer(bootstrap[0])
+	if err != nil {
+		logger.Errorf("Failed getting list of highways from peer %+v, err = %+v", bootstrap[0], err)
+		return
+	}
 
-	for _, b := range bootstrap {
-		if len(b) == 0 {
-			continue
-		}
-
+	for _, b := range hInfos {
 		// Get peer info
-		addr, err := multiaddr.NewMultiaddr(b)
+		addr, err := multiaddr.NewMultiaddr(b.PeerInfo)
 		if err != nil {
-			logger.Warnf("Invalid bootstrap highway: %v", b)
+			logger.Warnf("Invalid highway addr: %v", b)
 			continue
 		}
-		pInfo, err := peer.AddrInfoFromP2pAddr(addr)
+		addrInfo, err := peer.AddrInfoFromP2pAddr(addr)
 		if err != nil {
-			logger.Warnf("Invalid bootstrap highway: %v", b)
+			logger.Warnf("Invalid highway addr: %v, %v", b, addr)
 			continue
 		}
 
 		// Remember this highway
-		ss := []byte{} // TODO(@0xbunyip): parse from grpc result
-		switch pInfo.ID.String() {
-		case "QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv":
-			ss = []byte{255}
-		case "QmWoKWHPGjUNbjohYS2MySNDBiCXA2tDs3jT6P3MXDgb9D":
-			ss = []byte{0}
-		case "QmSZGxdbG1AfuDX1ia6kRyewrVbBNkjd6NU4AbZUCE2ZyG":
-			ss = []byte{1}
+		ss := []byte{}
+		for _, s := range b.SupportShards {
+			ss = append(ss, byte(s))
 		}
-		h.hmap.AddPeer(*pInfo, ss)
-
-		// Get latest committee from bootstrap highways if available
-		err = h.hc.Dial(*pInfo)
-		if err != nil {
-			logger.Warn("Failed dialing to bootstrap node", pInfo, err)
-			continue
-		}
-
-		cc, err := h.GetChainCommittee(pInfo.ID)
-		if err != nil {
-			logger.Warnf("Failed get chain committtee: %+v", err)
-			continue
-		}
-		logger.Info("Received chain committee:", cc)
-
-		// TOOD(@0xbunyip): update chain committee to ChainData here
+		h.hmap.AddPeer(*addrInfo, ss)
 	}
+
+	// TODO(@0xbunyip): Get latest committee from bootstrap highways if available
+	// err = h.hc.Dial(*addrInfo)
+	// if err != nil {
+	// 	logger.Warn("Failed dialing to bootstrap node", addrInfo, err)
+	// 	continue
+	// }
+
+	// cc, err := h.GetChainCommittee(addrInfo.ID)
+	// if err != nil {
+	// 	logger.Warnf("Failed get chain committtee: %+v", err)
+	// 	continue
+	// }
+	// logger.Info("Received chain committee:", cc)
+
+	// // TOOD(@0xbunyip): update chain committee to ChainData here
 }
 
-func (h *Manager) getListHighways(ma string) ([]string, error) {
+func (h *Manager) getListHighwaysFromPeer(ma string) ([]*proto.HighwayInfo, error) {
 	addrInfo, err := common.StringToAddrInfo(ma)
 	if err != nil {
-		return nil, addrInfo
+		return nil, err
 	}
-	return nil, nil
+
+	err = h.hc.Dial(*addrInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	hInfos, err := h.GetListHighways(addrInfo.ID)
+	if err != nil {
+		return nil, err
+	}
+	return hInfos, nil
 }
 
 func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, error) {
@@ -133,6 +138,20 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 		return nil, errors.Wrapf(err, "comm: %s", comm)
 	}
 	return comm, nil
+}
+
+func (h *Manager) GetListHighways(pid peer.ID) ([]*proto.HighwayInfo, error) {
+	c, err := h.hc.GetHWClient(pid)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.GetHighwayInfos(context.Background(), &proto.GetHighwayInfosRequest{})
+	logger.Infof("resp: %+v", resp)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return resp.Highways, nil
 }
 
 func (h *Manager) Start() {

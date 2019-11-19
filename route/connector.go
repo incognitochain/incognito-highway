@@ -15,6 +15,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO(@0xbunyip): swap connector and client
+// client provides rpc and connector manages connection
+// also, move server out of connector
 type Connector struct {
 	host host.Host
 	hmap *Map
@@ -38,8 +41,8 @@ func NewConnector(
 		host:       h,
 		hmap:       hmap,
 		ps:         ps,
-		hws:        NewServer(prtc), // GRPC server serving other highways
-		hwc:        NewClient(prtc), // GRPC clients to other highways
+		hws:        NewServer(prtc, hmap), // GRPC server serving other highways
+		hwc:        NewClient(prtc),       // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
 	}
