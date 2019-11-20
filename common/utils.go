@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -58,7 +57,19 @@ func HasValuesAt(
 	value byte,
 ) int {
 	for i, v := range slice {
-		if reflect.DeepEqual(v, value) {
+		if v == value {
+			return i
+		}
+	}
+	return -1
+}
+
+func HasStringAt(
+	slice []string,
+	value string,
+) int {
+	for i, v := range slice {
+		if v == value {
 			return i
 		}
 	}

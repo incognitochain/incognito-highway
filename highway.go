@@ -6,6 +6,7 @@ import (
 	"highway/common"
 	"highway/p2p"
 	"highway/process"
+	"highway/process/topic"
 	"highway/route"
 	"math/rand"
 	"time"
@@ -16,15 +17,17 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	// Setup logging
-	initLogger()
-
 	config, err := GetProxyConfig()
 	if err != nil {
 		logger.Errorf("%+v", err)
 		return
 	}
+
+	// Setup logging
+	initLogger(config.loglevel)
+
 	config.printConfig()
+	topic.Handler.UpdateSupportShards(config.supportShards)
 	masterPeerID, err := peer.IDB58Decode(config.masternode)
 	if err != nil {
 		logger.Error(err)

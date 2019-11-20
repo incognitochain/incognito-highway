@@ -29,14 +29,12 @@ type ChainData struct {
 	ShardByCommitteePublicKey map[string]byte
 	CommitteeKeyByMiningKey   map[string]string
 	Locker                    *sync.RWMutex
-
-	masternode peer.ID
+	masternode                peer.ID
 }
 
 type PeerWithBlk struct {
 	ID     peer.ID
 	Height uint64
-	CID    byte
 }
 
 func (chainData *ChainData) Init(
@@ -130,7 +128,6 @@ func (chainData *ChainData) GetPeerHasBlk(
 			peers = append(peers, PeerWithBlk{
 				ID:     peerID,
 				Height: nodeState.Height,
-				CID:    committeeID,
 			})
 		} else {
 			logger.Warnf("Committee publickey %v not found in PeerID map", committeePublicKey)
@@ -214,7 +211,7 @@ func (chainData *ChainData) InitGenesisCommitteeFromFile(
 	//#endregion Reading genesis committee key from keylist.json
 
 	// Cut off keylist.json and update
-	keyListFromFile.Bc = keyListFromFile.Bc[:numberOfCandidate]
+	keyListFromFile.Bc = keyListFromFile.Bc[:]
 	for k := range keyListFromFile.Sh {
 		if k >= numberOfShard {
 			delete(keyListFromFile.Sh, k)
@@ -331,6 +328,9 @@ func newChainStateFromMsgPeerState(
 // ProcessChainCommittee receives all messages containing the new
 // committee published by masternode and update the list of committee members
 func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
+
+	//Message just contains CommitteeKey, Pending, so, how about waiting?
+
 	ctx := context.Background()
 	for {
 		msg, err := sub.Next(ctx)
@@ -340,7 +340,7 @@ func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
 			continue
 		}
 
-		// TODO(@0xbunyip): check if msg.From can be manipulated by forwarder
+		// TODO(@0xbunyip): check if msg.From can be maniconfiguration: driver=usbhid maxpower=200mA speed=12Mbit/s
 		if peer.ID(msg.From) != chainData.masternode {
 			from := peer.IDB58Encode(peer.ID(msg.From))
 			exp := peer.IDB58Encode(chainData.masternode)
@@ -397,14 +397,34 @@ func GetUserRole(cid int) *proto.UserRole {
 		layer = ic.BeaconRole
 		role = ic.CommitteeRole
 		shard = -1
-	} else {
+	} else if cid != -1 { // other than NORMAL
 		layer = ic.ShardRole
 		role = ic.CommitteeRole
 		shard = cid
+	} else {
+		layer = ""
+		role = ""
+		shard = -2
 	}
 	return &proto.UserRole{
 		Layer: layer,
 		Role:  role,
 		Shard: int32(shard),
 	}
+}
+
+// GetCommitteeInfoOfPublicKey With input public key, return role of it, if the role is COMMITTEE, return committee ID of it.
+// ROLE value is defined in common/constant.go
+// TODO Add pending list into Chaindata, update this function
+func (chainData *ChainData) GetCommitteeInfoOfPublicKey(
+	pk string,
+) (
+	byte,
+	int,
+) {
+	cID, err := chainData.GetCommitteeIDOfValidator(pk)
+	if err != nil {
+		return common.NORMAL, -1
+	}
+	return common.COMMITTEE, int(cID)
 }
