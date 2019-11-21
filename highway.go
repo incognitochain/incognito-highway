@@ -62,7 +62,7 @@ func main() {
 	chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, config.supportShards)
 
 	// Subscribe to receive new committee
-	process.GlobalPubsub.GRPCSpecSub <- process.SubHandler{
+	process.GlobalPubsub.SubHandlers <- process.SubHandler{
 		Topic:   "chain_committee",
 		Handler: chainData.ProcessChainCommitteeMsg,
 	}

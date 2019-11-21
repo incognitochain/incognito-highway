@@ -20,7 +20,7 @@ type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
 	GossipMachine        *p2pPubSub.PubSub
-	GRPCSpecSub          chan SubHandler
+	SubHandlers          chan SubHandler
 	OutSideMessage       chan string
 	followedTopic        []string
 	ForwardNow           chan p2pPubSub.Message
@@ -39,7 +39,7 @@ func InitPubSub(
 	if err != nil {
 		return err
 	}
-	GlobalPubsub.GRPCSpecSub = make(chan SubHandler, 100)
+	GlobalPubsub.SubHandlers = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
 	GlobalPubsub.SupportShards = supportShards
@@ -52,14 +52,14 @@ func InitPubSub(
 func (pubsub *PubSubManager) WatchingChain() {
 	for {
 		select {
-		case newGRPCSpecSub := <-pubsub.GRPCSpecSub:
-			subch, err := pubsub.FloodMachine.Subscribe(newGRPCSpecSub.Topic)
-			pubsub.followedTopic = append(pubsub.followedTopic, newGRPCSpecSub.Topic)
+		case newSubHandler := <-pubsub.SubHandlers:
+			subch, err := pubsub.FloodMachine.Subscribe(newSubHandler.Topic)
+			pubsub.followedTopic = append(pubsub.followedTopic, newSubHandler.Topic)
 			if err != nil {
 				logger.Info(err)
 				continue
 			}
-			go newGRPCSpecSub.Handler(subch)
+			go newSubHandler.Handler(subch)
 		case <-pubsub.SpecialPublishTicker.C:
 			go pubsub.PublishPeerStateToNode()
 		}

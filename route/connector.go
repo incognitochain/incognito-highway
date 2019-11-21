@@ -51,7 +51,7 @@ func NewConnector(
 	h.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
-	hc.ps.GRPCSpecSub <- process.SubHandler{
+	hc.ps.SubHandlers <- process.SubHandler{
 		Topic:   "highway_enlist",
 		Handler: hc.enlistHighways,
 	}
