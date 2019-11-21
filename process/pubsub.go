@@ -20,7 +20,6 @@ type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
 	GossipMachine        *p2pPubSub.PubSub
-	GRPCMessage          chan string
 	GRPCSpecSub          chan SubHandler
 	OutSideMessage       chan string
 	followedTopic        []string
@@ -40,7 +39,6 @@ func InitPubSub(
 	if err != nil {
 		return err
 	}
-	GlobalPubsub.GRPCMessage = make(chan string)
 	GlobalPubsub.GRPCSpecSub = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
@@ -54,16 +52,6 @@ func InitPubSub(
 func (pubsub *PubSubManager) WatchingChain() {
 	for {
 		select {
-		case newTopic := <-pubsub.GRPCMessage:
-			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
-			pubsub.followedTopic = append(pubsub.followedTopic, newTopic)
-			if err != nil {
-				logger.Info(err)
-				continue
-			}
-			typeOfProcessor := topic.GetTypeOfProcess(newTopic)
-			logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
-			go pubsub.handleNewMsg(subch, typeOfProcessor)
 		case newGRPCSpecSub := <-pubsub.GRPCSpecSub:
 			subch, err := pubsub.FloodMachine.Subscribe(newGRPCSpecSub.Topic)
 			pubsub.followedTopic = append(pubsub.followedTopic, newGRPCSpecSub.Topic)
