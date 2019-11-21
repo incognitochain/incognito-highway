@@ -58,6 +58,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
+	logger.Infof("Receive Register request, CID %v, peerID %v", req.CommitteeID, req.PeerID)
 	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
 	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
 	cIDs := []int{}
