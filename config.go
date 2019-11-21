@@ -20,6 +20,7 @@ type ProxyConfig struct {
 	version       string
 	host          string
 	masternode    string
+	loglevel      string
 }
 
 var proxyConfig *ProxyConfig
@@ -38,6 +39,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	version := flag.String("version", "0.1", "proxy version")
 	host := flag.String("host", "0.0.0.0", "listenning address")
 	masternode := flag.String("masternode", "QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV", "libp2p PeerID of master node")
+	loglevel := flag.String("loglevel", "info", "loglevel for highway, info or debug")
 	flag.Parse()
 
 	ss, err := parseSupportShards(*supportShards)
@@ -55,6 +57,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		version:       *version,
 		host:          *host,
 		masternode:    *masternode,
+		loglevel:      *loglevel,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()
