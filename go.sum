@@ -123,10 +123,6 @@ github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50 h1:+
 github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50/go.mod h1:5riooInEdamsXRruHSbk5aScSOFvreGwiYCdLOPOETY=
 github.com/incognitochain/incognito-chain v0.0.0-20191101095820-aa5b73f50a1b h1:U4THYihI3Vb3TsNTt6gAXgOvFP869dctRuWAj3QoxIs=
 github.com/incognitochain/incognito-chain v0.0.0-20191101095820-aa5b73f50a1b/go.mod h1:NW/T/5AqWSySM6GdYJfJzF1NZlA9XUxa650vw9+q2PY=
-github.com/incognitochain/incognito-chain v0.0.0-20191101101703-981f55a7b70d h1:tNsGQrtcJN+GwWmvYtyOHjYgnErgqxAAXNq9Yd15pto=
-github.com/incognitochain/incognito-chain v0.0.0-20191101101703-981f55a7b70d/go.mod h1:NW/T/5AqWSySM6GdYJfJzF1NZlA9XUxa650vw9+q2PY=
-github.com/incognitochain/incognito-chain v0.0.0-20191102072250-41d6c2ead5a4 h1:Yu39cOoIyF0HSPzZEsXXwgAmFKs7JohSZUOhy82Wh/4=
-github.com/incognitochain/incognito-chain v0.0.0-20191102072250-41d6c2ead5a4/go.mod h1:NW/T/5AqWSySM6GdYJfJzF1NZlA9XUxa650vw9+q2PY=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/ipfs/go-cid v0.0.1/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.2 h1:tuuKaZPU1M6HcejsO3AcYWW8sZ8MTvyxfc4uqB4eFE8=

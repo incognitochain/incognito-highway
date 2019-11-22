@@ -13,9 +13,9 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/multiformats/go-multihash v0.0.5
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
-	github.com/syndtr/goleveldb v1.0.0
 	go.uber.org/zap v1.12.0
 	google.golang.org/grpc v1.20.1
 	stathat.com/c/consistent v1.0.0 // indirect

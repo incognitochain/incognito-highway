@@ -15,6 +15,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO(@0xbunyip): swap connector and client
+// client provides rpc and connector manages connection
+// also, move server out of connector
 type Connector struct {
 	host host.Host
 	hmap *Map
@@ -38,8 +41,8 @@ func NewConnector(
 		host:       h,
 		hmap:       hmap,
 		ps:         ps,
-		hws:        NewServer(prtc), // GRPC server serving other highways
-		hwc:        NewClient(prtc), // GRPC clients to other highways
+		hws:        NewServer(prtc, hmap), // GRPC server serving other highways
+		hwc:        NewClient(prtc),       // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
 	}
@@ -48,7 +51,7 @@ func NewConnector(
 	h.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
-	hc.ps.GRPCSpecSub <- process.SubHandler{
+	hc.ps.SubHandlers <- process.SubHandler{
 		Topic:   "highway_enlist",
 		Handler: hc.enlistHighways,
 	}
@@ -92,13 +95,13 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 			logger.Error(err)
 			continue
 		}
-
 		// TODO(@0xakk0r0kamui): check highway's signature in msg
 		em := &enlistMessage{}
 		if err := json.Unmarshal(msg.Data, em); err != nil {
 			logger.Error(err)
 			continue
 		}
+		logger.Infof("Received highway_enlist msg: %+v", em)
 
 		// Update supported shards of peer
 		hc.hmap.AddPeer(em.Peer, em.SupportShards)
@@ -107,6 +110,7 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 }
 
 func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
+	logger.Debugf("Dialing to peer %+v", p)
 	err := hc.Dial(p)
 	if err != nil {
 		return err
@@ -124,9 +128,13 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 	if err != nil {
 		return errors.Wrapf(err, "enlistMessage: %v", data)
 	}
+	logger.Debugf("Publishing msg highway_enlist: %s", msg)
 	if err := hc.ps.FloodMachine.Publish("highway_enlist", msg); err != nil {
 		return errors.WithStack(err)
 	}
+
+	// Update list of connected shards
+	hc.hmap.ConnectToShardOfPeer(p)
 	return nil
 }
 

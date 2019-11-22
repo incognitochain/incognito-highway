@@ -5,6 +5,7 @@ import (
 	"highway/common"
 	"highway/process"
 	"highway/proto"
+	"highway/route"
 	"math/rand"
 	"sync"
 
@@ -213,7 +214,18 @@ func (hc *Client) getClientWithBlock(
 	to uint64,
 	heights []uint64,
 ) (proto.HighwayServiceClient, error) {
-	peerID := peer.ID("")
+	if hc.supported(cid) {
+		return hc.getChainClientWithBlock(cid, specific, to, heights)
+	}
+	return hc.routeManager.GetClientSupportShard(cid)
+}
+
+func (hc *Client) getChainClientWithBlock(
+	cid int,
+	specific bool,
+	to uint64,
+	heights []uint64,
+) (proto.HighwayServiceClient, error) {
 	maxHeight := to
 	if specific {
 		maxHeight = heights[len(heights)-1]
@@ -260,6 +272,15 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	return p.ID, nil
 }
 
+func (hc *Client) supported(cid int) bool {
+	for _, s := range hc.supportShards {
+		if byte(cid) == s {
+			return true
+		}
+	}
+	return false
+}
+
 func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
 	if len(peers) == 0 {
 		return process.PeerWithBlk{}, errors.Errorf("empty peer list")
@@ -282,16 +303,26 @@ func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.Pe
 }
 
 type Client struct {
-	m         *Manager
-	cc        *ClientConnector
-	chainData *process.ChainData
+	m             *Manager
+	routeManager  *route.Manager
+	cc            *ClientConnector
+	chainData     *process.ChainData
+	supportShards []byte // to know if we should query node or other highways
 }
 
-func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol, incChainData *process.ChainData) *Client {
+func NewClient(
+	m *Manager,
+	rman *route.Manager,
+	pr *p2pgrpc.GRPCProtocol,
+	incChainData *process.ChainData,
+	supportShards []byte,
+) *Client {
 	hc := &Client{
-		m:         m,
-		cc:        NewClientConnector(pr),
-		chainData: incChainData,
+		m:             m,
+		routeManager:  rman,
+		cc:            NewClientConnector(pr),
+		chainData:     incChainData,
+		supportShards: supportShards,
 	}
 	return hc
 }

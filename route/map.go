@@ -1,6 +1,8 @@
 package route
 
 import (
+	"sync"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -9,6 +11,7 @@ type Map struct {
 	Supports map[peer.ID][]byte       // peerID => shards supported
 
 	connected []byte // keep track of connected shards
+	*sync.RWMutex
 }
 
 func NewMap(p peer.AddrInfo, supportShards []byte) *Map {
@@ -16,12 +19,15 @@ func NewMap(p peer.AddrInfo, supportShards []byte) *Map {
 		Peers:     map[byte][]peer.AddrInfo{},
 		Supports:  map[peer.ID][]byte{},
 		connected: supportShards,
+		RWMutex:   &sync.RWMutex{},
 	}
 	m.AddPeer(p, supportShards)
 	return m
 }
 
 func (h *Map) IsConnectedToShard(s byte) bool {
+	h.RLock()
+	defer h.RUnlock()
 	for _, c := range h.connected {
 		if c == s {
 			return true
@@ -30,25 +36,30 @@ func (h *Map) IsConnectedToShard(s byte) bool {
 	return false
 }
 
-func (h *Map) ConnectToShard(s byte) {
+func (h *Map) connectToShard(s byte) {
+	logger.Debugf("Connected to shard %d", s)
 	h.connected = append(h.connected, s)
 }
 
 func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
+	h.Lock()
+	defer h.Unlock()
 	for _, s := range h.Supports[p.ID] {
-		h.ConnectToShard(s)
+		h.connectToShard(s)
 	}
 }
 
 // IsEnlisted checks if a peer has already registered as a valid highway
 func (h *Map) IsEnlisted(p peer.AddrInfo) bool {
+	h.RLock()
+	defer h.RUnlock()
 	_, ok := h.Supports[p.ID]
 	return ok
 }
 
 func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
-	// TODO(@0xbunyip): serialize all access to prevent race condition
-
+	h.Lock()
+	defer h.Unlock()
 	mcopy := func(b []byte) []byte { // Create new slice and copy
 		c := make([]byte, len(b))
 		copy(c, b)
@@ -60,4 +71,16 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
 		h.Peers[s] = append(h.Peers[s], p)
 	}
 	logger.Info("added peer", p, supportShards)
+}
+
+func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
+	h.RLock()
+	defer h.RUnlock()
+	m := map[byte][]peer.AddrInfo{}
+	for s, addrs := range h.Peers {
+		for _, addr := range addrs { // NOTE: Addrs in AddrInfo are still referenced
+			m[s] = append(m[s], addr)
+		}
+	}
+	return m
 }

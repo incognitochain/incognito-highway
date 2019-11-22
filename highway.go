@@ -40,33 +40,33 @@ func main() {
 	// New libp2p host
 	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
 
-	// Chain-facing connections
-	go chain.ManageChainConnections(proxyHost.Host, proxyHost.GRPC, chainData)
-
+	// Pubsub
 	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
 		logger.Error(err)
 		return
 	}
 	logger.Info("Init pubsub ok")
-
 	go process.GlobalPubsub.WatchingChain()
 
-	// Subscribe to receive new committee
-	process.GlobalPubsub.GRPCSpecSub <- process.SubHandler{
-		Topic:   "chain_committee",
-		Handler: chainData.ProcessChainCommitteeMsg,
-	}
-
 	// Highway manager: connect cross highways
-	h := route.NewManager(
+	rman := route.NewManager(
 		config.supportShards,
 		config.bootstrap,
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
 	)
-	go h.Start()
+	go rman.Start()
 
-	go proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
-	select {}
+	// Chain-facing connections
+	chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, config.supportShards)
+
+	// Subscribe to receive new committee
+	process.GlobalPubsub.SubHandlers <- process.SubHandler{
+		Topic:   "chain_committee",
+		Handler: chainData.ProcessChainCommitteeMsg,
+	}
+
+	logger.Info("Serving...")
+	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
 }
