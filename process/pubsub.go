@@ -26,6 +26,7 @@ type PubSubManager struct {
 	ForwardNow           chan p2pPubSub.Message
 	SpecialPublishTicker *time.Ticker
 	BlockChainData       *ChainData
+	Route                Sender
 }
 
 func InitPubSub(
@@ -54,7 +55,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 		select {
 		case newSubHandler := <-pubsub.SubHandlers:
 			subch, err := pubsub.FloodMachine.Subscribe(newSubHandler.Topic)
-			pubsub.followedTopic = append(pubsub.followedTopic, newSubHandler.Topic)
+			pubsub.followedTopic = append(pubsub.followedTopic, newSubHandler.Topic) // TODO(@0xakk0r0kamui): lock access to followedTopic
 			if err != nil {
 				logger.Info(err)
 				continue
@@ -95,6 +96,14 @@ func (pubsub *PubSubManager) handleNewMsg(
 				for _, pubTopic := range pubTopics {
 					go pubsub.FloodMachine.Publish(pubTopic, data.GetData())
 				}
+
+				// // TODO(@0xakk0r0kamui): refactor this (e.g., use separate handler for each msg type)
+				// msg := topic.GetMsgTypeOfTopic(sub.Topic())
+				// switch msg {
+				// case topic.CmdBlockBeacon, topic.CmdCrossShard, topic.CmdBlkShardToBeacon:
+				// 	pubsub.Route.Send(data.GetData())
+				// }
+
 			default:
 				return
 			}
