@@ -4,6 +4,7 @@ package main
 import (
 	"highway/chain"
 	"highway/common"
+	"highway/config"
 	"highway/p2p"
 	"highway/process"
 	"highway/process/topic"
@@ -17,18 +18,18 @@ import (
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	config, err := GetProxyConfig()
+	conf, err := config.GetProxyConfig()
 	if err != nil {
 		logger.Errorf("%+v", err)
 		return
 	}
 
 	// Setup logging
-	initLogger(config.loglevel)
+	initLogger(conf.Loglevel)
 
-	config.printConfig()
-	topic.Handler.UpdateSupportShards(config.supportShards)
-	masterPeerID, err := peer.IDB58Decode(config.masternode)
+	conf.PrintConfig()
+	topic.Handler.UpdateSupportShards(conf.SupportShards)
+	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
 		logger.Error(err)
 		return
@@ -38,10 +39,10 @@ func main() {
 	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
 
 	// New libp2p host
-	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
+	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
 
 	// Pubsub
-	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
+	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {
 		logger.Error(err)
 		return
 	}
@@ -50,8 +51,8 @@ func main() {
 
 	// Highway manager: connect cross highways
 	rman := route.NewManager(
-		config.supportShards,
-		config.bootstrap,
+		conf.SupportShards,
+		conf.Bootstrap,
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
@@ -59,7 +60,7 @@ func main() {
 	go rman.Start()
 
 	// Chain-facing connections
-	chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, config.supportShards)
+	chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
 
 	// Subscribe to receive new committee
 	process.GlobalPubsub.SubHandlers <- process.SubHandler{
