@@ -122,7 +122,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 	if err != nil {
-		logger.Warnf("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
+		logger.Debugf("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
@@ -187,7 +187,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 ) ([][]byte, error) {
 	client, err := hc.getClientWithBlock(int(common.BEACONID), specific, to, heights)
 	if err != nil {
-		logger.Warnf("No client with blockbeacon, from %v to %v", from, to)
+		logger.Debugf("No client with blockbeacon, from %v to %v", from, to)
 		return nil, err
 	}
 	reply, err := client.GetBlockBeaconByHeight(
