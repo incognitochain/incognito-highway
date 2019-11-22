@@ -5,6 +5,7 @@ import (
 	"highway/chain"
 	"highway/common"
 	"highway/config"
+	"highway/monitor"
 	"highway/p2p"
 	"highway/process"
 	"highway/process/topic"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 )
+
+var _ monitor.Monitor = (*config.Reporter)(nil)
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -67,6 +70,12 @@ func main() {
 		Topic:   "chain_committee",
 		Handler: chainData.ProcessChainCommitteeMsg,
 	}
+
+	// Setup monitoring
+	confReporter := config.NewReporter(conf)
+	reporters := []monitor.Monitor{confReporter}
+	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
+	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
 
 	logger.Info("Serving...")
 	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services

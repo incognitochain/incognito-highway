@@ -87,3 +87,17 @@ func StringToAddrInfo(ma string) (*peer.AddrInfo, error) {
 	}
 	return addrInfo, nil
 }
+
+func NewDefaultMarshaler(data interface{}) json.Marshaler {
+	return &marshaler{data}
+}
+
+type marshaler struct {
+	data interface{}
+}
+
+var _ json.Marshaler = (*marshaler)(nil)
+
+func (m *marshaler) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.data)
+}
