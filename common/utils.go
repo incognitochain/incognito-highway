@@ -48,8 +48,9 @@ type Key struct {
 }
 
 type KeyList struct {
-	Bc []Key         `json:"Beacon"`
-	Sh map[int][]Key `json:"Shard"`
+	Bc     []Key         `json:"Beacon"`
+	Sh     map[int][]Key `json:"Shard"`
+	ShPend map[int][]Key `json:"ShardPending"`
 }
 
 func HasValuesAt(

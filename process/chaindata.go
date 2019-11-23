@@ -22,14 +22,15 @@ import (
 )
 
 type ChainData struct {
-	ListMsgPeerStateOfShard   map[byte]CommitteeState //AllPeerState
-	CurrentNetworkState       NetworkState
-	CommitteePubkeyByPeerID   map[peer.ID]string
-	PeerIDByCommitteePubkey   map[string]peer.ID
-	ShardByCommitteePublicKey map[string]byte
-	CommitteeKeyByMiningKey   map[string]string
-	Locker                    *sync.RWMutex
-	masternode                peer.ID
+	ListMsgPeerStateOfShard          map[byte]CommitteeState //AllPeerState
+	CurrentNetworkState              NetworkState
+	CommitteePubkeyByPeerID          map[peer.ID]string
+	PeerIDByCommitteePubkey          map[string]peer.ID
+	ShardByCommitteePublicKey        map[string]byte
+	ShardPendingByCommitteePublicKey map[string]byte
+	CommitteeKeyByMiningKey          map[string]string
+	Locker                           *sync.RWMutex
+	masternode                       peer.ID
 }
 
 type PeerWithBlk struct {
@@ -53,6 +54,7 @@ func (chainData *ChainData) Init(
 	chainData.CommitteePubkeyByPeerID = map[peer.ID]string{}
 	chainData.PeerIDByCommitteePubkey = map[string]peer.ID{}
 	chainData.ShardByCommitteePublicKey = map[string]byte{}
+	chainData.ShardPendingByCommitteePublicKey = map[string]byte{}
 	chainData.CommitteeKeyByMiningKey = map[string]string{}
 	chainData.masternode = masternode
 	err := chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
@@ -240,6 +242,11 @@ func (chainData *ChainData) updateCommitteePublicKey(keys *common.KeyList) {
 			chainData.ShardByCommitteePublicKey[val.CommitteePubKey] = byte(j)
 		}
 	}
+	for j, pends := range keys.ShPend {
+		for _, pend := range pends {
+			chainData.ShardPendingByCommitteePublicKey[pend.CommitteePubKey] = byte(j)
+		}
+	}
 	for key := range chainData.ShardByCommitteePublicKey {
 		committeePK := new(common.CommitteePublicKey)
 		err := committeePK.FromString(key)
@@ -385,6 +392,18 @@ func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, 
 			keys.Sh[int(s)] = append(keys.Sh[int(s)], common.Key{CommitteePubKey: cpk})
 		}
 	}
+
+	// Shard's pending validators
+	for s, pends := range comm.AllShardPending {
+		for _, pend := range pends {
+			cpk, err := pend.ToBase58()
+			if err != nil {
+				return nil, errors.Wrapf(err, "key: %+v", pend)
+			}
+			keys.ShPend[int(s)] = append(keys.ShPend[int(s)], common.Key{CommitteePubKey: cpk})
+		}
+	}
+
 	return keys, nil
 }
 
