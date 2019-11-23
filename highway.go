@@ -63,7 +63,7 @@ func main() {
 	go rman.Start()
 
 	// Chain-facing connections
-	chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+	chainManager := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
 
 	// Subscribe to receive new committee
 	process.GlobalPubsub.SubHandlers <- process.SubHandler{
@@ -73,7 +73,8 @@ func main() {
 
 	// Setup monitoring
 	confReporter := config.NewReporter(conf)
-	reporters := []monitor.Monitor{confReporter}
+	chainReporter := chain.NewReporter(chainManager)
+	reporters := []monitor.Monitor{confReporter, chainReporter}
 	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
 	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
 

@@ -27,7 +27,7 @@ func ManageChainConnections(
 	prtc *p2pgrpc.GRPCProtocol,
 	chainData *process.ChainData,
 	supportShards []byte,
-) {
+) *Manager {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
@@ -41,11 +41,27 @@ func ManageChainConnections(
 
 	h.Network().Notify(m)
 	go m.start()
+	return m
 }
 
 func (m *Manager) GetPeers(cid int) []peer.ID {
 	m.peers.RLock()
 	defer m.peers.RUnlock()
+	ids := m.getPeers(cid)
+	return ids
+}
+
+func (m *Manager) GetAllPeers() map[int][]peer.ID {
+	m.peers.RLock()
+	defer m.peers.RUnlock()
+	ids := map[int][]peer.ID{}
+	for cid, _ := range m.peers.ids {
+		ids[cid] = m.getPeers(cid)
+	}
+	return ids
+}
+
+func (m *Manager) getPeers(cid int) []peer.ID {
 	ids := []peer.ID{}
 	for _, id := range m.peers.ids[cid] {
 		s := string(id) // make a copy
