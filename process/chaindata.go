@@ -441,6 +441,7 @@ func (chainData *ChainData) GetCommitteeInfoOfPublicKey(
 	byte,
 	int,
 ) {
+	// TODO(@0xakk0r0kamui): differentiate between pending/waiting and fullnode
 	cID, err := chainData.GetCommitteeIDOfValidator(pk)
 	if err != nil {
 		return common.NORMAL, -1

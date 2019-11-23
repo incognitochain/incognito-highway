@@ -256,7 +256,7 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	var peers []process.PeerWithBlk
 	for _, p := range peersHasBlk {
 		for _, cp := range connectedPeers {
-			if p.ID == cp {
+			if p.ID == cp.ID {
 				peers = append(peers, p)
 			}
 		}

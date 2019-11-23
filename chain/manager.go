@@ -16,7 +16,7 @@ type Manager struct {
 	newPeers chan PeerInfo
 
 	peers struct {
-		ids map[int][]peer.ID
+		ids map[int][]PeerInfo
 		sync.RWMutex
 	}
 }
@@ -32,7 +32,7 @@ func ManageChainConnections(
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
 	}
-	m.peers.ids = map[int][]peer.ID{}
+	m.peers.ids = map[int][]PeerInfo{}
 	m.peers.RWMutex = sync.RWMutex{}
 
 	// Server and client instance to communicate to Incognito nodes
@@ -44,61 +44,69 @@ func ManageChainConnections(
 	return m
 }
 
-func (m *Manager) GetPeers(cid int) []peer.ID {
+func (m *Manager) GetPeers(cid int) []PeerInfo {
 	m.peers.RLock()
 	defer m.peers.RUnlock()
 	ids := m.getPeers(cid)
 	return ids
 }
 
-func (m *Manager) GetAllPeers() map[int][]peer.ID {
+func (m *Manager) GetAllPeers() map[int][]PeerInfo {
 	m.peers.RLock()
 	defer m.peers.RUnlock()
-	ids := map[int][]peer.ID{}
+	ids := map[int][]PeerInfo{}
 	for cid, _ := range m.peers.ids {
 		ids[cid] = m.getPeers(cid)
 	}
 	return ids
 }
 
-func (m *Manager) getPeers(cid int) []peer.ID {
-	ids := []peer.ID{}
-	for _, id := range m.peers.ids[cid] {
-		s := string(id) // make a copy
-		ids = append(ids, peer.ID(s))
+func (m *Manager) getPeers(cid int) []PeerInfo {
+	peers := []PeerInfo{}
+	for _, pinfo := range m.peers.ids[cid] {
+		pcopy := PeerInfo{
+			ID:     peer.ID(string(pinfo.ID)), // make a copy
+			CID:    pinfo.CID,
+			Role:   pinfo.Role,
+			Pubkey: pinfo.Pubkey,
+		}
+		peers = append(peers, pcopy)
 	}
-	return ids
+	return peers
 }
 
 func (m *Manager) start() {
 	for {
 		select {
 		case p := <-m.newPeers:
-			m.addNewPeer(p.ID, p.CID)
+			m.addNewPeer(p)
 		}
 	}
 }
 
-func (m *Manager) addNewPeer(pid peer.ID, cid int) {
+func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	m.peers.Lock()
 	defer m.peers.Unlock()
+
+	pid := pinfo.ID
+	cid := pinfo.CID
 
 	// Remove from previous lists
 	m.peers.ids = remove(m.peers.ids, pid)
 
 	// Append to list
-	m.peers.ids[cid] = append(m.peers.ids[cid], pid)
+	m.peers.ids[cid] = append(m.peers.ids[cid], pinfo)
 	logger.Infof("Appended new peer to shard %d, pid = %v", cid, pid)
 }
 
-func remove(ids map[int][]peer.ID, rid peer.ID) map[int][]peer.ID {
+func remove(ids map[int][]PeerInfo, rid peer.ID) map[int][]PeerInfo {
 	for cid, peers := range ids {
 		k := 0
-		for _, pid := range peers {
-			if pid == rid {
+		for _, p := range peers {
+			if p.ID == rid {
 				continue
 			}
-			peers[k] = pid
+			peers[k] = p
 			k++
 		}
 
@@ -107,7 +115,6 @@ func remove(ids map[int][]peer.ID, rid peer.ID) map[int][]peer.ID {
 		}
 
 		ids[cid] = peers[:k]
-
 	}
 	return ids
 }
@@ -131,6 +138,8 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 }
 
 type PeerInfo struct {
-	ID  peer.ID
-	CID int // CommitteeID
+	ID     peer.ID
+	CID    int // CommitteeID
+	Role   string
+	Pubkey string
 }

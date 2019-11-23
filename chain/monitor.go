@@ -18,6 +18,7 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	validators := r.manager.GetAllPeers()
 	data := map[string]interface{}{
 		"validators_connecting": validators,
+		// "pending_connecting":    pendings,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil

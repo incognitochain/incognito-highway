@@ -73,23 +73,31 @@ func (s *Server) Register(
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
+		logger.Warnf("Couldn't process wantedMsgs: %+v %+v %+v", req.GetWantedMessages(), role, cIDs)
 		return nil, err
 	}
 
+	r := process.GetUserRole(cID)
+	pid, err := peer.IDB58Decode(req.PeerID)
+	if err != nil {
+		logger.Warnf("Invalid peerID: %v", req.PeerID)
+		return nil, err
+	}
+	pinfo := PeerInfo{ID: pid, Pubkey: req.GetCommitteePublicKey()}
 	if role == common.COMMITTEE {
-		// Notify HighwayClient of a new peer to request data later if possible
-		pid, err := peer.IDB58Decode(req.PeerID)
 		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
 
-		if err == nil {
-			s.m.newPeers <- PeerInfo{ID: pid, CID: int(cID)}
-		} else {
-			logger.Errorf("Invalid peerID: %v", req.PeerID)
-		}
+		pinfo.CID = int(cID)
+		pinfo.Role = r.Role
+	} else {
+		// TODO(@0xbunyip): support fullnode here (multiple cIDs)
+		pinfo.CID = int(cIDs[0])
+		pinfo.Role = "normal"
 	}
+	// Notify HighwayClient of a new peer to request data later if possible
+	s.m.newPeers <- pinfo
 
 	// Return response to node
-	r := process.GetUserRole(cID)
 	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
