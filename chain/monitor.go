@@ -16,9 +16,10 @@ func (r *Reporter) Start(_ time.Duration) {}
 
 func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	validators := r.manager.GetAllPeers()
+	totalConns := r.manager.GetTotalConnections()
 	data := map[string]interface{}{
-		"validators_connecting": validators,
-		// "pending_connecting":    pendings,
+		"peers":               validators,
+		"inbound_connections": totalConns,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil

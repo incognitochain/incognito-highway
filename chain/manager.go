@@ -19,6 +19,11 @@ type Manager struct {
 		ids map[int][]PeerInfo
 		sync.RWMutex
 	}
+
+	conns struct {
+		num int
+		sync.RWMutex
+	}
 }
 
 func ManageChainConnections(
@@ -34,6 +39,7 @@ func ManageChainConnections(
 	}
 	m.peers.ids = map[int][]PeerInfo{}
 	m.peers.RWMutex = sync.RWMutex{}
+	m.conns.RWMutex = sync.RWMutex{}
 
 	// Server and client instance to communicate to Incognito nodes
 	client := NewClient(m, rman, prtc, chainData, supportShards)
@@ -119,15 +125,29 @@ func remove(ids map[int][]PeerInfo, rid peer.ID) map[int][]PeerInfo {
 	return ids
 }
 
+func (m *Manager) GetTotalConnections() int {
+	m.conns.RLock()
+	total := m.conns.num
+	m.conns.RUnlock()
+	return total
+}
+
 func (m *Manager) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (m *Manager) ListenClose(network.Network, multiaddr.Multiaddr) {}
 func (m *Manager) Connected(n network.Network, c network.Conn) {
 	// logger.Println("chain/manager: new conn")
+	m.conns.Lock()
+	m.conns.num++
+	m.conns.Unlock()
 }
 func (m *Manager) OpenedStream(network.Network, network.Stream) {}
 func (m *Manager) ClosedStream(network.Network, network.Stream) {}
 
 func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
+	m.conns.Lock()
+	m.conns.num--
+	m.conns.Unlock()
+
 	m.peers.Lock()
 	defer m.peers.Unlock()
 	pid := conn.RemotePeer()
