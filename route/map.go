@@ -84,3 +84,23 @@ func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
 	}
 	return m
 }
+
+func (h *Map) CopySupports() map[peer.ID][]byte {
+	h.RLock()
+	defer h.RUnlock()
+	m := map[peer.ID][]byte{}
+	for pid, cids := range h.Supports {
+		c := make([]byte, len(cids))
+		copy(c, cids)
+		m[pid] = c
+	}
+	return m
+}
+
+func (h *Map) CopyConnected() []byte {
+	h.RLock()
+	defer h.RUnlock()
+	c := make([]byte, len(h.connected))
+	copy(c, h.connected)
+	return c
+}

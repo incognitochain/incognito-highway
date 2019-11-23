@@ -102,3 +102,11 @@ var _ json.Marshaler = (*marshaler)(nil)
 func (m *marshaler) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.data)
 }
+
+func BytesToInts(b []byte) []int {
+	s := make([]int, len(b))
+	for _, v := range b {
+		s = append(s, int(v))
+	}
+	return s
+}

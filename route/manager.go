@@ -243,3 +243,7 @@ func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, er
 
 	return proto.NewHighwayServiceClient(conn), nil
 }
+
+func (h *Manager) GetShardsConnected() []byte {
+	return h.hmap.CopyConnected()
+}

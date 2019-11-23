@@ -74,7 +74,8 @@ func main() {
 	// Setup monitoring
 	confReporter := config.NewReporter(conf)
 	chainReporter := chain.NewReporter(chainManager)
-	reporters := []monitor.Monitor{confReporter, chainReporter}
+	routeReporter := route.NewReporter(rman)
+	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter}
 	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
 	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
 
