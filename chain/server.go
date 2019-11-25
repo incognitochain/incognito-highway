@@ -59,6 +59,10 @@ func (s *Server) Register(
 	error,
 ) {
 	logger.Infof("Receive Register request, CID %v, peerID %v", req.CommitteeID, req.PeerID)
+
+	// Monitor status
+	defer s.reporter.watchRegister()
+
 	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
 	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
 	cIDs := []int{}
@@ -201,10 +205,12 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 type Server struct {
 	m  *Manager
 	hc *Client
+
+	reporter *Reporter
 }
 
-func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
-	s := &Server{hc: hc, m: m}
+func RegisterServer(m *Manager, gs *grpc.Server, hc *Client, reporter *Reporter) {
+	s := &Server{hc: hc, m: m, reporter: reporter}
 	proto.RegisterHighwayServiceServer(gs, s)
 }
 

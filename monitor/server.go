@@ -13,7 +13,7 @@ import (
 func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor) {
 	// Start all monitors
 	for _, m := range monitors {
-		m.Start(timestep)
+		go m.Start(timestep)
 	}
 
 	// Run http server

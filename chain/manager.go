@@ -32,7 +32,7 @@ func ManageChainConnections(
 	prtc *p2pgrpc.GRPCProtocol,
 	chainData *process.ChainData,
 	supportShards []byte,
-) *Manager {
+) *Reporter {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
@@ -41,13 +41,16 @@ func ManageChainConnections(
 	m.peers.RWMutex = sync.RWMutex{}
 	m.conns.RWMutex = sync.RWMutex{}
 
+	// Monitor
+	reporter := NewReporter(m)
+
 	// Server and client instance to communicate to Incognito nodes
 	client := NewClient(m, rman, prtc, chainData, supportShards)
-	RegisterServer(m, prtc.GetGRPCServer(), client)
+	RegisterServer(m, prtc.GetGRPCServer(), client, reporter)
 
 	h.Network().Notify(m)
 	go m.start()
-	return m
+	return reporter
 }
 
 func (m *Manager) GetPeers(cid int) []PeerInfo {
