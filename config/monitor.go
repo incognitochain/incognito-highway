@@ -20,10 +20,10 @@ func (r *Reporter) Start(_ time.Duration) {
 		supports = append(supports, int(s))
 	}
 	data := map[string]interface{}{
-		"port":          r.conf.ProxyPort,
-		"masternode":    r.conf.Masternode,
-		"bootstrap":     r.conf.Bootstrap,
-		"shard_support": supports,
+		"port":           r.conf.ProxyPort,
+		"masternode":     r.conf.Masternode,
+		"bootstrap":      r.conf.Bootstrap,
+		"shard_supports": supports,
 	}
 	r.marshaler = common.NewDefaultMarshaler(data)
 }

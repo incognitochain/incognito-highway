@@ -105,8 +105,8 @@ func (m *marshaler) MarshalJSON() ([]byte, error) {
 
 func BytesToInts(b []byte) []int {
 	s := make([]int, len(b))
-	for _, v := range b {
-		s = append(s, int(v))
+	for i, v := range b {
+		s[i] = int(v)
 	}
 	return s
 }
