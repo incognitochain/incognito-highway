@@ -48,6 +48,9 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	requestsPerPeer := map[string]map[string]int{}
 	r.requestsPerPeer.RLock()
 	for msg, peers := range r.requestsPerPeer.m {
+		if requestsPerPeer[msg] == nil {
+			requestsPerPeer[msg] = map[string]int{}
+		}
 		for pid, cnt := range peers {
 			requestsPerPeer[msg][pid] = cnt
 		}
@@ -71,6 +74,8 @@ func NewReporter(manager *Manager) *Reporter {
 	}
 	r.requestCounts.m = map[string]int{}
 	r.requestCounts.RWMutex = sync.RWMutex{}
+	r.requestsPerPeer.m = map[string]map[string]int{}
+	r.requestsPerPeer.RWMutex = sync.RWMutex{}
 	return r
 }
 
@@ -91,10 +96,14 @@ func (r *Reporter) clearRequestCounts() {
 func (r *Reporter) watchRequestsPerPeer(msg string, pid peer.ID, err error) {
 	r.requestsPerPeer.Lock()
 	defer r.requestsPerPeer.Unlock()
-	if err != nil { // NOTE: we can monitor failed requests too
+	if err == nil { // NOTE: we can monitor failed requests too
+		logger.Infof("watch is not err")
+		if r.requestsPerPeer.m[msg] == nil {
+			r.requestsPerPeer.m[msg] = map[string]int{}
+		}
 		r.requestsPerPeer.m[msg][pid.String()] += 1
 	} else {
-		logger.Infof("watch is err")
+		logger.Infof("watch is err: %+v", err)
 	}
 }
 
