@@ -5,6 +5,7 @@ import (
 	"highway/chain"
 	"highway/common"
 	"highway/config"
+	"highway/health"
 	"highway/monitor"
 	"highway/p2p"
 	"highway/process"
@@ -74,7 +75,8 @@ func main() {
 	// Setup monitoring
 	confReporter := config.NewReporter(conf)
 	routeReporter := route.NewReporter(rman)
-	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter}
+	healthReporter := health.NewReporter()
+	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter}
 	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
 	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
 
