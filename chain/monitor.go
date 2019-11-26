@@ -17,8 +17,9 @@ type Reporter struct {
 	}
 }
 
-func (r *Reporter) Start(timestep time.Duration) {
-	for ; true; <-time.Tick(timestep) {
+func (r *Reporter) Start(_ time.Duration) {
+	clearRequestTimestep := 5 * time.Minute
+	for ; true; <-time.Tick(clearRequestTimestep) {
 		r.clearRequestCounts()
 	}
 }
@@ -54,10 +55,10 @@ func NewReporter(manager *Manager) *Reporter {
 	return r
 }
 
-func (r *Reporter) watchRegister() {
+func (r *Reporter) watchRequestCounts(key string) {
 	r.requestCounts.Lock()
 	defer r.requestCounts.Unlock()
-	r.requestCounts.m["register"] += 1
+	r.requestCounts.m[key] += 1
 }
 
 func (r *Reporter) clearRequestCounts() {
