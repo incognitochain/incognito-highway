@@ -19,7 +19,7 @@ type Reporter struct {
 	}
 
 	requestsPerPeer struct {
-		m map[string]map[string]int
+		m PeerRequestMap
 		sync.RWMutex
 	}
 }
@@ -45,22 +45,17 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	r.requestCounts.RUnlock()
 
 	// Make a copy of request per peer stats
-	requestsPerPeer := map[string]map[string]int{}
+	requestsPerPeer := PeerRequestMap{}
 	r.requestsPerPeer.RLock()
-	for msg, peers := range r.requestsPerPeer.m {
-		if requestsPerPeer[msg] == nil {
-			requestsPerPeer[msg] = map[string]int{}
-		}
-		for pid, cnt := range peers {
-			requestsPerPeer[msg][pid] = cnt
-		}
+	for key, val := range r.requestsPerPeer.m {
+		requestsPerPeer[key] = val
 	}
 	r.requestsPerPeer.RUnlock()
 
 	data := map[string]interface{}{
 		"peers":               validators,
 		"inbound_connections": totalConns,
-		"requests":            r.requestCounts.m,
+		"requests":            requests,
 		"request_per_peer":    requestsPerPeer,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
@@ -74,7 +69,7 @@ func NewReporter(manager *Manager) *Reporter {
 	}
 	r.requestCounts.m = map[string]int{}
 	r.requestCounts.RWMutex = sync.RWMutex{}
-	r.requestsPerPeer.m = map[string]map[string]int{}
+	r.requestsPerPeer.m = PeerRequestMap{}
 	r.requestsPerPeer.RWMutex = sync.RWMutex{}
 	return r
 }
@@ -96,21 +91,39 @@ func (r *Reporter) clearRequestCounts() {
 func (r *Reporter) watchRequestsPerPeer(msg string, pid peer.ID, err error) {
 	r.requestsPerPeer.Lock()
 	defer r.requestsPerPeer.Unlock()
-	if err == nil { // NOTE: we can monitor failed requests too
-		logger.Infof("watch is not err")
-		if r.requestsPerPeer.m[msg] == nil {
-			r.requestsPerPeer.m[msg] = map[string]int{}
-		}
-		r.requestsPerPeer.m[msg][pid.String()] += 1
+	key := PeerRequestKey{Msg: msg}
+	if err == nil {
+		key.PeerID = pid.String()
 	} else {
-		logger.Infof("watch is err: %+v", err)
+		key.PeerID = "error"
 	}
+	r.requestsPerPeer.m[key] += 1
 }
 
 func (r *Reporter) clearRequestsPerPeer() {
 	r.requestsPerPeer.Lock()
 	defer r.requestsPerPeer.Unlock()
 	for key := range r.requestsPerPeer.m {
-		r.requestsPerPeer.m[key] = map[string]int{}
+		delete(r.requestsPerPeer.m, key)
 	}
+}
+
+type PeerRequestKey struct {
+	Msg    string
+	PeerID string
+}
+
+type PeerRequestMap map[PeerRequestKey]int
+
+// MarshalJSON helps flatten PeerRequestKey into a nested map
+// for prettier results when json.Marshal
+func (m PeerRequestMap) MarshalJSON() ([]byte, error) {
+	splat := map[string]map[string]int{}
+	for key, val := range m {
+		if splat[key.Msg] == nil {
+			splat[key.Msg] = map[string]int{}
+		}
+		splat[key.Msg][key.PeerID] = val
+	}
+	return json.Marshal(splat)
 }
