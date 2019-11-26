@@ -94,8 +94,9 @@ func (hc *Client) GetBlockShardByHeight(
 	client, pid, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 
 	// Monitor, defer here to make sure even failed requests are logged
-	logger.Infof("Defering get_block_shard")
-	defer hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
+	}()
 
 	if err != nil {
 		logger.Debugf("No client with blockshard, shardID = %v, from %v to %v", shardID, from, to)
@@ -129,7 +130,9 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	client, pid, err := hc.getClientWithBlock(int(shardID), specific, to, heights)
 
 	// Monitor, defer here to make sure even failed requests are logged
-	defer hc.reporter.watchRequestsPerPeer("get_block_shard_to_beacon", pid, errOut)
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_shard_to_beacon", pid, errOut)
+	}()
 
 	if err != nil {
 		logger.Debugf("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
@@ -148,6 +151,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
+		logger.Warnf("err: %+v", err)
 		return nil, errors.WithStack(err)
 	}
 	return reply.Data, nil
@@ -169,7 +173,9 @@ func (hc *Client) GetBlockCrossShardByHeight(
 	client, pid, err := hc.getClientWithBlock(int(fromShard), specific, toHeight, heights)
 
 	// Monitor, defer here to make sure even failed requests are logged
-	defer hc.reporter.watchRequestsPerPeer("get_block_cross_shard", pid, errOut)
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_cross_shard", pid, errOut)
+	}()
 
 	if err != nil {
 		logger.Debugf("No client with blockCS, shard from = %v, to = %v, height from = %v, to = %v, heights = %v", fromShard, toShard, fromHeight, toHeight, heights)
@@ -203,8 +209,9 @@ func (hc *Client) GetBlockBeaconByHeight(
 	client, pid, err := hc.getClientWithBlock(int(common.BEACONID), specific, to, heights)
 
 	// Monitor, defer here to make sure even failed requests are logged
-	logger.Infof("Defering get_block_beacon")
-	defer hc.reporter.watchRequestsPerPeer("get_block_beacon", pid, errOut)
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_beacon", pid, errOut)
+	}()
 
 	if err != nil {
 		logger.Debugf("No client with blockbeacon, from %v to %v", from, to)
