@@ -105,7 +105,7 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 
 	// Append to list
 	m.peers.ids[cid] = append(m.peers.ids[cid], pinfo)
-	logger.Infof("Appended new peer to shard %d, pid = %v", cid, pid)
+	logger.Infof("Appended new peer to shard %d, pid = %v, cnt = %d peers", cid, pid, len(m.peers.ids[cid]))
 }
 
 func remove(ids map[int][]PeerInfo, rid peer.ID) map[int][]PeerInfo {
