@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"highway/process"
 	"highway/proto"
+	hmap "highway/route/hmap"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -20,7 +21,7 @@ import (
 // also, move server out of connector
 type Connector struct {
 	host host.Host
-	hmap *Map
+	hmap *hmap.Map
 	ps   *process.PubSubManager
 	hwc  *Client
 	hws  *Server
@@ -33,7 +34,7 @@ type Connector struct {
 func NewConnector(
 	h host.Host,
 	prtc *p2pgrpc.GRPCProtocol,
-	hmap *Map,
+	hmap *hmap.Map,
 	ps *process.PubSubManager,
 	masternode peer.ID,
 ) *Connector {

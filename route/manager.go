@@ -6,6 +6,7 @@ import (
 	"highway/common"
 	"highway/process"
 	"highway/proto"
+	hmap "highway/route/hmap"
 	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -20,7 +21,7 @@ import (
 type Manager struct {
 	ID peer.ID
 
-	hmap *Map
+	hmap *hmap.Map
 	hc   *Connector
 }
 
@@ -36,7 +37,7 @@ func NewManager(
 		ID:    h.ID(),
 		Addrs: h.Addrs(),
 	}
-	hmap := NewMap(p, supportShards)
+	hmap := hmap.NewMap(p, supportShards)
 
 	hw := &Manager{
 		ID:   h.ID(),

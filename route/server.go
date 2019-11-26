@@ -3,6 +3,7 @@ package route
 import (
 	"context"
 	"highway/proto"
+	hmap "highway/route/hmap"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -43,12 +44,12 @@ func (s *Server) GetHighwayInfos(ctx context.Context, req *proto.GetHighwayInfos
 	return resp, nil
 }
 
-func NewServer(prtc *p2pgrpc.GRPCProtocol, hmap *Map) *Server {
+func NewServer(prtc *p2pgrpc.GRPCProtocol, hmap *hmap.Map) *Server {
 	s := &Server{hmap: hmap}
 	proto.RegisterHighwayConnectorServiceServer(prtc.GetGRPCServer(), s)
 	return s
 }
 
 type Server struct {
-	hmap *Map
+	hmap *hmap.Map
 }

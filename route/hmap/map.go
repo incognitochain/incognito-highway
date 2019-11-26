@@ -37,7 +37,6 @@ func (h *Map) IsConnectedToShard(s byte) bool {
 }
 
 func (h *Map) connectToShard(s byte) {
-	logger.Debugf("Connected to shard %d", s)
 	h.connected = append(h.connected, s)
 }
 
@@ -70,7 +69,6 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
 	for _, s := range supportShards {
 		h.Peers[s] = append(h.Peers[s], p)
 	}
-	logger.Info("added peer", p, supportShards)
 }
 
 func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
