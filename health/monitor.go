@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"highway/common"
 	"io/ioutil"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -16,10 +17,11 @@ type Reporter struct {
 	idle     uint64
 	total    uint64
 	cpuUsage float64
+	memUsage uint64
 }
 
 func (r *Reporter) Start(_ time.Duration) {
-	healthTimestep := 5 * time.Second
+	healthTimestep := 60 * time.Second
 	for ; true; <-time.Tick(healthTimestep) {
 		r.updateSample()
 	}
@@ -28,6 +30,7 @@ func (r *Reporter) Start(_ time.Duration) {
 func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	data := map[string]interface{}{}
 	data["cpu"] = r.cpuUsage
+	data["mem"] = r.memUsage
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil
 }
@@ -46,6 +49,11 @@ func (r *Reporter) updateSample() {
 	totalTicks := float64(total - total0)
 	r.cpuUsage = 100 * (totalTicks - idleTicks) / totalTicks
 	r.idle, r.total = idle, total
+
+	// Memory sample
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	r.memUsage = m.Sys >> 20
 }
 
 func getCPUSample() (idle, total uint64) {
