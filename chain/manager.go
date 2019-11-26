@@ -45,7 +45,7 @@ func ManageChainConnections(
 	reporter := NewReporter(m)
 
 	// Server and client instance to communicate to Incognito nodes
-	client := NewClient(m, rman, prtc, chainData, supportShards)
+	client := NewClient(m, reporter, rman, prtc, chainData, supportShards)
 	RegisterServer(m, prtc.GetGRPCServer(), client, reporter)
 
 	h.Network().Notify(m)
