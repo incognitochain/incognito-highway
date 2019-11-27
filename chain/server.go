@@ -7,6 +7,8 @@ import (
 	"highway/process/topic"
 	"highway/proto"
 
+	"github.com/pkg/errors"
+
 	peer "github.com/libp2p/go-libp2p-peer"
 	"google.golang.org/grpc"
 )
@@ -113,12 +115,11 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	logger.Debug("Receive GetBlockShardByHash request")
-	return nil, nil
+	logger.Errorf("Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
+	return nil, errors.New("not supported")
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
-	// logger.Debug("Receive GetBlockBeaconByHeight request")
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -144,7 +145,6 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
-	logger.Debug("Receive GetBlockShardToBeaconByHeight request")
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
@@ -161,12 +161,11 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	logger.Debug("Receive GetBlockBeaconByHash request")
-	return nil, nil
+	logger.Errorf("Receive GetBlockBeaconByHash request: %x", req.Hashes)
+	return nil, errors.New("not supported")
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	logger.Debug("Receive GetBlockCrossShardByHeight request")
 	data, err := s.hc.GetBlockCrossShardByHeight(
 		req.FromShard,
 		req.ToShard,
@@ -185,8 +184,8 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 }
 
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
-	logger.Debug("Receive GetBlockCrossShardByHash request")
-	return nil, nil
+	logger.Errorf("Receive GetBlockCrossShardByHash request: %d %d %x", req.FromShard, req.ToShard, req.Hashes)
+	return nil, errors.New("not supported")
 }
 
 type Server struct {

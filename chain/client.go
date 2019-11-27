@@ -92,8 +92,9 @@ func (hc *Client) GetBlockShardByHeight(
 ) ([][]byte, error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	client, err := hc.getClientWithBlock(int(shardID), to)
+	logger.Debugf("Requesting Shard block: shard = %v, height %v -> %v, heights = %v", shardID, from, to, heights)
 	if err != nil {
-		logger.Warnf("No client with blockshard, shardID = %v, from %v to %v", shardID, from, to)
+		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v", shardID, from, to, heights)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardByHeight(
@@ -123,8 +124,9 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 ) ([][]byte, error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	client, err := hc.getClientWithBlock(int(shardID), to)
+	logger.Debugf("Requesting S2B block: shard = %v, height %v -> %v, heights = %v", shardID, from, to, heights)
 	if err != nil {
-		logger.Warnf("No client with blocks2b, shardID = %v, from %v to %v", shardID, from, to)
+		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v", shardID, from, to, heights)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
@@ -158,9 +160,9 @@ func (hc *Client) GetBlockCrossShardByHeight(
 	// => request from peer of shard `fromShard`
 	toHeight, heights = capBlocksPerRequest(specific, fromHeight, toHeight, heights)
 	client, err := hc.getClientWithBlock(int(fromShard), toHeight)
-	logger.Debugf("Requesting CrossShard block shard %v -> %v, height %v -> %v, %v, pool: %v", fromShard, toShard, fromHeight, toHeight, heights, fromPool)
+	logger.Debugf("Requesting CrossShard block: shard %v -> %v, height %v -> %v, heights = %v, pool = %v", fromShard, toShard, fromHeight, toHeight, heights, fromPool)
 	if err != nil {
-		logger.Warnf("No client with blockCS, shard from = %v, to = %v, height from = %v, to = %v, heights = %v", fromShard, toShard, fromHeight, toHeight, heights)
+		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v", fromShard, toShard, fromHeight, toHeight, heights)
 		return nil, err
 	}
 	reply, err := client.GetBlockCrossShardByHeight(
@@ -190,8 +192,9 @@ func (hc *Client) GetBlockBeaconByHeight(
 ) ([][]byte, error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	client, err := hc.getClientWithBlock(int(common.BEACONID), to)
+	logger.Debugf("Requesting Beacon block: height %v -> %v, heights = %v", from, to, heights)
 	if err != nil {
-		logger.Warnf("No client with blockbeacon, from %v to %v", from, to)
+		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v", from, to, heights)
 		return nil, err
 	}
 	reply, err := client.GetBlockBeaconByHeight(
@@ -216,7 +219,7 @@ func (hc *Client) getClientWithBlock(
 	height uint64,
 ) (proto.HighwayServiceClient, error) {
 	peerID, err := hc.choosePeerIDWithBlock(cid, height)
-	logger.Debugf("Chosen peer: %v", peerID)
+	// logger.Debugf("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, err
 	}
@@ -230,14 +233,14 @@ func (hc *Client) getClientWithBlock(
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
-	logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
+	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
 		return peer.ID(""), err
 	}
 
 	// Filter out disconnected peers
 	connectedPeers := hc.m.GetPeers(cid)
-	logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
+	// logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
 	var peers []process.PeerWithBlk
 	for _, p := range peersHasBlk {
 		for _, cp := range connectedPeers {
@@ -246,14 +249,14 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 			}
 		}
 	}
-	logger.Debugf("PeersLeft: %+v", peers)
+	// logger.Debugf("PeersLeft: %+v", peers)
 
 	// Pick randomly
 	p, err := pickWeightedRandomPeer(peers, blk)
 	if err != nil {
 		return peer.ID(""), err
 	}
-	logger.Debugf("Peer picked: %+v", p)
+	// logger.Debugf("Peer picked: %+v", p)
 	return p.ID, nil
 }
 
