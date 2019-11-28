@@ -407,28 +407,20 @@ func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, 
 	return keys, nil
 }
 
-func GetUserRole(cid int) *proto.UserRole {
-	// TODO(@0xbunyip): support pending, waiting and normal role
+func GetUserRole(role string, cid int) *proto.UserRole {
 	layer := ""
-	role := ""
-	shard := int(common.BEACONID)
 	if cid == int(common.BEACONID) {
 		layer = ic.BeaconRole
-		role = ic.CommitteeRole
-		shard = -1
 	} else if cid != -1 { // other than NORMAL
 		layer = ic.ShardRole
-		role = ic.CommitteeRole
-		shard = cid
 	} else {
 		layer = ""
 		role = ""
-		shard = -2
 	}
 	return &proto.UserRole{
 		Layer: layer,
 		Role:  role,
-		Shard: int32(shard),
+		Shard: int32(cid),
 	}
 }
 
