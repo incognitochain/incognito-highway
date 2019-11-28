@@ -7,6 +7,8 @@ import (
 	"highway/process/topic"
 	"highway/proto"
 
+	"github.com/pkg/errors"
+
 	peer "github.com/libp2p/go-libp2p-peer"
 	"google.golang.org/grpc"
 )
@@ -106,8 +108,6 @@ func (s *Server) Register(
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
-	logger.Debugf("Receive GetBlockShardByHeight request, shard %v, from height %v to %v", req.Shard, req.FromHeight, req.ToHeight)
-
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard")
 
@@ -130,13 +130,11 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	logger.Debug("Receive GetBlockShardByHash request")
-	return nil, nil
+	logger.Errorf("Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
+	return nil, errors.New("not supported")
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
-	logger.Debugf("Receive GetBlockBeaconByHeight request, from height %v to %v", req.FromHeight, req.ToHeight)
-
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_beacon")
 
@@ -165,8 +163,6 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
-	logger.Debugf("Receive GetBlockShardToBeaconByHeight request, from shard = %v, from height %v to %v", req.FromShard, req.FromHeight, req.ToHeight)
-
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
 
@@ -186,13 +182,11 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	logger.Debug("Receive GetBlockBeaconByHash request")
-	return nil, nil
+	logger.Errorf("Receive GetBlockBeaconByHash request: %x", req.Hashes)
+	return nil, errors.New("not supported")
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	logger.Debugf("Receive GetBlockCrossShardByHeight request, from Shard %v to shard %v, from height %v to %v", req.FromShard, req.ToShard, req.FromHeight, req.ToHeight)
-
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_cross_shard")
 
@@ -214,8 +208,8 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 }
 
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
-	logger.Debug("Receive GetBlockCrossShardByHash request")
-	return nil, nil
+	logger.Errorf("Receive GetBlockCrossShardByHash request: %d %d %x", req.FromShard, req.ToShard, req.Hashes)
+	return nil, errors.New("not supported")
 }
 
 type Server struct {
