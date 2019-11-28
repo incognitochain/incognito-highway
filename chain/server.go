@@ -20,7 +20,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	logger.Infof("Receive Register request, CID %v, peerID %v", req.CommitteeID, req.PeerID)
+	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
 
 	// Monitor status
 	defer s.reporter.watchRequestCounts("register")
@@ -58,6 +58,7 @@ func (s *Server) Register(
 	}
 	pinfo := PeerInfo{ID: pid, Pubkey: req.GetCommitteePublicKey()}
 	if role == common.COMMITTEE {
+		logger.Infof("Update peerID of CommitteePubkey: %v %v", pid.String(), req.GetCommitteePublicKey())
 		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
 
 		pinfo.CID = int(cID)

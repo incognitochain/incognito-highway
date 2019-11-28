@@ -181,10 +181,24 @@ func (chainData *ChainData) UpdatePeerIDOfCommitteePubkey(
 	candidate string,
 	peerID *peer.ID,
 ) {
+	// TODO(@0xakk0r0kamui): skip committee pubkey, saves only mining key => refer to
+	// validators by their mining key
 	chainData.Locker.Lock()
+	defer chainData.Locker.Unlock()
 	chainData.CommitteePubkeyByPeerID[*peerID] = candidate
 	chainData.PeerIDByCommitteePubkey[candidate] = *peerID
-	chainData.Locker.Unlock()
+
+	// Store mining key here also if user sent CommitteePubkey
+	validatorKey := new(common.CommitteePublicKey)
+	err := validatorKey.FromString(candidate)
+	if err != nil || len(validatorKey.IncPubKey) == 0 {
+		return
+	}
+	validatorMiningPK, err := validatorKey.MiningPublicKey()
+	if err != nil {
+		return
+	}
+	chainData.CommitteeKeyByMiningKey[validatorMiningPK] = candidate
 }
 
 func (chainData *ChainData) InitGenesisCommitteeFromFile(
