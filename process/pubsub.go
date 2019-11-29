@@ -102,7 +102,7 @@ func (pubsub *PubSubManager) handleNewMsg(
 				go func() {
 					err := pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.GetMiningPubkeyFromPeerID(data.GetFrom()), data.GetData())
 					if err != nil {
-						err = errors.WithMessagef(err, "from: %v data %v", data.GetFrom(), data.GetData())
+						err = errors.WithMessagef(err, "from: %v", data.GetFrom())
 						logger.Warnf("Cannot update peerstate: %+v", err)
 					}
 				}()
