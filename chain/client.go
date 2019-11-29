@@ -15,75 +15,6 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-func (hc *Client) GetBlockByHeight(
-	shardID int32,
-	specific bool,
-	from uint64,
-	to uint64,
-	heights []uint64,
-	fromCandidate string,
-) ([][]byte, error) {
-	client, err := hc.getClientWithPublicKey(fromCandidate)
-	if err != nil {
-		return nil, err
-	}
-	if shardID != -1 {
-		reply, err := client.GetBlockShardByHeight(
-			context.Background(),
-			&proto.GetBlockShardByHeightRequest{
-				Shard:      shardID,
-				Specific:   specific,
-				FromHeight: from,
-				ToHeight:   to,
-				Heights:    heights,
-				FromPool:   false,
-			},
-		)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		} else {
-			logger.Infof("Reply: %v", reply)
-			return reply.GetData(), nil
-		}
-	}
-
-	reply, err := client.GetBlockBeaconByHeight(
-		context.Background(),
-		&proto.GetBlockBeaconByHeightRequest{
-			Specific:   specific,
-			FromHeight: from,
-			ToHeight:   to,
-			Heights:    heights,
-			FromPool:   false,
-		},
-	)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	} else {
-		logger.Infof("Reply: %v", reply)
-		return reply.GetData(), nil
-	}
-}
-
-func (hc *Client) getClientWithPublicKey(
-	committeePublicKey string,
-) (proto.HighwayServiceClient, error) {
-	peerID, exist := hc.chainData.PeerIDByCommitteePubkey[committeePublicKey]
-	if !exist {
-		logger.Infof("Committee Publickey %v", committeePublicKey)
-		PK := common.CommitteePublicKey{}
-		PK.FromString(committeePublicKey)
-		pkstring, _ := PK.MiningPublicKey()
-		logger.Infof("Committee Publickey by mining key %v", hc.chainData.CommitteeKeyByMiningKey[pkstring])
-		return nil, errors.Errorf("Can not find PeerID of this committee PublicKey %v", committeePublicKey)
-	}
-	client, err := hc.cc.GetServiceClient(peerID)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
 func (hc *Client) GetBlockShardByHeight(
 	shardID int32,
 	specific bool,
@@ -328,7 +259,9 @@ func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.Pe
 // If the request is for some blocks, this caps the number blocks requested
 func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
 	if specific {
-		heights = heights[:common.MaxBlocksPerRequest]
+		if len(heights) > common.MaxBlocksPerRequest {
+			heights = heights[:common.MaxBlocksPerRequest]
+		}
 		return heights[len(heights)-1], heights
 	}
 
