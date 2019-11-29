@@ -25,6 +25,8 @@ const (
 	PendingRole   = "pending"
 	WaitingRole   = "waiting"
 	NormalNode    = ""
+
+	MaxBlocksPerRequest = 100
 )
 
 const (
