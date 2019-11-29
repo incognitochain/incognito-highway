@@ -53,6 +53,7 @@ func (chainData *ChainData) Init(
 	chainData.MiningPubkeyByPeerID = map[peer.ID]string{}
 	chainData.PeerIDByMiningPubkey = map[string]peer.ID{}
 	chainData.ShardPendingByMiningPubkey = map[string]byte{}
+	chainData.ShardByMiningPubkey = map[string]byte{}
 	chainData.masternode = masternode
 	err := chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
 	if err != nil {
