@@ -48,7 +48,7 @@ func (s *Server) Register(
 
 	cID := 0
 	if len(cIDs) > 0 {
-		cID = cIDs[0]
+		cID = cIDs[0] // For validators, cIDs must contain exactly 1 value that is the shard that the they are validating on
 	}
 	r := process.GetUserRole(reqRole, cID)
 	pid, err := peer.IDB58Decode(req.PeerID)
@@ -59,7 +59,10 @@ func (s *Server) Register(
 	pinfo := PeerInfo{ID: pid, Pubkey: req.GetCommitteePublicKey()}
 	if role == common.COMMITTEE {
 		logger.Infof("Update peerID of CommitteePubkey: %v %v", pid.String(), req.GetCommitteePublicKey())
-		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
+		err := s.hc.chainData.UpdateCommittee(req.GetCommitteePublicKey(), pid, byte(cID))
+		if err != nil {
+			return nil, err
+		}
 
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
