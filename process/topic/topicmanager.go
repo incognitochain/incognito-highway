@@ -115,7 +115,7 @@ func (topicManager *TopicManager) getTopicPairForNode(
 			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID)))
 			listAction = append(listAction, proto.MessageTopicPair_SUB)
 		}
-	case CmdBlockShard, CmdTx:
+	case CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken:
 		if cID != common.BEACONID {
 			if forPub {
 				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID)))
