@@ -66,34 +66,28 @@ func main() {
 	}
 
 	// Beacon
-	fmt.Println(r.Chain.Peers[255])
-	j := 0
-	for _, val := range keyListFromFile.Bc {
+	for i, val := range keyListFromFile.Bc {
 		key := new(incognitokey.CommitteePublicKey)
 		key.FromString(val.CommitteePubKey)
 		miningKey := key.GetMiningKeyBase58("bls")
-		// fmt.Printf("%x\n", key.MiningPubKey["bls"])
 
 		if !found(miningKey, r.Chain.Peers[255]) {
-			j += 1
-			// fmt.Printf("beacon, not connected to peer %d, mining key %s\n", i, miningKey)
-			// break
+			fmt.Printf("beacon, not connected to peer %d, mining key %s\n", i, miningKey)
 		}
 	}
-	fmt.Println(j)
 
-	// // Shards
-	// for sh, vals := range keyListFromFile.Sh {
-	// 	for i, val := range vals {
-	// 		key := new(common.CommitteePublicKey)
-	// 		key.FromString(val.CommitteePubKey)
+	// Shards
+	for sh, vals := range keyListFromFile.Sh {
+		for i, val := range vals {
+			key := new(incognitokey.CommitteePublicKey)
+			key.FromString(val.CommitteePubKey)
+			miningKey := key.GetMiningKeyBase58("bls")
 
-	// 		if !found(key, r.Chain.Peers[sh]) {
-	// 			miningKey, _ := key.MiningPublicKey()
-	// 			fmt.Printf("shard %d, not connected to peer %d, mining key %s\n", sh, i, miningKey)
-	// 		}
-	// 	}
-	// }
+			if !found(miningKey, r.Chain.Peers[sh]) {
+				fmt.Printf("shard %d, not connected to peer %d, mining key %s\n", sh, i, miningKey)
+			}
+		}
+	}
 }
 
 func found(miningKey string, peers []struct{ Pubkey string }) bool {
@@ -104,4 +98,3 @@ func found(miningKey string, peers []struct{ Pubkey string }) bool {
 	}
 	return false
 }
-
