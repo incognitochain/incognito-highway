@@ -31,7 +31,7 @@ func get(url string) ([]byte, error) {
 }
 
 func getReport() (*Report, error) {
-	url := "http://139.162.9.169:8339/monitor"
+	url := "http://51.89.41.31:8339/monitor"
 	body, err := get(url)
 	if err != nil {
 		return nil, err
