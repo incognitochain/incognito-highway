@@ -56,10 +56,16 @@ func (s *Server) Register(
 		logger.Warnf("Invalid peerID: %v", req.PeerID)
 		return nil, err
 	}
-	pinfo := PeerInfo{ID: pid, Pubkey: req.GetCommitteePublicKey()}
+
+	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
+	if err != nil {
+		return nil, err
+	}
+
+	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
-		logger.Infof("Update peerID of CommitteePubkey: %v %v", pid.String(), req.GetCommitteePublicKey())
-		err := s.hc.chainData.UpdateCommittee(req.GetCommitteePublicKey(), pid, byte(cID))
+		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
+		err := s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
 		if err != nil {
 			return nil, err
 		}

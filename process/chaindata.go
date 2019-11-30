@@ -62,18 +62,15 @@ func (chainData *ChainData) Init(
 	return nil
 }
 
-func (chainData *ChainData) GetCommitteeIDOfValidator(validator string) (byte, error) {
-	miningPubkey, err := extractMiningKey(validator)
-	if err != nil {
-		return 0, err
-	}
+func (chainData *ChainData) GetCommitteeIDOfValidator(validator common.ProcessedKey) (byte, error) {
+	miningPubkey := string(validator)
 
 	chainData.Locker.RLock()
 	defer chainData.Locker.RUnlock()
 	if cid, ok := chainData.ShardByMiningPubkey[miningPubkey]; ok {
 		return cid, nil
 	}
-	return 0, errors.New("candidate " + validator + " not found 2")
+	return 0, errors.New("candidate " + miningPubkey + " not found 2")
 }
 
 func (chainData *ChainData) GetPeerHasBlk(
@@ -113,29 +110,10 @@ func (chainData *ChainData) GetPeerHasBlk(
 	return peers, nil
 }
 
-func (chainData *ChainData) GetPeerIDOfValidator(validator string) (*peer.ID, error) {
-	chainData.Locker.RLock()
-	defer chainData.Locker.RUnlock()
-	miningPubkey, err := extractMiningKey(validator)
-	if err != nil {
-		return nil, err
-	}
-
-	chainData.Locker.RLock()
-	defer chainData.Locker.RUnlock()
-	if pid, ok := chainData.PeerIDByMiningPubkey[miningPubkey]; ok {
-		return &pid, nil
-	}
-	return nil, errors.New("candidate " + validator + " not found")
-}
-
 // UpdateCommittee saves peerID, mining pubkey and committeeID of a validator
-func (chainData *ChainData) UpdateCommittee(pubkey string, peerID peer.ID, cid byte) error {
+func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID peer.ID, cid byte) error {
 	// Convert from CommitteePubkey to MiningPubKey if user submitted one
-	miningPubkey, err := extractMiningKey(pubkey)
-	if err != nil {
-		return err
-	}
+	miningPubkey := string(pubkey)
 
 	// Map between mining pubkey and peerID
 	chainData.Locker.Lock()
@@ -191,27 +169,30 @@ func (chainData *ChainData) updateMiningKeys(keys *common.KeyList) error {
 	chainData.Locker.Lock()
 	defer chainData.Locker.Unlock()
 	for _, val := range keys.Bc {
-		miningPubkey, err := extractMiningKey(val.CommitteePubKey)
+		pkey, err := common.PreprocessKey(val.CommitteePubKey)
 		if err != nil {
 			return err
 		}
+		miningPubkey := string(pkey)
 		chainData.ShardByMiningPubkey[miningPubkey] = common.BEACONID
 	}
 	for j, vals := range keys.Sh {
 		for _, val := range vals {
-			miningPubkey, err := extractMiningKey(val.CommitteePubKey)
+			pkey, err := common.PreprocessKey(val.CommitteePubKey)
 			if err != nil {
 				return err
 			}
+			miningPubkey := string(pkey)
 			chainData.ShardByMiningPubkey[miningPubkey] = byte(j)
 		}
 	}
 	for j, pends := range keys.ShPend {
 		for _, pend := range pends {
-			miningPubkey, err := extractMiningKey(pend.CommitteePubKey)
+			pkey, err := common.PreprocessKey(pend.CommitteePubKey)
 			if err != nil {
 				return err
 			}
+			miningPubkey := string(pkey)
 			chainData.ShardPendingByMiningPubkey[miningPubkey] = byte(j)
 		}
 	}
@@ -244,18 +225,19 @@ func (chainData *ChainData) UpdateCommitteeState(
 }
 
 func (chainData *ChainData) UpdatePeerState(publisher string, data []byte) error {
-	committeeID, err := chainData.GetCommitteeIDOfValidator(publisher)
+	pkey, err := common.PreprocessKey(publisher)
+	if err != nil {
+		return err
+	}
+	miningPubkey := string(pkey)
+
+	committeeID, err := chainData.GetCommitteeIDOfValidator(pkey)
 	if err != nil {
 		logger.Infof("This publisher not belong to current committee %v %v", publisher, committeeID)
 		return err
 	}
 
 	// Save peerstate by miningPubkey
-	miningPubkey, err := extractMiningKey(publisher)
-	if err != nil {
-		return err
-	}
-
 	chainData.Locker.Lock()
 	if chainData.ListMsgPeerStateOfShard[byte(committeeID)] == nil {
 		chainData.ListMsgPeerStateOfShard[byte(committeeID)] = map[string][]byte{}
@@ -382,21 +364,4 @@ func GetUserRole(role string, cid int) *proto.UserRole {
 		Role:  role,
 		Shard: int32(cid),
 	}
-}
-
-// extractMiningKey receives either CommitteePubKey or MiningPubKey;
-// for CommitteePubKey, it converts to MiningPubKey and returns;
-// otherwise, keep the key as it is
-func extractMiningKey(pubkey string) (string, error) {
-	key := new(common.CommitteePublicKey)
-	if err := key.FromString(pubkey); err != nil {
-		return "", errors.WithMessagef(err, "pubkey: %s", pubkey)
-	}
-
-	key.IncPubKey = nil
-	miningPubkey, err := key.ToBase58()
-	if err != nil {
-		return "", errors.WithMessagef(err, "pubkey: %s", pubkey)
-	}
-	return miningPubkey, nil
 }
