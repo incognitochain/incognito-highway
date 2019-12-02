@@ -76,7 +76,8 @@ func main() {
 	confReporter := config.NewReporter(conf)
 	routeReporter := route.NewReporter(rman)
 	healthReporter := health.NewReporter()
-	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter}
+	processReporter := process.NewReporter(chainData)
+	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter, processReporter}
 	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
 	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
 
