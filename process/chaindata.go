@@ -314,6 +314,26 @@ func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
 	}
 }
 
+func (chainData *ChainData) CopyNetworkState() NetworkState {
+	chainData.Locker.RLock()
+	defer chainData.Locker.RUnlock()
+	state := NetworkState{
+		BeaconState: map[string]ChainState{},
+		ShardState:  map[byte]map[string]ChainState{},
+	}
+
+	for key, cs := range chainData.CurrentNetworkState.BeaconState {
+		state.BeaconState[key] = cs
+	}
+	for cid, states := range chainData.CurrentNetworkState.ShardState {
+		state.ShardState[cid] = map[string]ChainState{}
+		for key, cs := range states {
+			state.ShardState[cid][key] = cs
+		}
+	}
+	return state
+}
+
 func getKeyListFromMessage(comm *incognitokey.ChainCommittee) (*common.KeyList, error) {
 	// TODO(@0xbunyip): handle epoch
 	keys := &common.KeyList{Sh: map[int][]common.Key{}}
