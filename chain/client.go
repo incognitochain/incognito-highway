@@ -285,12 +285,17 @@ func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.Pe
 // If the request is for a range, this function returns the maximum block height allowed
 // If the request is for some blocks, this caps the number blocks requested
 func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
+	var maxHeight uint64
 	if specific {
-		heights = heights[:common.MaxBlocksPerRequest]
+		maxHeight = uint64(len(heights))
+		if common.MaxBlocksPerRequest < len(heights) {
+			maxHeight = common.MaxBlocksPerRequest
+		}
+		heights = heights[:maxHeight]
 		return heights[len(heights)-1], heights
 	}
 
-	maxHeight := from + common.MaxBlocksPerRequest
+	maxHeight = from + common.MaxBlocksPerRequest
 	if to > maxHeight {
 		return maxHeight, heights
 	}
