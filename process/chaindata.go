@@ -2,13 +2,8 @@ package process
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
 	"highway/common"
 	"highway/proto"
-	"io/ioutil"
-	"os"
 	"sort"
 	"sync"
 
@@ -17,7 +12,6 @@ import (
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/wire"
 	peer "github.com/libp2p/go-libp2p-core/peer"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +23,6 @@ type ChainData struct {
 	ShardByMiningPubkey        map[string]byte
 	ShardPendingByMiningPubkey map[string]byte
 	Locker                     *sync.RWMutex
-	masternode                 peer.ID
 }
 
 type PeerWithBlk struct {
@@ -37,12 +30,7 @@ type PeerWithBlk struct {
 	Height uint64
 }
 
-func (chainData *ChainData) Init(
-	filename string,
-	numberOfShard,
-	numberOfCandidate int,
-	masternode peer.ID,
-) error {
+func (chainData *ChainData) Init(numberOfShard int) error {
 	logger.Info("Init chaindata")
 	chainData.ListMsgPeerStateOfShard = map[byte]CommitteeState{}
 	chainData.Locker = &sync.RWMutex{}
@@ -54,11 +42,6 @@ func (chainData *ChainData) Init(
 	chainData.PeerIDByMiningPubkey = map[string]peer.ID{}
 	chainData.ShardPendingByMiningPubkey = map[string]byte{}
 	chainData.ShardByMiningPubkey = map[string]byte{}
-	chainData.masternode = masternode
-	err := chainData.InitGenesisCommitteeFromFile(filename, numberOfShard, numberOfCandidate)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -121,81 +104,6 @@ func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID p
 	chainData.MiningPubkeyByPeerID[peerID] = miningPubkey
 	chainData.PeerIDByMiningPubkey[miningPubkey] = peerID
 	chainData.ShardByMiningPubkey[miningPubkey] = cid
-	return nil
-}
-
-func (chainData *ChainData) InitGenesisCommitteeFromFile(
-	filename string,
-	numberOfShard,
-	numberOfCandidate int,
-) error {
-	logger.Infof("NumberOfShard %v, NumberOfCandidate %v", numberOfShard, numberOfCandidate)
-
-	//#region Reading genesis committee key from keylist.json
-	keyListFromFile := common.KeyList{}
-	if filename != "" {
-		jsonFile, err := os.Open(filename)
-		if err != nil {
-			logger.Error(err)
-			return err
-		}
-		fmt.Printf("Successfully Opened %v\n", filename)
-		defer jsonFile.Close()
-		byteValue, _ := ioutil.ReadAll(jsonFile)
-		err = json.Unmarshal([]byte(byteValue), &keyListFromFile)
-		if err != nil {
-			return err
-		}
-	}
-	//#endregion Reading genesis committee key from keylist.json
-
-	// Cut off keylist.json and update
-	for k := range keyListFromFile.Sh {
-		if k >= numberOfShard {
-			delete(keyListFromFile.Sh, k)
-		}
-	}
-	for j := range keyListFromFile.Sh {
-		keyListFromFile.Sh[j] = keyListFromFile.Sh[j][:numberOfCandidate]
-	}
-	chainData.updateMiningKeys(&keyListFromFile)
-
-	logger.Infof("Result of reading from file:\nLen of keyListFromFile:\n\tBeacon %v\n\tShard: %v\nlen of ShardByCommittee %v", len(keyListFromFile.Bc), len(keyListFromFile.Sh[0]), len(chainData.ShardByMiningPubkey))
-	return nil
-}
-
-// updateMiningKeys saves the publickeys of all validators
-func (chainData *ChainData) updateMiningKeys(keys *common.KeyList) error {
-	chainData.Locker.Lock()
-	defer chainData.Locker.Unlock()
-	for _, val := range keys.Bc {
-		pkey, err := common.PreprocessKey(val.CommitteePubKey)
-		if err != nil {
-			return err
-		}
-		miningPubkey := string(pkey)
-		chainData.ShardByMiningPubkey[miningPubkey] = common.BEACONID
-	}
-	for j, vals := range keys.Sh {
-		for _, val := range vals {
-			pkey, err := common.PreprocessKey(val.CommitteePubKey)
-			if err != nil {
-				return err
-			}
-			miningPubkey := string(pkey)
-			chainData.ShardByMiningPubkey[miningPubkey] = byte(j)
-		}
-	}
-	for j, pends := range keys.ShPend {
-		for _, pend := range pends {
-			pkey, err := common.PreprocessKey(pend.CommitteePubKey)
-			if err != nil {
-				return err
-			}
-			miningPubkey := string(pkey)
-			chainData.ShardPendingByMiningPubkey[miningPubkey] = byte(j)
-		}
-	}
 	return nil
 }
 
@@ -273,44 +181,6 @@ func newChainStateFromMsgPeerState(
 		Timestamp:     blkChainState.Timestamp,
 		BestStateHash: blkChainState.BestStateHash,
 		BlockHash:     blkChainState.BlockHash,
-	}
-}
-
-// ProcessChainCommittee receives all messages containing the new
-// committee published by masternode and update the list of committee members
-func (chainData *ChainData) ProcessChainCommitteeMsg(sub *pubsub.Subscription) {
-	//Message just contains CommitteeKey, Pending, so, how about waiting?
-	ctx := context.Background()
-	for {
-		msg, err := sub.Next(ctx)
-		logger.Info("Received new committee")
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-
-		// TODO(@0xbunyip): check if msg.From can be maniconfiguration: driver=usbhid maxpower=200mA speed=12Mbit/s
-		if peer.ID(msg.From) != chainData.masternode {
-			from := peer.IDB58Encode(peer.ID(msg.From))
-			exp := peer.IDB58Encode(chainData.masternode)
-			logger.Warnf("Received NewCommittee from unauthorized source, expect from %+v, got from %+v, data %+v", from, exp, msg.Data)
-			continue
-		}
-
-		logger.Info("Saving new committee")
-		comm := &incognitokey.ChainCommittee{}
-		if err := json.Unmarshal(msg.Data, comm); err != nil {
-			logger.Error(err)
-			continue
-		}
-
-		// Update chain committee
-		keys, err := getKeyListFromMessage(comm)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		chainData.updateMiningKeys(keys)
 	}
 }
 
