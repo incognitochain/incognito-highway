@@ -8,6 +8,7 @@ import (
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
+	"highway/rpcserver"
 	"math/rand"
 	"time"
 
@@ -33,6 +34,15 @@ func main() {
 		logger.Error(err)
 		return
 	}
+
+	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
+		Port: config.bootnodePort,
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	go rpcServer.Start()
 
 	chainData := new(process.ChainData)
 	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
@@ -69,4 +79,5 @@ func main() {
 
 	logger.Info("Serving...")
 	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
+
 }
