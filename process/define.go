@@ -1,5 +1,10 @@
 package process
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 type ChainState struct {
 	Timestamp     int64
 	Height        uint64
@@ -26,4 +31,14 @@ func (nwState *NetworkState) Init(numberOfShard int) {
 	for i := byte(0); i < byte(numberOfShard); i++ {
 		nwState.ShardState[i] = map[string]ChainState{}
 	}
+}
+
+func (m ChainState) MarshalJSON() ([]byte, error) {
+	pretty := map[string]interface{}{
+		"Timestamp":     m.Timestamp,
+		"Height":        m.Height,
+		"BlockHash":     fmt.Sprintf("%x", m.BlockHash[:]),
+		"BestStateHash": fmt.Sprintf("%x", m.BestStateHash[:]),
+	}
+	return json.Marshal(pretty)
 }

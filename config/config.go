@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"flag"
@@ -11,25 +11,20 @@ import (
 )
 
 type ProxyConfig struct {
-	proxyPort     int
-	adminPort     int
-	isProfiling   bool
-	supportShards []byte
-	privateKey    string
-	bootstrap     []string
-	version       string
-	host          string
-	masternode    string
-	loglevel      string
-	bootnodePort  int
+	ProxyPort     int
+	AdminPort     int
+	IsProfiling   bool
+	SupportShards []byte
+	PrivateKey    string
+	Bootstrap     []string
+	Version       string
+	Host          string
+	Masternode    string
+	Loglevel      string
+	BootnodePort  int
 }
 
-var proxyConfig *ProxyConfig
-
 func GetProxyConfig() (*ProxyConfig, error) {
-	if proxyConfig != nil {
-		return proxyConfig, nil
-	}
 	// get config from process
 	proxyPort := flag.Int("proxy_port", 9330, "port for communication with other node (optional, default 3333)")
 	bootnodePort := flag.Int("bootnode_port", 9334, "port for communication with other node (optional, default 9334)")
@@ -50,24 +45,23 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	}
 
 	config := &ProxyConfig{
-		proxyPort:     *proxyPort,
-		adminPort:     *adminPort,
-		isProfiling:   *isProfiling,
-		supportShards: ss,
-		privateKey:    *privateKey,
-		bootstrap:     strings.Split(*bootstrap, ","),
-		version:       *version,
-		host:          *host,
-		masternode:    *masternode,
-		loglevel:      *loglevel,
-		bootnodePort:  *bootnodePort,
+		ProxyPort:     *proxyPort,
+		AdminPort:     *adminPort,
+		IsProfiling:   *isProfiling,
+		SupportShards: ss,
+		PrivateKey:    *privateKey,
+		Bootstrap:     strings.Split(*bootstrap, ","),
+		Version:       *version,
+		Host:          *host,
+		Masternode:    *masternode,
+		Loglevel:      *loglevel,
+		BootnodePort:  *bootnodePort,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()
 	// 	log.Fatal("Need private key")
 	// }
-	proxyConfig = config
-	return proxyConfig, nil
+	return config, nil
 }
 
 func parseSupportShards(s string) ([]byte, error) {
@@ -99,14 +93,14 @@ func parseSupportShards(s string) ([]byte, error) {
 	return sup, nil
 }
 
-func (s ProxyConfig) printConfig() {
+func (s ProxyConfig) PrintConfig() {
 	fmt.Println("============== Config =============")
-	fmt.Println("Bootstrap node: ", s.bootstrap)
-	fmt.Println("Host: ", s.host)
-	fmt.Println("Proxy: ", s.proxyPort)
-	fmt.Println("Admin: ", s.adminPort)
-	fmt.Println("IsProfiling: ", s.isProfiling)
-	fmt.Println("Support shards: ", s.supportShards)
-	fmt.Println("Private Key: ", s.privateKey)
+	fmt.Println("Bootstrap node: ", s.Bootstrap)
+	fmt.Println("Host: ", s.Host)
+	fmt.Println("Proxy: ", s.ProxyPort)
+	fmt.Println("Admin: ", s.AdminPort)
+	fmt.Println("IsProfiling: ", s.IsProfiling)
+	fmt.Println("Support shards: ", s.SupportShards)
+	fmt.Println("Private Key: ", s.PrivateKey)
 	fmt.Println("============== End Config =============")
 }

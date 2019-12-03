@@ -48,8 +48,9 @@ type Key struct {
 }
 
 type KeyList struct {
-	Bc []Key         `json:"Beacon"`
-	Sh map[int][]Key `json:"Shard"`
+	Bc     []Key         `json:"Beacon"`
+	Sh     map[int][]Key `json:"Shard"`
+	ShPend map[int][]Key `json:"ShardPending"`
 }
 
 func HasValuesAt(
@@ -86,4 +87,26 @@ func StringToAddrInfo(ma string) (*peer.AddrInfo, error) {
 		return nil, errors.WithStack(err)
 	}
 	return addrInfo, nil
+}
+
+func NewDefaultMarshaler(data interface{}) json.Marshaler {
+	return &marshaler{data}
+}
+
+type marshaler struct {
+	data interface{}
+}
+
+var _ json.Marshaler = (*marshaler)(nil)
+
+func (m *marshaler) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.data)
+}
+
+func BytesToInts(b []byte) []int {
+	s := make([]int, len(b))
+	for i, v := range b {
+		s[i] = int(v)
+	}
+	return s
 }
