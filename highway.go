@@ -41,7 +41,7 @@ func main() {
 	}
 
 	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
-		Port: config.bootnodePort,
+		Port: conf.BootnodePort,
 	})
 	if err != nil {
 		logger.Error(err)
