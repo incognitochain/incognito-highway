@@ -61,6 +61,10 @@ func (s *Server) Register(
 	error,
 ) {
 	logger.Infof("Receive Register request, CID %v, peerID %v", req.CommitteeID, req.PeerID)
+
+	// Monitor status
+	defer s.reporter.watchRequestCounts("register")
+
 	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
 	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
 	cIDs := []int{}
@@ -75,27 +79,38 @@ func (s *Server) Register(
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
+		logger.Warnf("Couldn't process wantedMsgs: %+v %+v %+v", req.GetWantedMessages(), role, cIDs)
 		return nil, err
 	}
 
+	r := process.GetUserRole(cID)
+	pid, err := peer.IDB58Decode(req.PeerID)
+	if err != nil {
+		logger.Warnf("Invalid peerID: %v", req.PeerID)
+		return nil, err
+	}
+	pinfo := PeerInfo{ID: pid, Pubkey: req.GetCommitteePublicKey()}
 	if role == common.COMMITTEE {
-		// Notify HighwayClient of a new peer to request data later if possible
-		pid, err := peer.IDB58Decode(req.PeerID)
 		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
 
-		if err == nil {
-			s.m.newPeers <- PeerInfo{ID: pid, CID: int(cID)}
-		} else {
-			logger.Errorf("Invalid peerID: %v", req.PeerID)
-		}
+		pinfo.CID = int(cID)
+		pinfo.Role = r.Role
+	} else {
+		// TODO(@0xbunyip): support fullnode here (multiple cIDs)
+		pinfo.CID = int(cIDs[0])
+		pinfo.Role = "normal"
 	}
+	// Notify HighwayClient of a new peer to request data later if possible
+	s.m.newPeers <- pinfo
 
 	// Return response to node
-	r := process.GetUserRole(cID)
 	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_shard")
+
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -120,6 +135,9 @@ func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockSha
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_beacon")
+
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -145,6 +163,9 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
+
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
@@ -166,6 +187,9 @@ func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBe
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_cross_shard")
+
 	data, err := s.hc.GetBlockCrossShardByHeight(
 		req.FromShard,
 		req.ToShard,
@@ -191,10 +215,12 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 type Server struct {
 	m  *Manager
 	hc *Client
+
+	reporter *Reporter
 }
 
-func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
-	s := &Server{hc: hc, m: m}
+func RegisterServer(m *Manager, gs *grpc.Server, hc *Client, reporter *Reporter) {
+	s := &Server{hc: hc, m: m, reporter: reporter}
 	proto.RegisterHighwayServiceServer(gs, s)
 }
 
