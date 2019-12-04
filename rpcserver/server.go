@@ -28,7 +28,7 @@ func NewRPCServer(
 func (rpcServer *RpcServer) Start() error {
 	handler := &Handler{rpcServer}
 	rpcServer.server.Register(handler)
-	listenner, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", rpcServer.Config.Port))
+	listenner, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcServer.Config.Port))
 	if err != nil {
 		fmt.Printf("listen in address %v error: %v\n", listenner.Addr().String(), err)
 		return err

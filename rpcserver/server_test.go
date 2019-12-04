@@ -1,14 +1,17 @@
 package rpcserver
 
 import (
+	"fmt"
 	"net/rpc"
 	"testing"
 	"time"
 )
 
 func TestRpcServer_GetHWForAll(t *testing.T) {
+	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", "127.0.0.1", "9330", "QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv")
 	rpcConf := &RpcServerConfig{
-		Port: 9330,
+		Port:     9330,
+		IPFSAddr: selfIPFSAddr,
 	}
 	server, err := NewRPCServer(rpcConf)
 	if err != nil {

@@ -1,5 +1,6 @@
 package rpcserver
 
 type RpcServerConfig struct {
-	Port int
+	Port     int
+	IPFSAddr string
 }

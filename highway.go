@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"highway/chain"
 	"highway/common"
 	"highway/config"
@@ -40,20 +41,23 @@ func main() {
 		return
 	}
 
+	chainData := new(process.ChainData)
+	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
+
+	// New libp2p host
+	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
+
+	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.Host, conf.ProxyPort, proxyHost.Host.ID().String())
+	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
 	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
-		Port: conf.BootnodePort,
+		Port:     conf.BootnodePort,
+		IPFSAddr: selfIPFSAddr,
 	})
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 	go rpcServer.Start()
-
-	chainData := new(process.ChainData)
-	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
-
-	// New libp2p host
-	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
 
 	// Pubsub
 	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {

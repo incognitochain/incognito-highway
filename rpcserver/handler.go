@@ -2,7 +2,6 @@ package rpcserver
 
 import (
 	"fmt"
-	"highway/common"
 )
 
 type Handler struct {
@@ -22,8 +21,9 @@ func (s *Handler) GetPeers(
 	// if args[0] != "all" {
 	// 	return nil, fmt.Errorf("Multi HW per shard is not supported in this time!")
 	// }
+	// s.connector.GetListHighways(pid peer.ID)
 	res.PeerPerShard = map[string][]string{
-		"all": []string{common.DefaultHWPeerID},
+		"all": []string{s.rpcServer.Config.IPFSAddr},
 	}
 	fmt.Println("Response", *res)
 	return
