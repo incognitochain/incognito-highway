@@ -8,6 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/host"
 	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 )
 
 var GlobalPubsub PubSubManager
@@ -98,7 +99,14 @@ func (pubsub *PubSubManager) handleNewMsg(
 				// 	}
 				// }
 				//#endregion Just logging information
-				go pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.CommitteePubkeyByPeerID[data.GetFrom()], data.GetData())
+				go func() {
+					err := pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.GetMiningPubkeyFromPeerID(data.GetFrom()), data.GetData())
+					if err != nil {
+						err = errors.WithMessagef(err, "from: %v", data.GetFrom())
+						logger.Warnf("Cannot update peerstate: %+v", err)
+					}
+				}()
+
 			case topic.ProcessAndPublish:
 				logger.Debugf("[pubsub] Received data of topic %v, data [%v..%v]", sub.Topic(), data.Data[:5], data.Data[len(data.Data)-6:])
 				if isDuplicate {
