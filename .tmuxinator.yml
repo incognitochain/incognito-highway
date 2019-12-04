@@ -46,7 +46,5 @@ windows:
   - b:
       root: ./
       panes:
-        - ./run.sh "beacon" 2>&1 | tee beacon-hw.log
-        - sleep 1 && ./run.sh "s0" 2>&1 | tee s0-hw.log
-        - sleep 1 && ./run.sh "s1" 2>&1 | tee s1-hw.log
+        - ./run.sh "all" 2>&1 | tee all-hw.log
 

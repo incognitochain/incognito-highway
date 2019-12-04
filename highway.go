@@ -42,7 +42,7 @@ func main() {
 	}
 
 	chainData := new(process.ChainData)
-	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
+	chainData.Init(common.NumberOfShard)
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
@@ -80,11 +80,11 @@ func main() {
 	// Chain-facing connections
 	chainReporter := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
 
-	// Subscribe to receive new committee
-	process.GlobalPubsub.SubHandlers <- process.SubHandler{
-		Topic:   "chain_committee",
-		Handler: chainData.ProcessChainCommitteeMsg,
-	}
+	// // Subscribe to receive new committee
+	// process.GlobalPubsub.SubHandlers <- process.SubHandler{
+	// 	Topic:   "chain_committee",
+	// 	Handler: chainData.ProcessChainCommitteeMsg,
+	// }
 
 	// Setup monitoring
 	confReporter := config.NewReporter(conf)

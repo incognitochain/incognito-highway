@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-/*
 func (s *Server) Register(
 	ctx context.Context,
 	req *proto.RegisterRequest,
@@ -21,61 +20,25 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	// TODO(@akk0r0kamui): auth committee pubkey and peerID
-	logger.Debugf("Receive new request from %v via gRPC", req.GetPeerID())
-	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
-	isValidator := true
-	if err != nil {
-		// return nil, err
-		isValidator = false
-	}
-	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), isValidator, committeeID, req.GetPeerID())
-	// logger.Info(pairs)
-	if err != nil {
-		return nil, err
-	}
-	//	return &ProxyRegisterResponse{Pair: pairs}, nil
-
-	// Notify HighwayClient of a new peer to request data later if possible
-	pid, err := peer.IDB58Decode(req.PeerID)
-	s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
-	cid := int(committeeID)
-
-	if err == nil {
-		s.m.newPeers <- PeerInfo{ID: pid, CID: cid}
-	} else {
-		logger.Errorf("Invalid peerID: %v", req.PeerID)
-	}
-
-	// Return response to node
-	role := process.GetUserRole(cid)
-	return &proto.RegisterResponse{Pair: pairs, Role: role}, nil
-}
-*/
-
-func (s *Server) Register(
-	ctx context.Context,
-	req *proto.RegisterRequest,
-) (
-	*proto.RegisterResponse,
-	error,
-) {
-	logger.Infof("Receive Register request, CID %v, peerID %v", req.CommitteeID, req.PeerID)
+	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
 
 	// Monitor status
 	defer s.reporter.watchRequestCounts("register")
 
 	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
-	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
+	reqRole := req.GetRole()
+	reqCIDs := req.GetCommitteeID()
 	cIDs := []int{}
-	if role == common.NORMAL {
-		reqCIDs := req.GetCommitteeID()
-		for _, cid := range reqCIDs {
-			cIDs = append(cIDs, int(cid))
-		}
-	} else {
-		cIDs = append(cIDs, cID)
+	for _, cid := range reqCIDs {
+		cIDs = append(cIDs, int(cid))
 	}
+
+	// Map from user defined role to highway defined role
+	role := common.NORMAL // normal node, waiting and pending validators
+	if reqRole == common.CommitteeRole {
+		role = common.COMMITTEE
+	}
+
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
@@ -83,15 +46,29 @@ func (s *Server) Register(
 		return nil, err
 	}
 
-	r := process.GetUserRole(cID)
+	cID := 0
+	if len(cIDs) > 0 {
+		cID = cIDs[0] // For validators, cIDs must contain exactly 1 value that is the shard that the they are validating on
+	}
+	r := process.GetUserRole(reqRole, cID)
 	pid, err := peer.IDB58Decode(req.PeerID)
 	if err != nil {
 		logger.Warnf("Invalid peerID: %v", req.PeerID)
 		return nil, err
 	}
-	pinfo := PeerInfo{ID: pid, Pubkey: req.GetCommitteePublicKey()}
+
+	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
+	if err != nil {
+		return nil, err
+	}
+
+	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
-		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
+		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
+		err := s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
+		if err != nil {
+			return nil, err
+		}
 
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
