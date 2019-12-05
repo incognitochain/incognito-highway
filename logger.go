@@ -2,6 +2,7 @@ package main
 
 import (
 	"highway/chain"
+	"highway/health"
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
@@ -33,4 +34,5 @@ func initLogger(level string) {
 	route.InitLogger(logger)
 	process.InitLogger(logger)
 	topic.InitLogger(logger)
+	health.InitLogger(logger)
 }

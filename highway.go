@@ -2,71 +2,100 @@
 package main
 
 import (
+	"fmt"
 	"highway/chain"
 	"highway/common"
+	"highway/config"
+	"highway/health"
+	"highway/monitor"
 	"highway/p2p"
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
+	"highway/rpcserver"
 	"math/rand"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
+var _ monitor.Monitor = (*config.Reporter)(nil)
+
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	config, err := GetProxyConfig()
+	conf, err := config.GetProxyConfig()
 	if err != nil {
 		logger.Errorf("%+v", err)
 		return
 	}
 
 	// Setup logging
-	initLogger(config.loglevel)
+	initLogger(conf.Loglevel)
 
-	config.printConfig()
-	topic.Handler.UpdateSupportShards(config.supportShards)
-	masterPeerID, err := peer.IDB58Decode(config.masternode)
+	conf.PrintConfig()
+	topic.Handler.UpdateSupportShards(conf.SupportShards)
+	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 
 	chainData := new(process.ChainData)
-	chainData.Init("keylist.json", common.NumberOfShard, common.CommitteeSize, masterPeerID)
+	chainData.Init(common.NumberOfShard)
 
 	// New libp2p host
-	proxyHost := p2p.NewHost(config.version, config.host, config.proxyPort, config.privateKey)
+	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
 
-	// Chain-facing connections
-	go chain.ManageChainConnections(proxyHost.Host, proxyHost.GRPC, chainData)
+	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.Host, conf.ProxyPort, proxyHost.Host.ID().String())
+	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
+	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
+		Port:     conf.BootnodePort,
+		IPFSAddr: selfIPFSAddr,
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	go rpcServer.Start()
 
-	if err := process.InitPubSub(proxyHost.Host, config.supportShards, chainData); err != nil {
+	// Pubsub
+	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {
 		logger.Error(err)
 		return
 	}
 	logger.Info("Init pubsub ok")
-
 	go process.GlobalPubsub.WatchingChain()
 
-	// Subscribe to receive new committee
-	process.GlobalPubsub.GRPCSpecSub <- process.SubHandler{
-		Topic:   "chain_committee",
-		Handler: chainData.ProcessChainCommitteeMsg,
-	}
-
 	// Highway manager: connect cross highways
-	h := route.NewManager(
-		config.supportShards,
-		config.bootstrap,
+	rman := route.NewManager(
+		conf.SupportShards,
+		conf.Bootstrap,
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
 	)
-	go h.Start()
+	go rman.Start()
 
-	go proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
-	select {}
+	// Chain-facing connections
+	chainReporter := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+
+	// // Subscribe to receive new committee
+	// process.GlobalPubsub.SubHandlers <- process.SubHandler{
+	// 	Topic:   "chain_committee",
+	// 	Handler: chainData.ProcessChainCommitteeMsg,
+	// }
+
+	// Setup monitoring
+	confReporter := config.NewReporter(conf)
+	routeReporter := route.NewReporter(rman)
+	healthReporter := health.NewReporter()
+	processReporter := process.NewReporter(chainData)
+	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter, processReporter}
+	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
+	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
+
+	logger.Info("Serving...")
+	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
+
 }

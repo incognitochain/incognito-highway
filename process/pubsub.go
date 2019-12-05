@@ -2,11 +2,13 @@ package process
 
 import (
 	"context"
+	"highway/database"
 	"highway/process/topic"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
 	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 )
 
 var GlobalPubsub PubSubManager
@@ -20,8 +22,7 @@ type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
 	GossipMachine        *p2pPubSub.PubSub
-	GRPCMessage          chan string
-	GRPCSpecSub          chan SubHandler
+	SubHandlers          chan SubHandler
 	OutSideMessage       chan string
 	followedTopic        []string
 	ForwardNow           chan p2pPubSub.Message
@@ -40,8 +41,7 @@ func InitPubSub(
 	if err != nil {
 		return err
 	}
-	GlobalPubsub.GRPCMessage = make(chan string)
-	GlobalPubsub.GRPCSpecSub = make(chan SubHandler, 100)
+	GlobalPubsub.SubHandlers = make(chan SubHandler, 100)
 	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
 	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
 	GlobalPubsub.SupportShards = supportShards
@@ -54,24 +54,15 @@ func InitPubSub(
 func (pubsub *PubSubManager) WatchingChain() {
 	for {
 		select {
-		case newTopic := <-pubsub.GRPCMessage:
-			subch, err := pubsub.FloodMachine.Subscribe(newTopic)
-			pubsub.followedTopic = append(pubsub.followedTopic, newTopic)
+		case newSubHandler := <-pubsub.SubHandlers:
+			logger.Infof("Watching chain sub topic %v", newSubHandler.Topic)
+			subch, err := pubsub.FloodMachine.Subscribe(newSubHandler.Topic)
+			pubsub.followedTopic = append(pubsub.followedTopic, newSubHandler.Topic)
 			if err != nil {
 				logger.Info(err)
 				continue
 			}
-			typeOfProcessor := topic.GetTypeOfProcess(newTopic)
-			logger.Infof("Success subscribe topic %v, Type of process %v", newTopic, typeOfProcessor)
-			go pubsub.handleNewMsg(subch, typeOfProcessor)
-		case newGRPCSpecSub := <-pubsub.GRPCSpecSub:
-			subch, err := pubsub.FloodMachine.Subscribe(newGRPCSpecSub.Topic)
-			pubsub.followedTopic = append(pubsub.followedTopic, newGRPCSpecSub.Topic)
-			if err != nil {
-				logger.Info(err)
-				continue
-			}
-			go newGRPCSpecSub.Handler(subch)
+			go newSubHandler.Handler(subch)
 		case <-pubsub.SpecialPublishTicker.C:
 			go pubsub.PublishPeerStateToNode()
 		}
@@ -84,9 +75,16 @@ func (pubsub *PubSubManager) handleNewMsg(
 	typeOfProcessor byte,
 ) {
 	for {
+		isDuplicate := false
 		data, err := sub.Next(context.Background())
-		//TODO implement GossipSub with special topic
+		// TODO implement GossipSub with special topic
+		// TODO Add lock for each of msg type
 		if (err == nil) && (data != nil) {
+			if database.IsMarkedData(data.GetData()) {
+				isDuplicate = true
+			} else {
+				database.MarkData(data.GetData())
+			}
 			switch typeOfProcessor {
 			case topic.DoNothing:
 				continue
@@ -101,8 +99,20 @@ func (pubsub *PubSubManager) handleNewMsg(
 				// 	}
 				// }
 				//#endregion Just logging information
-				go pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.CommitteePubkeyByPeerID[data.GetFrom()], data.GetData())
+				go func() {
+					err := pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.GetMiningPubkeyFromPeerID(data.GetFrom()), data.GetData())
+					if err != nil {
+						err = errors.WithMessagef(err, "from: %v", data.GetFrom())
+						logger.Warnf("Cannot update peerstate: %+v", err)
+					}
+				}()
+
 			case topic.ProcessAndPublish:
+				logger.Debugf("[pubsub] Received data of topic %v, data [%v..%v]", sub.Topic(), data.Data[:5], data.Data[len(data.Data)-6:])
+				if isDuplicate {
+					continue
+				}
+				logger.Debugf("[pubsub] Broadcast topic %v, data [%v..%v]", sub.Topic(), data.Data[:5], data.Data[len(data.Data)-6:])
 				pubTopics := topic.Handler.GetHWPubTopicsFromHWSub(sub.Topic())
 				for _, pubTopic := range pubTopics {
 					go pubsub.FloodMachine.Publish(pubTopic, data.GetData())
@@ -142,6 +152,7 @@ func (pubsub *PubSubManager) PublishPeerStateToNode() {
 func (pubsub *PubSubManager) SubKnownTopics() error {
 	topicSubs := topic.Handler.GetListSubTopicForHW()
 	for _, topicSub := range topicSubs {
+		logger.Infof("Success subscribe topic %v", topicSub)
 		subch, err := pubsub.FloodMachine.Subscribe(topicSub)
 		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
 		if err != nil {
@@ -149,7 +160,6 @@ func (pubsub *PubSubManager) SubKnownTopics() error {
 			continue
 		}
 		typeOfProcessor := topic.GetTypeOfProcess(topicSub)
-		logger.Infof("Success subscribe topic %v, Type of process %v", topicSub, typeOfProcessor)
 		go pubsub.handleNewMsg(subch, typeOfProcessor)
 	}
 	return nil

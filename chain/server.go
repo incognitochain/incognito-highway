@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-/*
 func (s *Server) Register(
 	ctx context.Context,
 	req *proto.RegisterRequest,
@@ -21,81 +20,74 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	// TODO(@akk0r0kamui): auth committee pubkey and peerID
-	logger.Debugf("Receive new request from %v via gRPC", req.GetPeerID())
-	committeeID, err := s.hc.chainData.GetCommitteeIDOfValidator(req.GetCommitteePublicKey())
-	isValidator := true
-	if err != nil {
-		// return nil, err
-		isValidator = false
-	}
-	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), isValidator, committeeID, req.GetPeerID())
-	// logger.Info(pairs)
-	if err != nil {
-		return nil, err
-	}
-	//	return &ProxyRegisterResponse{Pair: pairs}, nil
+	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
 
-	// Notify HighwayClient of a new peer to request data later if possible
-	pid, err := peer.IDB58Decode(req.PeerID)
-	s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
-	cid := int(committeeID)
+	// Monitor status
+	defer s.reporter.watchRequestCounts("register")
 
-	if err == nil {
-		s.m.newPeers <- PeerInfo{ID: pid, CID: cid}
-	} else {
-		logger.Errorf("Invalid peerID: %v", req.PeerID)
-	}
-
-	// Return response to node
-	role := process.GetUserRole(cid)
-	return &proto.RegisterResponse{Pair: pairs, Role: role}, nil
-}
-*/
-
-func (s *Server) Register(
-	ctx context.Context,
-	req *proto.RegisterRequest,
-) (
-	*proto.RegisterResponse,
-	error,
-) {
 	// TODO Add list of committeeID, which node wanna sub/pub,..., into register request
-	role, cID := s.hc.chainData.GetCommitteeInfoOfPublicKey(req.GetCommitteePublicKey())
+	reqRole := req.GetRole()
+	reqCIDs := req.GetCommitteeID()
 	cIDs := []int{}
-	if role == common.NORMAL {
-		reqCIDs := req.GetCommitteeID()
-		for _, cid := range reqCIDs {
-			cIDs = append(cIDs, int(cid))
-		}
-	} else {
-		cIDs = append(cIDs, cID)
+	for _, cid := range reqCIDs {
+		cIDs = append(cIDs, int(cid))
 	}
+
+	// Map from user defined role to highway defined role
+	role := common.NORMAL // normal node, waiting and pending validators
+	if reqRole == common.CommitteeRole {
+		role = common.COMMITTEE
+	}
+
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
 	if err != nil {
+		logger.Warnf("Couldn't process wantedMsgs: %+v %+v %+v", req.GetWantedMessages(), role, cIDs)
 		return nil, err
 	}
 
-	if role == common.COMMITTEE {
-		// Notify HighwayClient of a new peer to request data later if possible
-		pid, err := peer.IDB58Decode(req.PeerID)
-		s.hc.chainData.UpdatePeerIDOfCommitteePubkey(req.GetCommitteePublicKey(), &pid)
-
-		if err == nil {
-			s.m.newPeers <- PeerInfo{ID: pid, CID: int(cID)}
-		} else {
-			logger.Errorf("Invalid peerID: %v", req.PeerID)
-		}
+	cID := 0
+	if len(cIDs) > 0 {
+		cID = cIDs[0] // For validators, cIDs must contain exactly 1 value that is the shard that the they are validating on
+	}
+	r := process.GetUserRole(reqRole, cID)
+	pid, err := peer.IDB58Decode(req.PeerID)
+	if err != nil {
+		logger.Warnf("Invalid peerID: %v", req.PeerID)
+		return nil, err
 	}
 
+	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
+	if err != nil {
+		return nil, err
+	}
+
+	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
+	if role == common.COMMITTEE {
+		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
+		err := s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
+		if err != nil {
+			return nil, err
+		}
+
+		pinfo.CID = int(cID)
+		pinfo.Role = r.Role
+	} else {
+		// TODO(@0xbunyip): support fullnode here (multiple cIDs)
+		pinfo.CID = int(cIDs[0])
+		pinfo.Role = "normal"
+	}
+	// Notify HighwayClient of a new peer to request data later if possible
+	s.m.newPeers <- pinfo
+
 	// Return response to node
-	r := process.GetUserRole(cID)
 	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
-	// logger.Println("Receive GetBlockShardByHeight request")
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_shard")
+
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -115,11 +107,30 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	logger.Errorf("Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
-	return nil, errors.New("not supported")
+	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
+	defer s.reporter.watchRequestCounts("get_block_shard")
+
+	// TODO(@0xbunyip): check if block in cache
+
+	// Call node to get blocks
+	// TODO(@0xbunyip): use fromPool
+	data, err := s.hc.GetBlockShardByHash(
+		req.Shard,
+		req.Hashes,
+	)
+	if err != nil {
+		logger.Infof("[blkbyhash] Receive GetBlockShardByHash response error: %v ", err)
+		return nil, err
+	}
+	// TODO(@0xbunyip): cache blocks
+	logger.Infof("[blkbyhash] Receive GetBlockShardByHash response data: %v ", data)
+	return &proto.GetBlockShardByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_beacon")
+
 	// TODO(@0xbunyip): check if block in cache
 
 	// Call node to get blocks
@@ -145,6 +156,9 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
+
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
@@ -161,11 +175,27 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	logger.Errorf("Receive GetBlockBeaconByHash request: %x", req.Hashes)
-	return nil, errors.New("not supported")
+	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
+	defer s.reporter.watchRequestCounts("get_block_beacon")
+
+	// TODO(@0xbunyip): check if block in cache
+
+	// Call node to get blocks
+	// TODO(@0xbunyip): use fromPool
+	data, err := s.hc.GetBlockBeaconByHash(
+		req.Hashes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	// TODO(@0xbunyip): cache blocks
+	return &proto.GetBlockBeaconByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
+	// Monitor status
+	defer s.reporter.watchRequestCounts("get_block_cross_shard")
+
 	data, err := s.hc.GetBlockCrossShardByHeight(
 		req.FromShard,
 		req.ToShard,
@@ -191,10 +221,12 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 type Server struct {
 	m  *Manager
 	hc *Client
+
+	reporter *Reporter
 }
 
-func RegisterServer(m *Manager, gs *grpc.Server, hc *Client) {
-	s := &Server{hc: hc, m: m}
+func RegisterServer(m *Manager, gs *grpc.Server, hc *Client, reporter *Reporter) {
+	s := &Server{hc: hc, m: m, reporter: reporter}
 	proto.RegisterHighwayServiceServer(gs, s)
 }
 

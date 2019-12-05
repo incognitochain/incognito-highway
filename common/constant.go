@@ -1,12 +1,5 @@
 package common
 
-type CommitteePublicKey struct {
-	IncPubKey    []byte
-	MiningPubKey map[string][]byte
-}
-
-type MiningPublicKey map[string][]byte
-
 var (
 	SelfID string = "aaaaa"
 	//Remove soon
@@ -16,8 +9,7 @@ var (
 
 const (
 	BEACONID      byte = 255
-	NumberOfShard      = 8
-	CommitteeSize      = 4
+	NumberOfShard      = 2
 	BeaconRole         = "beacon"
 	ShardRole          = "shard"
 
@@ -27,6 +19,9 @@ const (
 	NormalNode    = ""
 
 	MaxBlocksPerRequest = 100
+
+	DefaultRPCServerPort = 9330
+	DefaultHWPeerID      = "/ip4/127.0.0.1/tcp/9330/p2p/QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv"
 )
 
 const (

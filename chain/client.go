@@ -5,6 +5,7 @@ import (
 	"highway/common"
 	"highway/process"
 	"highway/proto"
+	"highway/route"
 	"math/rand"
 	"sync"
 
@@ -14,85 +15,22 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
-func (hc *Client) GetBlockByHeight(
-	shardID int32,
-	specific bool,
-	from uint64,
-	to uint64,
-	heights []uint64,
-	fromCandidate string,
-) ([][]byte, error) {
-	client, err := hc.getClientWithPublicKey(fromCandidate)
-	if err != nil {
-		return nil, err
-	}
-	if shardID != -1 {
-		reply, err := client.GetBlockShardByHeight(
-			context.Background(),
-			&proto.GetBlockShardByHeightRequest{
-				Shard:      shardID,
-				Specific:   specific,
-				FromHeight: from,
-				ToHeight:   to,
-				Heights:    heights,
-				FromPool:   false,
-			},
-		)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		} else {
-			logger.Infof("Reply: %v", reply)
-			return reply.GetData(), nil
-		}
-	}
-
-	reply, err := client.GetBlockBeaconByHeight(
-		context.Background(),
-		&proto.GetBlockBeaconByHeightRequest{
-			Specific:   specific,
-			FromHeight: from,
-			ToHeight:   to,
-			Heights:    heights,
-			FromPool:   false,
-		},
-	)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	} else {
-		logger.Infof("Reply: %v", reply)
-		return reply.GetData(), nil
-	}
-}
-
-func (hc *Client) getClientWithPublicKey(
-	committeePublicKey string,
-) (proto.HighwayServiceClient, error) {
-	peerID, exist := hc.chainData.PeerIDByCommitteePubkey[committeePublicKey]
-	if !exist {
-		logger.Infof("Committee Publickey %v", committeePublicKey)
-		PK := common.CommitteePublicKey{}
-		PK.FromString(committeePublicKey)
-		pkstring, _ := PK.MiningPublicKey()
-		logger.Infof("Committee Publickey by mining key %v", hc.chainData.CommitteeKeyByMiningKey[pkstring])
-		return nil, errors.Errorf("Can not find PeerID of this committee PublicKey %v", committeePublicKey)
-	}
-	client, err := hc.cc.GetServiceClient(peerID)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
 func (hc *Client) GetBlockShardByHeight(
 	shardID int32,
 	specific bool,
 	from uint64,
 	to uint64,
 	heights []uint64,
-) ([][]byte, error) {
+) (resp [][]byte, errOut error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
-	client, err := hc.getClientWithBlock(int(shardID), to)
+	client, pid, err := hc.getClientWithBlock(int(shardID), to)
 	logger.Debugf("Requesting Shard block: shard = %v, height %v -> %v, heights = %v", shardID, from, to, heights)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
+	}()
+
 	if err != nil {
 		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v", shardID, from, to, heights)
 		return nil, err
@@ -115,16 +53,53 @@ func (hc *Client) GetBlockShardByHeight(
 	return reply.Data, nil
 }
 
+func (hc *Client) GetBlockShardByHash(
+	shardID int32,
+	hashes [][]byte,
+) (resp [][]byte, errOut error) {
+	client, pid, err := hc.getClientWithHashes(int(shardID), hashes)
+	logger.Debugf("Requesting Shard block: shard = %v, hashes %v ", shardID, hashes)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
+	}()
+
+	if err != nil {
+		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v", shardID, hashes)
+		return nil, err
+	}
+
+	reply, err := client.GetBlockShardByHash(
+		context.Background(),
+		&proto.GetBlockShardByHashRequest{
+			Shard:  shardID,
+			Hashes: hashes,
+		},
+	)
+	logger.Infof("[blkbyhash] Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
 func (hc *Client) GetBlockShardToBeaconByHeight(
 	shardID int32,
 	specific bool,
 	from uint64,
 	to uint64,
 	heights []uint64,
-) ([][]byte, error) {
+) (resp [][]byte, errOut error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
-	client, err := hc.getClientWithBlock(int(shardID), to)
+	client, pid, err := hc.getClientWithBlock(int(shardID), to)
 	logger.Debugf("Requesting S2B block: shard = %v, height %v -> %v, heights = %v", shardID, from, to, heights)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_shard_to_beacon", pid, errOut)
+	}()
+
 	if err != nil {
 		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v", shardID, from, to, heights)
 		return nil, err
@@ -142,6 +117,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
+		logger.Warnf("err: %+v", err)
 		return nil, errors.WithStack(err)
 	}
 	return reply.Data, nil
@@ -155,12 +131,18 @@ func (hc *Client) GetBlockCrossShardByHeight(
 	toHeight uint64,
 	heights []uint64,
 	fromPool bool,
-) ([][]byte, error) {
+) (resp [][]byte, errOut error) {
 	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
 	// => request from peer of shard `fromShard`
 	toHeight, heights = capBlocksPerRequest(specific, fromHeight, toHeight, heights)
-	client, err := hc.getClientWithBlock(int(fromShard), toHeight)
+	client, pid, err := hc.getClientWithBlock(int(fromShard), toHeight)
 	logger.Debugf("Requesting CrossShard block: shard %v -> %v, height %v -> %v, heights = %v, pool = %v", fromShard, toShard, fromHeight, toHeight, heights, fromPool)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_cross_shard", pid, errOut)
+	}()
+
 	if err != nil {
 		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v", fromShard, toShard, fromHeight, toHeight, heights)
 		return nil, err
@@ -189,10 +171,16 @@ func (hc *Client) GetBlockBeaconByHeight(
 	from uint64,
 	to uint64,
 	heights []uint64,
-) ([][]byte, error) {
+) (resp [][]byte, errOut error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
-	client, err := hc.getClientWithBlock(int(common.BEACONID), to)
+	client, pid, err := hc.getClientWithBlock(int(common.BEACONID), to)
 	logger.Debugf("Requesting Beacon block: height %v -> %v, heights = %v", from, to, heights)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_beacon", pid, errOut)
+	}()
+
 	if err != nil {
 		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v", from, to, heights)
 		return nil, err
@@ -214,21 +202,71 @@ func (hc *Client) GetBlockBeaconByHeight(
 	return reply.Data, nil
 }
 
+func (hc *Client) GetBlockBeaconByHash(
+	hashes [][]byte,
+) (resp [][]byte, errOut error) {
+	client, pid, err := hc.getClientWithHashes(int(common.BEACONID), hashes)
+	logger.Debugf("Requesting Beacon block: shard = %v, hashes %v ", int(common.BEACONID), hashes)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_beacon", pid, errOut)
+	}()
+
+	if err != nil {
+		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v", int(common.BEACONID), hashes)
+		return nil, err
+	}
+
+	reply, err := client.GetBlockBeaconByHash(
+		context.Background(),
+		&proto.GetBlockBeaconByHashRequest{
+			Hashes: hashes,
+		},
+	)
+	// logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
 func (hc *Client) getClientWithBlock(
 	cid int,
 	height uint64,
-) (proto.HighwayServiceClient, error) {
+) (proto.HighwayServiceClient, peer.ID, error) {
+	if hc.supported(cid) {
+		return hc.getChainClientWithBlock(cid, height)
+	}
+	return hc.routeManager.GetClientSupportShard(cid)
+}
+
+// TODO replace this function, it just for fix special case in "1 HW for all"-mode.
+func (hc *Client) getClientWithHashes(
+	cid int,
+	hashes [][]byte,
+) (proto.HighwayServiceClient, peer.ID, error) {
+	connectedPeers := hc.m.GetPeers(cid)
+	if len(connectedPeers) == 0 {
+		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
+	}
+	peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
+	client, err := hc.cc.GetServiceClient(peerPicked.ID)
+	return client, peerPicked.ID, err
+}
+
+func (hc *Client) getChainClientWithBlock(cid int, height uint64) (proto.HighwayServiceClient, peer.ID, error) {
 	peerID, err := hc.choosePeerIDWithBlock(cid, height)
 	// logger.Debugf("Chosen peer: %v", peerID)
 	if err != nil {
-		return nil, err
+		return nil, peerID, err
 	}
 
 	client, err := hc.cc.GetServiceClient(peerID)
 	if err != nil {
-		return nil, err
+		return nil, peerID, err
 	}
-	return client, nil
+	return client, peerID, nil
 }
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
@@ -244,7 +282,7 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	var peers []process.PeerWithBlk
 	for _, p := range peersHasBlk {
 		for _, cp := range connectedPeers {
-			if p.ID == cp {
+			if p.ID == cp.ID {
 				peers = append(peers, p)
 			}
 		}
@@ -258,6 +296,15 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	}
 	// logger.Debugf("Peer picked: %+v", p)
 	return p.ID, nil
+}
+
+func (hc *Client) supported(cid int) bool {
+	for _, s := range hc.supportShards {
+		if byte(cid) == s {
+			return true
+		}
+	}
+	return false
 }
 
 func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
@@ -285,17 +332,14 @@ func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.Pe
 // If the request is for a range, this function returns the maximum block height allowed
 // If the request is for some blocks, this caps the number blocks requested
 func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
-	var maxHeight uint64
 	if specific {
-		maxHeight = uint64(len(heights))
-		if common.MaxBlocksPerRequest < len(heights) {
-			maxHeight = common.MaxBlocksPerRequest
+		if len(heights) > common.MaxBlocksPerRequest {
+			heights = heights[:common.MaxBlocksPerRequest]
 		}
-		heights = heights[:maxHeight]
 		return heights[len(heights)-1], heights
 	}
 
-	maxHeight = from + common.MaxBlocksPerRequest
+	maxHeight := from + common.MaxBlocksPerRequest
 	if to > maxHeight {
 		return maxHeight, heights
 	}
@@ -303,16 +347,29 @@ func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint
 }
 
 type Client struct {
-	m         *Manager
-	cc        *ClientConnector
-	chainData *process.ChainData
+	m             *Manager
+	reporter      *Reporter
+	routeManager  *route.Manager
+	cc            *ClientConnector
+	chainData     *process.ChainData
+	supportShards []byte // to know if we should query node or other highways
 }
 
-func NewClient(m *Manager, pr *p2pgrpc.GRPCProtocol, incChainData *process.ChainData) *Client {
+func NewClient(
+	m *Manager,
+	reporter *Reporter,
+	rman *route.Manager,
+	pr *p2pgrpc.GRPCProtocol,
+	incChainData *process.ChainData,
+	supportShards []byte,
+) *Client {
 	hc := &Client{
-		m:         m,
-		cc:        NewClientConnector(pr),
-		chainData: incChainData,
+		m:             m,
+		reporter:      reporter,
+		routeManager:  rman,
+		cc:            NewClientConnector(pr),
+		chainData:     incChainData,
+		supportShards: supportShards,
 	}
 	return hc
 }
