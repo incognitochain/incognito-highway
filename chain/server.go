@@ -107,8 +107,24 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	logger.Errorf("Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
-	return nil, errors.New("not supported")
+	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
+	defer s.reporter.watchRequestCounts("get_block_shard")
+
+	// TODO(@0xbunyip): check if block in cache
+
+	// Call node to get blocks
+	// TODO(@0xbunyip): use fromPool
+	data, err := s.hc.GetBlockShardByHash(
+		req.Shard,
+		req.Hashes,
+	)
+	if err != nil {
+		logger.Infof("[blkbyhash] Receive GetBlockShardByHash response error: %v ", err)
+		return nil, err
+	}
+	// TODO(@0xbunyip): cache blocks
+	logger.Infof("[blkbyhash] Receive GetBlockShardByHash response data: %v ", data)
+	return &proto.GetBlockShardByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
@@ -159,8 +175,21 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	logger.Errorf("Receive GetBlockBeaconByHash request: %x", req.Hashes)
-	return nil, errors.New("not supported")
+	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
+	defer s.reporter.watchRequestCounts("get_block_beacon")
+
+	// TODO(@0xbunyip): check if block in cache
+
+	// Call node to get blocks
+	// TODO(@0xbunyip): use fromPool
+	data, err := s.hc.GetBlockBeaconByHash(
+		req.Hashes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	// TODO(@0xbunyip): cache blocks
+	return &proto.GetBlockBeaconByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
