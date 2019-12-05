@@ -53,6 +53,37 @@ func (hc *Client) GetBlockShardByHeight(
 	return reply.Data, nil
 }
 
+func (hc *Client) GetBlockShardByHash(
+	shardID int32,
+	hashes [][]byte,
+) (resp [][]byte, errOut error) {
+	client, pid, err := hc.getClientWithHashes(int(shardID), hashes)
+	logger.Debugf("Requesting Shard block: shard = %v, hashes %v ", shardID, hashes)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
+	}()
+
+	if err != nil {
+		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v", shardID, hashes)
+		return nil, err
+	}
+
+	reply, err := client.GetBlockShardByHash(
+		context.Background(),
+		&proto.GetBlockShardByHashRequest{
+			Shard:  shardID,
+			Hashes: hashes,
+		},
+	)
+	logger.Infof("[blkbyhash] Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
 func (hc *Client) GetBlockShardToBeaconByHeight(
 	shardID int32,
 	specific bool,
@@ -171,6 +202,35 @@ func (hc *Client) GetBlockBeaconByHeight(
 	return reply.Data, nil
 }
 
+func (hc *Client) GetBlockBeaconByHash(
+	hashes [][]byte,
+) (resp [][]byte, errOut error) {
+	client, pid, err := hc.getClientWithHashes(int(common.BEACONID), hashes)
+	logger.Debugf("Requesting Beacon block: shard = %v, hashes %v ", int(common.BEACONID), hashes)
+
+	// Monitor, defer here to make sure even failed requests are logged
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_block_beacon", pid, errOut)
+	}()
+
+	if err != nil {
+		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v", int(common.BEACONID), hashes)
+		return nil, err
+	}
+
+	reply, err := client.GetBlockBeaconByHash(
+		context.Background(),
+		&proto.GetBlockBeaconByHashRequest{
+			Hashes: hashes,
+		},
+	)
+	// logger.Infof("Reply: %v", reply)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reply.Data, nil
+}
+
 func (hc *Client) getClientWithBlock(
 	cid int,
 	height uint64,
@@ -179,6 +239,20 @@ func (hc *Client) getClientWithBlock(
 		return hc.getChainClientWithBlock(cid, height)
 	}
 	return hc.routeManager.GetClientSupportShard(cid)
+}
+
+// TODO replace this function, it just for fix special case in "1 HW for all"-mode.
+func (hc *Client) getClientWithHashes(
+	cid int,
+	hashes [][]byte,
+) (proto.HighwayServiceClient, peer.ID, error) {
+	connectedPeers := hc.m.GetPeers(cid)
+	if len(connectedPeers) == 0 {
+		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
+	}
+	peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
+	client, err := hc.cc.GetServiceClient(peerPicked.ID)
+	return client, peerPicked.ID, err
 }
 
 func (hc *Client) getChainClientWithBlock(cid int, height uint64) (proto.HighwayServiceClient, peer.ID, error) {

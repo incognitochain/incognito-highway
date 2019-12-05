@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"highway/chain"
 	"highway/common"
 	"highway/config"
@@ -11,6 +12,7 @@ import (
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
+	"highway/rpcserver"
 	"math/rand"
 	"time"
 
@@ -44,6 +46,18 @@ func main() {
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
+
+	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.Host, conf.ProxyPort, proxyHost.Host.ID().String())
+	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
+	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
+		Port:     conf.BootnodePort,
+		IPFSAddr: selfIPFSAddr,
+	})
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	go rpcServer.Start()
 
 	// Pubsub
 	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {
@@ -83,4 +97,5 @@ func main() {
 
 	logger.Info("Serving...")
 	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services
+
 }
