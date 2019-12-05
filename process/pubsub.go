@@ -152,7 +152,7 @@ func (pubsub *PubSubManager) PublishPeerStateToNode() {
 func (pubsub *PubSubManager) SubKnownTopics() error {
 	topicSubs := topic.Handler.GetListSubTopicForHW()
 	for _, topicSub := range topicSubs {
-		logger.Infof("Success subscribe topic %v, Type of process %v", topicSub)
+		logger.Infof("Success subscribe topic %v", topicSub)
 		subch, err := pubsub.FloodMachine.Subscribe(topicSub)
 		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
 		if err != nil {
