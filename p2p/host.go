@@ -61,6 +61,7 @@ func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
 	}
 
 	p2pHost, err := libp2p.New(ctx, opts...)
+	fmt.Println(p2pHost.Addrs())
 
 	selfPeer := &Peer{
 		PeerID:        p2pHost.ID(),
