@@ -9,13 +9,14 @@ import (
 	"os"
 )
 
+type Peer struct {
+	Pubkey string
+	ID     string
+}
+
 type Report struct {
 	Chain struct {
-		Peers map[int][]struct {
-			Pubkey string
-			ID     string
-		} `json:"peers"`
-
+		Peers          map[int][]Peer            `json:"peers"`
 		RequestPerPeer map[string]map[string]int `json:"request_per_peer"`
 	} `json:"chain"`
 }
@@ -31,7 +32,7 @@ func get(url string) ([]byte, error) {
 }
 
 func getReport() (*Report, error) {
-	url := "http://51.89.41.31:8339/monitor"
+	url := "http://51.89.41.31:8080/monitor"
 	body, err := get(url)
 	if err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func loadKeylist(filename string) common.KeyList {
 	return keyListFromFile
 }
 
-func found(miningKey string, peers []struct{ Pubkey string }) bool {
+func found(miningKey string, peers []Peer) bool {
 	for _, p := range peers {
 		if miningKey == p.Pubkey {
 			return true

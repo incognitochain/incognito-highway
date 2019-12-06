@@ -26,8 +26,8 @@ type ProxyConfig struct {
 
 func GetProxyConfig() (*ProxyConfig, error) {
 	// get config from process
-	proxyPort := flag.Int("proxy_port", 9330, "port for communication with other node (optional, default 3333)")
-	bootnodePort := flag.Int("bootnode_port", 9334, "port for communication with other node (optional, default 9334)")
+	proxyPort := flag.Int("proxy_port", 9334, "port for communication with other node (optional, default 3333)")
+	bootnodePort := flag.Int("bootnode_port", 9330, "port for communication with other node (optional, default 9334)")
 	adminPort := flag.Int("admin_port", 8080, "rest api /websocket port for administration, monitoring (optional, default 8080)")
 	isProfiling := flag.Bool("profiling", false, "enable profiling through admin port")
 	supportShards := flag.String("support_shards", "all", "shard list that this proxy will work for (optional, default \"all\")")
