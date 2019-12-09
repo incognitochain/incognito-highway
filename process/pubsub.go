@@ -79,11 +79,18 @@ func (pubsub *PubSubManager) handleNewMsg(
 		data, err := sub.Next(context.Background())
 		// TODO implement GossipSub with special topic
 		// TODO Add lock for each of msg type
+		cID := topic.GetCommitteeIDOfTopic(sub.Topic())
+		//Just temp fix, updated in 1 HW 1 Shard version
+		cIDByte := byte(cID)
+		if cID == -1 {
+			cIDByte = 254
+		}
+		data4cache := append(data.GetData(), cIDByte)
 		if (err == nil) && (data != nil) {
-			if database.IsMarkedData(data.GetData()) {
+			if database.IsMarkedData(data4cache) {
 				isDuplicate = true
 			} else {
-				database.MarkData(data.GetData())
+				database.MarkData(data4cache)
 			}
 			switch typeOfProcessor {
 			case topic.DoNothing:
