@@ -19,8 +19,8 @@ func TestGetCommitteeIDOfTopic(t *testing.T) {
 				fmt.Printf("Topics: %v, cID: %v\n", tp, cID)
 				switch msg {
 				case CmdBlockBeacon, CmdBlkShardToBeacon:
-					if cID != noCIDInTopic {
-						t.Errorf("GetCommitteeIDOfTopic(%v) = %v, want %v", tp, cID, noCIDInTopic)
+					if cID != NoCIDInTopic {
+						t.Errorf("GetCommitteeIDOfTopic(%v) = %v, want %v", tp, cID, NoCIDInTopic)
 					}
 				case CmdCrossShard:
 					//Don't know how to check

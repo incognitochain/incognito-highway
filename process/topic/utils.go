@@ -75,7 +75,7 @@ func GetCommitteeIDOfTopic(topic string) int {
 		return -1
 	}
 	if topicElements[1] == "" {
-		return -1
+		return NoCIDInTopic
 	}
 	cID, _ := strconv.Atoi(topicElements[1])
 	return cID
@@ -85,7 +85,7 @@ func getTopicForPubSub(msgType string, cID int) string {
 	if isBroadcastMessage(msgType) {
 		return fmt.Sprintf("%s-%d-", msgType, cID)
 	}
-	if cID == noCIDInTopic {
+	if cID == NoCIDInTopic {
 		return fmt.Sprintf("%s--%s", msgType, common.SelfID)
 	}
 	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
