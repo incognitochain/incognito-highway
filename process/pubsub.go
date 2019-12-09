@@ -4,6 +4,7 @@ import (
 	"context"
 	"highway/database"
 	"highway/process/topic"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
@@ -16,6 +17,8 @@ var GlobalPubsub PubSubManager
 type SubHandler struct {
 	Topic   string
 	Handler func(*p2pPubSub.Subscription)
+	Sub     *p2pPubSub.Subscription
+	Locker  *sync.Mutex
 }
 
 type PubSubManager struct {
@@ -67,6 +70,49 @@ func (pubsub *PubSubManager) WatchingChain() {
 			go pubsub.PublishPeerStateToNode()
 		}
 
+	}
+}
+
+func (handler *SubHandler) handleNewMsgv2(
+	pubsub *PubSubManager,
+	fromInside bool,
+) {
+	for {
+		data, err := handler.Sub.Next(context.Background())
+		dataBytes := data.GetData()
+		if (err == nil) && (data != nil) {
+
+			//#region check duplicate and cache data
+			handler.Locker.Lock()
+			if database.IsMarkedData(dataBytes) {
+				handler.Locker.Unlock()
+				continue
+			}
+			database.MarkData(dataBytes)
+			handler.Locker.Unlock()
+			//#endregion check duplicate and cache data
+
+			msgType := topic.GetMsgTypeOfTopic(handler.Topic)
+			cID := topic.GetCommitteeIDOfTopic(handler.Topic)
+			// TODO @0xakk0r0kamui replace it by map[string]func
+			switch handler.Topic {
+			case topic.CmdBFT:
+				continue
+			case topic.CmdPeerState:
+				go pubsub.HandlePeerState(data.GetFrom(), dataBytes)
+			case topic.CmdBlockBeacon:
+				go pubsub.HandleBlkBeacon(fromInside, msgType, cID, dataBytes)
+			case topic.CmdBlkShardToBeacon, topic.CmdCrossShard:
+				go pubsub.HandleCrossCommitteeBlock(fromInside, msgType, cID, dataBytes)
+			case topic.CmdBlockShard:
+				go pubsub.HandleBlkShard(msgType, cID, dataBytes)
+			case topic.CmdTx, topic.CmdPrivacyCustomToken, topic.CmdCustomToken:
+				go pubsub.HandleTX(msgType, cID, dataBytes)
+			default:
+				logger.Warnf("Missing handler for topic %v", handler.Topic)
+				return
+			}
+		}
 	}
 }
 

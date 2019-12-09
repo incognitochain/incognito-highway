@@ -1,12 +1,14 @@
 package topic
 
 import (
+	"fmt"
 	"highway/common"
 	"highway/proto"
 	"sync"
 )
 
 type listPairByCID map[byte]proto.MessageTopicPair
+type listPairByMsg map[string]proto.MessageTopicPair
 
 var Handler TopicManager
 
@@ -266,4 +268,11 @@ func (topicManager *TopicManager) GetHWPubTopicsFromMsg(msg string, cID int) []s
 		}
 	}
 	return []string{}
+}
+
+func (topicManager *TopicManager) GetHWPubSubOutSideFromMsg(msg string, cID int) string {
+	if cID == noCIDInTopic {
+		return fmt.Sprintf("%v--", msg)
+	}
+	return fmt.Sprintf("%v-%d-", msg, cID)
 }
