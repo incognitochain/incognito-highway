@@ -82,9 +82,6 @@ func (pubsub *PubSubManager) handleNewMsg(
 		cID := topic.GetCommitteeIDOfTopic(sub.Topic())
 		//Just temp fix, updated in 1 HW 1 Shard version
 		cIDByte := byte(cID)
-		if cID == topic.NoCIDInTopic {
-			cIDByte = byte(cID)
-		}
 		data4cache := append(data.GetData(), cIDByte)
 		if (err == nil) && (data != nil) {
 			if database.IsMarkedData(data4cache) {
