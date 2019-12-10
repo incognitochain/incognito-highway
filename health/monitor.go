@@ -6,7 +6,9 @@ import (
 	"highway/common"
 	"io/ioutil"
 	"net"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +31,7 @@ func (r *Reporter) Start(_ time.Duration) {
 	healthTimestep := 60 * time.Second
 	for ; true; <-time.Tick(healthTimestep) {
 		r.updateSample()
+		r.memProfile()
 	}
 }
 
@@ -85,6 +88,19 @@ func (r *Reporter) updateSample() {
 			continue
 		}
 		r.netStats[ifmon.Name()] = NetStat{Tx: tx, Rx: rx}
+	}
+}
+
+func (r *Reporter) memProfile() {
+	f, err := os.Create("mem.prof")
+	if err != nil {
+		logger.Warn("Could not create memory profile: ", err)
+		return
+	}
+	defer f.Close()
+	runtime.GC() // get up-to-date statistics
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		logger.Warn("Could not write memory profile: ", err)
 	}
 }
 
