@@ -257,7 +257,7 @@ func (hc *Client) getClientWithHashes(
 
 func (hc *Client) getChainClientWithBlock(cid int, height uint64) (proto.HighwayServiceClient, peer.ID, error) {
 	peerID, err := hc.choosePeerIDWithBlock(cid, height)
-	// logger.Debugf("Chosen peer: %v", peerID)
+	logger.Debugf("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, peerID, err
 	}
@@ -271,14 +271,14 @@ func (hc *Client) getChainClientWithBlock(cid int, height uint64) (proto.Highway
 
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
-	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
+	logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
 		return peer.ID(""), err
 	}
 
 	// Filter out disconnected peers
 	connectedPeers := hc.m.GetPeers(cid)
-	// logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
+	logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
 	var peers []process.PeerWithBlk
 	for _, p := range peersHasBlk {
 		for _, cp := range connectedPeers {
@@ -287,14 +287,14 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 			}
 		}
 	}
-	// logger.Debugf("PeersLeft: %+v", peers)
+	logger.Debugf("PeersLeft: %+v", peers)
 
 	// Pick randomly
 	p, err := pickWeightedRandomPeer(peers, blk)
 	if err != nil {
 		return peer.ID(""), err
 	}
-	// logger.Debugf("Peer picked: %+v", p)
+	logger.Debugf("Peer picked: %+v", p)
 	return p.ID, nil
 }
 
