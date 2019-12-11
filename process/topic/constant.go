@@ -14,7 +14,7 @@ const (
 	NODESUB      = "-nodesub"
 	NODESIDE     = "incnode"
 	HIGHWAYSIDE  = "highway"
-	noCIDInTopic = -1
+	NoCIDInTopic = -2
 )
 
 const (

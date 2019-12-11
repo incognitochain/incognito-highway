@@ -128,22 +128,22 @@ func (topicManager *TopicManager) getTopicPairForNode(
 	case CmdBlockBeacon:
 		if forPub {
 			if cID == common.BEACONID {
-				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, noCIDInTopic))
+				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic))
 				listAction = append(listAction, proto.MessageTopicPair_PUB)
 			}
 		} else {
-			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, noCIDInTopic))
+			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic))
 			listAction = append(listAction, proto.MessageTopicPair_SUB)
 		}
 	case CmdBlkShardToBeacon:
 		if forPub {
 			if cID != common.BEACONID {
-				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, noCIDInTopic))
+				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic))
 				listAction = append(listAction, proto.MessageTopicPair_PUB)
 			}
 		} else {
 			if cID == common.BEACONID {
-				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, noCIDInTopic))
+				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic))
 				listAction = append(listAction, proto.MessageTopicPair_SUB)
 			}
 		}
@@ -250,7 +250,7 @@ func (topicManager *TopicManager) GetHWPubTopicsFromHWSub(topicReceived string) 
 }
 
 func (topicManager *TopicManager) GetHWPubTopicsFromMsg(msg string, cID int) []string {
-	if cID == noCIDInTopic {
+	if cID == NoCIDInTopic {
 		for _, cid := range topicManager.supportShards {
 			if pair, ok := topicManager.allTopicPairForNodeSub[msg][cid]; ok {
 				if len(pair.Topic) > 0 {
