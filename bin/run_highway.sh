@@ -7,7 +7,7 @@ echo "/data/*.txt {
   missingok
   delaycompress
   copytruncate
-  size 100M
+  size 1000M
 }" > /tmp/logrotate
 logrotate -fv /tmp/logrotate
 
