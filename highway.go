@@ -45,9 +45,9 @@ func main() {
 	chainData.Init(common.NumberOfShard)
 
 	// New libp2p host
-	proxyHost := p2p.NewHost(conf.Version, conf.Host, conf.ProxyPort, conf.PrivateKey)
+	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, conf.PrivateKey)
 
-	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.Host, conf.ProxyPort, proxyHost.Host.ID().String())
+	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.PublicIP, conf.ProxyPort, proxyHost.Host.ID().String())
 	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
 	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
 		Port:     conf.BootnodePort,
