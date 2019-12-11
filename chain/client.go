@@ -315,6 +315,15 @@ func (hc *Client) supported(cid int) bool {
 	return false
 }
 
+func (hc *Client) Start() {
+	for {
+		select {
+		case pid := <-hc.DisconnectedIDs:
+			hc.cc.CloseDisconnected(pid)
+		}
+	}
+}
+
 func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
 	if len(peers) == 0 {
 		return process.PeerWithBlk{}, errors.Errorf("empty peer list")
@@ -355,6 +364,8 @@ func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint
 }
 
 type Client struct {
+	DisconnectedIDs chan peer.ID
+
 	m             *Manager
 	reporter      *Reporter
 	routeManager  *route.Manager
@@ -372,13 +383,15 @@ func NewClient(
 	supportShards []byte,
 ) *Client {
 	hc := &Client{
-		m:             m,
-		reporter:      reporter,
-		routeManager:  rman,
-		cc:            NewClientConnector(pr),
-		chainData:     incChainData,
-		supportShards: supportShards,
+		m:               m,
+		reporter:        reporter,
+		routeManager:    rman,
+		cc:              NewClientConnector(pr),
+		chainData:       incChainData,
+		supportShards:   supportShards,
+		DisconnectedIDs: make(chan peer.ID, 1000),
 	}
+	go hc.Start()
 	return hc
 }
 
@@ -404,6 +417,20 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	}
 	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
 	return client, nil
+}
+
+func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
+	cc.conns.Lock()
+	defer cc.conns.Unlock()
+
+	logger.Infof("Closing connection to pID %s", peerID.String())
+	if conn, ok := cc.conns.connMap[peerID]; ok {
+		if err := conn.Close(); err != nil {
+			logger.Warnf("Failed closing connection to pID %s: %s", peerID.String(), errors.WithStack(err))
+		} else {
+			delete(cc.conns.connMap, peerID)
+		}
+	}
 }
 
 type ClientConnector struct {
