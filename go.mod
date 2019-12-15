@@ -18,6 +18,6 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
 	go.uber.org/zap v1.12.0
-	google.golang.org/grpc v1.20.1
+	google.golang.org/grpc v1.25.1
 	stathat.com/c/consistent v1.0.0 // indirect
 )
