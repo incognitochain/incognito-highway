@@ -7,7 +7,6 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50
 	github.com/incognitochain/incognito-chain v0.0.0-20191101095820-aa5b73f50a1b
-	github.com/jessevdk/go-flags v1.4.0
 	github.com/libp2p/go-libp2p v0.3.1
 	github.com/libp2p/go-libp2p-core v0.2.2
 	github.com/libp2p/go-libp2p-peer v0.2.0

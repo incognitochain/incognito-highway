@@ -7,6 +7,7 @@ import (
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
+	"highway/rpcserver"
 	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
@@ -69,8 +70,8 @@ func (h *Manager) setup(bootstrap []string) {
 	}
 
 	for _, b := range hInfos {
-		// Get peer info
-		addr, err := multiaddr.NewMultiaddr(b.PeerInfo)
+		// Get addr info from string
+		addr, err := multiaddr.NewMultiaddr(b.AddrInfo)
 		if err != nil {
 			logger.Warnf("Invalid highway addr: %v", b)
 			continue
@@ -106,21 +107,31 @@ func (h *Manager) setup(bootstrap []string) {
 	// // TOOD(@0xbunyip): update chain committee to ChainData here
 }
 
-func (h *Manager) getListHighwaysFromPeer(ma string) ([]*proto.HighwayInfo, error) {
-	addrInfo, err := common.StringToAddrInfo(ma)
+func (h *Manager) getListHighwaysFromPeer(addr string) ([]HighwayInfo, error) {
+	resps, err := rpcserver.DiscoverHighWay(addr, []string{"all"})
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.hc.Dial(*addrInfo)
-	if err != nil {
-		return nil, err
+	// NOTE: assume each highway supports all shards
+	// TODO(@0xbunyip): for v2, return correct list of supported shards for each addrinfo
+	if _, ok := resps["all"]; !ok {
+		return nil, errors.Errorf("no highway return from bootnode %s", addr)
+	}
+	ss := make([]int, common.NumberOfShard+1)
+	for i := 0; i < common.NumberOfShard; i++ {
+		ss[i] = i
+	}
+	ss[common.NumberOfShard] = int(common.BEACONID)
+
+	hInfos := []HighwayInfo{}
+	for _, resp := range resps["all"] {
+		hInfos = append(hInfos, HighwayInfo{
+			AddrInfo:      resp,
+			SupportShards: ss,
+		})
 	}
 
-	hInfos, err := h.GetListHighways(addrInfo.ID)
-	if err != nil {
-		return nil, err
-	}
 	return hInfos, nil
 }
 
@@ -139,20 +150,6 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 		return nil, errors.Wrapf(err, "comm: %s", comm)
 	}
 	return comm, nil
-}
-
-func (h *Manager) GetListHighways(pid peer.ID) ([]*proto.HighwayInfo, error) {
-	c, err := h.hc.GetHWClient(pid)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := c.GetHighwayInfos(context.Background(), &proto.GetHighwayInfosRequest{})
-	logger.Infof("resp: %+v", resp)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return resp.Highways, nil
 }
 
 func (h *Manager) Start() {
@@ -249,4 +246,9 @@ func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, pe
 
 func (h *Manager) GetShardsConnected() []byte {
 	return h.Hmap.CopyConnected()
+}
+
+type HighwayInfo struct {
+	AddrInfo      string
+	SupportShards []int
 }

@@ -6,6 +6,7 @@ import (
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
+	"highway/rpcserver"
 	"strings"
 
 	"go.uber.org/zap"
@@ -35,4 +36,5 @@ func initLogger(level string) {
 	process.InitLogger(logger)
 	topic.InitLogger(logger)
 	health.InitLogger(logger)
+	rpcserver.InitLogger(logger)
 }

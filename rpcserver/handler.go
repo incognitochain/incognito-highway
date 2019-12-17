@@ -19,9 +19,16 @@ func (s *Handler) GetPeers(
 	peers := s.rpcServer.pmap.CopyPeersMap()
 	addrs := []string{}
 
-	// NOTE: assume all highways support all shards
+	// NOTE: assume all highways support all shards => get at 0
 	for _, p := range peers[0] {
-		addrs = append(addrs, p.Addrs[0].String())
+		// TODO(@0xbunyip): get p[idx] with public ip
+		ma, err := peer.AddrInfoToP2pAddrs(&p)
+		if err != nil {
+			logger.Warnf("Invalid addr info: %+v", p)
+			continue
+		}
+
+		addrs = append(addrs, ma[0].String())
 	}
 
 	res.PeerPerShard = map[string][]string{
