@@ -15,6 +15,8 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
+const MaxCallRecvMsgSize = 50 << 20 // 50 MBs per gRPC response
+
 func (hc *Client) GetBlockShardByHeight(
 	shardID int32,
 	specific bool,
@@ -45,6 +47,7 @@ func (hc *Client) GetBlockShardByHeight(
 			Heights:    heights,
 			FromPool:   false,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -78,6 +81,7 @@ func (hc *Client) GetBlockShardByHash(
 			Shard:  shardID,
 			Hashes: hashes,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	logger.Infof("[blkbyhash] Reply: %v", reply)
 	if err != nil {
@@ -116,6 +120,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 			Heights:    heights,
 			FromPool:   false,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	if err != nil {
 		logger.Warnf("err: %+v", err)
@@ -162,6 +167,7 @@ func (hc *Client) GetBlockCrossShardByHeight(
 			Heights:    heights,
 			FromPool:   fromPool,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -200,6 +206,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 			Heights:    heights,
 			FromPool:   false,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -231,6 +238,7 @@ func (hc *Client) GetBlockBeaconByHash(
 		&proto.GetBlockBeaconByHashRequest{
 			Hashes: hashes,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)

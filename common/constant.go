@@ -9,7 +9,7 @@ var (
 
 const (
 	BEACONID      byte = 255
-	NumberOfShard      = 2
+	NumberOfShard      = 8
 	BeaconRole         = "beacon"
 	ShardRole          = "shard"
 
