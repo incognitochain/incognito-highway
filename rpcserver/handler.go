@@ -1,13 +1,13 @@
 package rpcserver
 
-import (
-	"fmt"
-)
+import "github.com/libp2p/go-libp2p-core/peer"
 
 type Handler struct {
 	rpcServer *RpcServer
-	// TODO using this param for support response all of HW peerID instead of default peerID for all shard
-	// connector *route.Manager
+}
+
+type PeerMap interface {
+	CopyPeersMap() map[byte][]peer.AddrInfo
 }
 
 func (s *Handler) GetPeers(
@@ -16,15 +16,16 @@ func (s *Handler) GetPeers(
 ) (
 	err error,
 ) {
-	fmt.Println(req)
-	// Return default maps
-	// if args[0] != "all" {
-	// 	return nil, fmt.Errorf("Multi HW per shard is not supported in this time!")
-	// }
-	// s.connector.GetListHighways(pid peer.ID)
-	res.PeerPerShard = map[string][]string{
-		"all": []string{s.rpcServer.Config.IPFSAddr},
+	peers := s.rpcServer.pmap.CopyPeersMap()
+	addrs := []string{}
+
+	// NOTE: assume all highways support all shards
+	for _, p := range peers[0] {
+		addrs = append(addrs, p.Addrs[0].String())
 	}
-	fmt.Println("Response", *res)
+
+	res.PeerPerShard = map[string][]string{
+		"all": addrs,
+	}
 	return
 }

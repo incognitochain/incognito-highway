@@ -25,8 +25,8 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	shardsConnected := common.BytesToInts(connected)
 
 	// List of all connected highway, their full addrinfo and supported shards
-	peers := r.manager.hmap.CopyPeersMap()
-	supports := r.manager.hmap.CopySupports()
+	peers := r.manager.Hmap.CopyPeersMap()
+	supports := r.manager.Hmap.CopySupports()
 	highwayConnected := map[string]highwayInfo{}
 	for pid, cids := range supports {
 		// Find addrInfo from pid

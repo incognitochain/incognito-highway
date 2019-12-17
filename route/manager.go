@@ -21,7 +21,7 @@ import (
 type Manager struct {
 	ID peer.ID
 
-	hmap *hmap.Map
+	Hmap *hmap.Map
 	hc   *Connector
 }
 
@@ -41,7 +41,7 @@ func NewManager(
 
 	hw := &Manager{
 		ID:   h.ID(),
-		hmap: hmap,
+		Hmap: hmap,
 		hc: NewConnector(
 			h,
 			prtc,
@@ -86,7 +86,7 @@ func (h *Manager) setup(bootstrap []string) {
 		for _, s := range b.SupportShards {
 			ss = append(ss, byte(s))
 		}
-		h.hmap.AddPeer(*addrInfo, ss)
+		h.Hmap.AddPeer(*addrInfo, ss)
 	}
 
 	// TODO(@0xbunyip): Get latest committee from bootstrap highways if available
@@ -183,12 +183,12 @@ func (h *Manager) UpdateConnection() {
 
 // connectChain connects this highway to a peer in a chain (shard or beacon) if it hasn't connected to one yet
 func (h *Manager) connectChain(sid byte) error {
-	if h.hmap.IsConnectedToShard(sid) {
+	if h.Hmap.IsConnectedToShard(sid) {
 		return nil
 	}
 
 	logger.Info("Connecting to chain ", sid)
-	highways := h.hmap.Peers[sid]
+	highways := h.Hmap.Peers[sid]
 	if len(highways) == 0 {
 		return errors.Errorf("found no highway supporting chain %d", sid)
 	}
@@ -232,7 +232,7 @@ func choosePeer(peers []peer.AddrInfo, id peer.ID) (peer.AddrInfo, error) {
 // supporting a specific shard
 func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error) {
 	// TODO(@0xbunyip): make sure peer is still connected
-	peers := h.hmap.Peers[byte(cid)]
+	peers := h.Hmap.Peers[byte(cid)]
 	if len(peers) == 0 {
 		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
 	}
@@ -248,5 +248,5 @@ func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, pe
 }
 
 func (h *Manager) GetShardsConnected() []byte {
-	return h.hmap.CopyConnected()
+	return h.Hmap.CopyConnected()
 }
