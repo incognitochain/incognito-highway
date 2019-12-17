@@ -46,9 +46,11 @@ func (hc *Client) GetBlockShardByHeight(
 			FromPool:   false,
 		},
 	)
-	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+	if reply != nil {
+		logger.Debugf("Reply len: %v", len(reply.Data))
 	}
 	return reply.Data, nil
 }
@@ -115,10 +117,12 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 			FromPool:   false,
 		},
 	)
-	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		logger.Warnf("err: %+v", err)
 		return nil, errors.WithStack(err)
+	}
+	if reply != nil {
+		logger.Debugf("Reply len: %v", len(reply.Data))
 	}
 	return reply.Data, nil
 }
@@ -159,9 +163,11 @@ func (hc *Client) GetBlockCrossShardByHeight(
 			FromPool:   fromPool,
 		},
 	)
-	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+	if reply != nil {
+		logger.Debugf("Reply len: %v", len(reply.Data))
 	}
 	return reply.Data, nil
 }
@@ -195,9 +201,11 @@ func (hc *Client) GetBlockBeaconByHeight(
 			FromPool:   false,
 		},
 	)
-	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+	if reply != nil {
+		logger.Debugf("Reply len: %v", len(reply.Data))
 	}
 	return reply.Data, nil
 }
@@ -224,9 +232,11 @@ func (hc *Client) GetBlockBeaconByHash(
 			Hashes: hashes,
 		},
 	)
-	// logger.Infof("Reply: %v", reply)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+	if reply != nil {
+		logger.Debugf("Reply len: %v", len(reply.Data))
 	}
 	return reply.Data, nil
 }
