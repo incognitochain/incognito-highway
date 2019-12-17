@@ -46,5 +46,5 @@ windows:
   - b:
       root: ./
       panes:
-        - ./run.sh "all" 2>&1 | tee all-hw.log
+        - ./run.sh "local" 2>&1 | tee all-hw.log
 
