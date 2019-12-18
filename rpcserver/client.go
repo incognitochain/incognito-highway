@@ -25,7 +25,7 @@ func DiscoverHighWay(
 	}
 	defer client.Close()
 
-	logger.Info("Connected to %v", discoverPeerAddress)
+	logger.Infof("Connected to %v", discoverPeerAddress)
 	req := Request{Shard: shardsStr}
 	var res Response
 	logger.Infof("Start dialing RPC server with param %v", req)
