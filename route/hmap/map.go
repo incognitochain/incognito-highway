@@ -67,8 +67,29 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
 
 	h.Supports[p.ID] = mcopy(supportShards)
 	for _, s := range supportShards {
-		h.Peers[s] = append(h.Peers[s], p)
+		h.Peers[s] = append(h.Peers[s], p) // TODO(@0xbunyip): clear h.Peers before appending
 	}
+}
+
+func (h *Map) RemovePeer(p peer.AddrInfo) {
+	h.Lock()
+	defer h.Unlock()
+	delete(h.Supports, p.ID)
+	for i, addrs := range h.Peers {
+		k := 0
+		for _, addr := range addrs {
+			if addr.ID == p.ID {
+				continue
+			}
+			h.Peers[i][k] = addr
+			k++
+		}
+		if k < len(h.Peers[i]) {
+			logger.Infof("Remove peer from map of shard %d: %+v", i, p)
+		}
+		h.Peers[i] = h.Peers[i][:k]
+	}
+	// TODO(@0xbunyip): update connected
 }
 
 func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {

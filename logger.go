@@ -6,6 +6,7 @@ import (
 	"highway/process"
 	"highway/process/topic"
 	"highway/route"
+	"highway/route/hmap"
 	"highway/rpcserver"
 	"strings"
 
@@ -37,4 +38,5 @@ func initLogger(level string) {
 	topic.InitLogger(logger)
 	health.InitLogger(logger)
 	rpcserver.InitLogger(logger)
+	hmap.InitLogger(logger)
 }

@@ -3,18 +3,22 @@ package route
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"highway/common"
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
 	"highway/rpcserver"
+	"math/rand"
 	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/stathat/consistent"
 )
@@ -24,6 +28,7 @@ type Manager struct {
 
 	Hmap *hmap.Map
 	hc   *Connector
+	host host.Host
 }
 
 func NewManager(
@@ -49,25 +54,97 @@ func NewManager(
 			&process.GlobalPubsub,
 			masternode,
 		),
+		host: h,
 	}
 
-	hw.setup(bootstrap)
+	go hw.keepHighwayConnection(bootstrap)
 
 	// Start highway connector event loop
 	go hw.hc.Start()
 	return hw
 }
 
-func (h *Manager) setup(bootstrap []string) {
-	if len(bootstrap) == 0 || len(bootstrap[0]) == 0 {
-		return
-	}
-	hInfos, err := h.getListHighwaysFromPeer(bootstrap[0])
-	if err != nil {
-		logger.Errorf("Failed getting list of highways from peer %+v, err = %+v", bootstrap[0], err)
-		return
+// keepHighwayConnection maintains the map of all highways including
+// both the ones we want and don't want to connect to.
+// This func keep the map up to date but doesn't make the decision of
+// which highway to connect. That job is performed by route.Connector
+// Every few seconds, we call a random known highway, get the list of
+// all highways and merge with ours. If any connection is dead for too
+// long, we remove it from the highway map.
+// Note that other highways won't return a disconnected highway when queried.
+// Therefore after awhile, the offline highway will be removed from all maps.
+func (h *Manager) keepHighwayConnection(bootstrap []string) {
+	if len(bootstrap) > 0 && len(bootstrap[0]) > 0 {
+		hInfos, err := h.getListHighwaysFromPeer(bootstrap[0])
+		if err != nil {
+			logger.Warnf("Failed getting list of highways from peer %+v, err = %+v", bootstrap[0], err)
+		} else {
+			h.updateHighwayMap(hInfos)
+		}
 	}
 
+	// We refer to each highway using their peerID. This is not totally correct
+	// when the same highway is rerun with different supported shards.
+	// Therefore, if we rerun a highway (in a short period of time) with different
+	// supported shards, we need to use a new peerID.
+	lastSeen := map[peer.ID]time.Time{}
+	watchTimestep := 30 * time.Second
+	removeDeadline := time.Duration(30 * time.Minute)
+	for ; true; <-time.Tick(watchTimestep) {
+		// Get a random highway from map to get list highway
+		if randomPeer, ok := getRandomPeer(h.Hmap.CopyPeersMap(), []peer.ID{h.ID}); ok {
+			hInfos, err := h.getListHighwaysFromPeer(randomPeer)
+			if err != nil {
+				logger.Warnf("Failed getting list highway from peer %+v: err = %+v", randomPeer, err)
+			} else {
+				h.updateHighwayMap(hInfos)
+			}
+		}
+
+		peerMap := h.Hmap.CopyPeersMap()
+		for _, peers := range peerMap {
+			for _, p := range peers {
+				// No need to connect to ourself
+				if p.ID == h.ID {
+					continue
+				}
+
+				if h.host.Network().Connectedness(p.ID) == network.Connected {
+					lastSeen[p.ID] = time.Now()
+					continue
+				}
+
+				if _, ok := lastSeen[p.ID]; !ok {
+					lastSeen[p.ID] = time.Now()
+				}
+
+				// Not connected, remove from map it's been too long
+				if time.Since(lastSeen[p.ID]) > removeDeadline {
+					h.Hmap.RemovePeer(p)
+					delete(lastSeen, p.ID)
+				}
+			}
+		}
+	}
+
+	// TODO(@0xbunyip): Get latest committee from bootstrap highways if available
+	// err = h.hc.Dial(*addrInfo)
+	// if err != nil {
+	// 	logger.Warn("Failed dialing to bootstrap node", addrInfo, err)
+	// 	continue
+	// }
+
+	// cc, err := h.GetChainCommittee(addrInfo.ID)
+	// if err != nil {
+	// 	logger.Warnf("Failed get chain committtee: %+v", err)
+	// 	continue
+	// }
+	// logger.Info("Received chain committee:", cc)
+
+	// // TOOD(@0xbunyip): update chain committee to ChainData here
+}
+
+func (h *Manager) updateHighwayMap(hInfos []HighwayInfo) {
 	for _, b := range hInfos {
 		// Get addr info from string
 		addr, err := multiaddr.NewMultiaddr(b.AddrInfo)
@@ -88,22 +165,38 @@ func (h *Manager) setup(bootstrap []string) {
 		}
 		h.Hmap.AddPeer(*addrInfo, ss)
 	}
+}
 
-	// TODO(@0xbunyip): Get latest committee from bootstrap highways if available
-	// err = h.hc.Dial(*addrInfo)
-	// if err != nil {
-	// 	logger.Warn("Failed dialing to bootstrap node", addrInfo, err)
-	// 	continue
-	// }
-
-	// cc, err := h.GetChainCommittee(addrInfo.ID)
-	// if err != nil {
-	// 	logger.Warnf("Failed get chain committtee: %+v", err)
-	// 	continue
-	// }
-	// logger.Info("Received chain committee:", cc)
-
-	// // TOOD(@0xbunyip): update chain committee to ChainData here
+// getRandomPeer returns the address (ip:port) of a random peer, exluding some
+// peers to make sure we don't connect to ourself
+func getRandomPeer(peers map[byte][]peer.AddrInfo, excludes []peer.ID) (string, bool) {
+	includes := []string{} // List of ip:port
+	for _, addrs := range peers {
+		for _, p := range addrs {
+			found := false
+			for _, e := range excludes {
+				if p.ID == e {
+					found = true
+					break
+				}
+			}
+			if !found {
+				ip, err := p.Addrs[0].ValueForProtocol(ma.P_IP4)
+				if err != nil {
+					continue
+				}
+				port, err := p.Addrs[0].ValueForProtocol(ma.P_TCP)
+				if err != nil {
+					continue
+				}
+				includes = append(includes, fmt.Sprintf("%s:%s", ip, port))
+			}
+		}
+	}
+	if len(includes) == 0 {
+		return "", false
+	}
+	return includes[rand.Intn(len(includes))], true
 }
 
 func (h *Manager) getListHighwaysFromPeer(addr string) ([]HighwayInfo, error) {
@@ -166,6 +259,8 @@ func (h *Manager) Start() {
 }
 
 func (h *Manager) UpdateConnection() {
+	// TODO(@0xbunyip): connect to all highway same shards and
+	// one highway of other shard
 	for i := byte(0); i < common.NumberOfShard; i++ {
 		if err := h.connectChain(i); err != nil {
 			logger.Error(err)
