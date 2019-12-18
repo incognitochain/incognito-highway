@@ -1,6 +1,12 @@
 package rpcserver
 
-import "github.com/libp2p/go-libp2p-core/peer"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
+)
 
 type Handler struct {
 	rpcServer *RpcServer
@@ -28,11 +34,38 @@ func (s *Handler) GetPeers(
 			continue
 		}
 
-		addrs = append(addrs, ma[0].String())
+		nonLocal := filterLocalAddrs(ma)
+		addr := ma[0].String()
+		if len(nonLocal) > 0 {
+			addr = nonLocal[0].String()
+		}
+		addrs = append(addrs, addr)
 	}
 
 	res.PeerPerShard = map[string][]string{
 		"all": addrs,
 	}
 	return
+}
+
+func filterLocalAddrs(mas []ma.Multiaddr) []ma.Multiaddr {
+	localAddrs := []string{
+		"127.0.0.1",
+		"0.0.0.0",
+	}
+	nonLocal := []ma.Multiaddr{}
+	for _, ma := range mas {
+		local := false
+		for _, s := range localAddrs {
+			if strings.Contains(ma.String(), s) {
+				local = true
+				break
+			}
+		}
+		if !local {
+			nonLocal = append(nonLocal, ma)
+		}
+	}
+	fmt.Println(mas, nonLocal)
+	return nonLocal
 }
