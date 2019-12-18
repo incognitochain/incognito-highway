@@ -2,7 +2,6 @@
 package main
 
 import (
-	"fmt"
 	"highway/chain"
 	"highway/common"
 	"highway/config"
@@ -66,12 +65,9 @@ func main() {
 	go rman.Start()
 
 	// RPCServer
-	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.PublicIP, conf.ProxyPort, proxyHost.Host.ID().String())
-	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
 	rpcServer, err := rpcserver.NewRPCServer(
 		&rpcserver.RpcServerConfig{
-			Port:     conf.BootnodePort,
-			IPFSAddr: selfIPFSAddr,
+			Port: conf.BootnodePort,
 		},
 		rman.Hmap,
 	)

@@ -33,7 +33,6 @@ func NewManager(
 	h host.Host,
 	prtc *p2pgrpc.GRPCProtocol,
 ) *Manager {
-	// TODO(@0xbunyip): use bootstrap to get initial highways
 	p := peer.AddrInfo{
 		ID:    h.ID(),
 		Addrs: h.Addrs(),
