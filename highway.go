@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"highway/chain"
 	"highway/common"
 	"highway/config"
@@ -61,6 +62,7 @@ func main() {
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
+		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 	)
 	go rman.Start()
 

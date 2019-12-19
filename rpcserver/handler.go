@@ -14,6 +14,7 @@ type Handler struct {
 
 type PeerMap interface {
 	CopyPeersMap() map[byte][]peer.AddrInfo
+	CopyRPCUrls() map[peer.ID]string
 }
 
 func (s *Handler) GetPeers(
@@ -23,11 +24,11 @@ func (s *Handler) GetPeers(
 	err error,
 ) {
 	peers := s.rpcServer.pmap.CopyPeersMap()
-	addrs := []string{}
+	rpcs := s.rpcServer.pmap.CopyRPCUrls()
+	addrs := []HighwayAddr{}
 
 	// NOTE: assume all highways support all shards => get at 0
 	for _, p := range peers[0] {
-		// TODO(@0xbunyip): get p[idx] with public ip
 		ma, err := peer.AddrInfoToP2pAddrs(&p)
 		if err != nil {
 			logger.Warnf("Invalid addr info: %+v", p)
@@ -39,10 +40,13 @@ func (s *Handler) GetPeers(
 		if len(nonLocal) > 0 {
 			addr = nonLocal[0].String()
 		}
-		addrs = append(addrs, addr)
+		addrs = append(addrs, HighwayAddr{
+			Libp2pAddr: addr,
+			RPCUrl:     rpcs[p.ID],
+		})
 	}
 
-	res.PeerPerShard = map[string][]string{
+	res.PeerPerShard = map[string][]HighwayAddr{
 		"all": addrs,
 	}
 	return

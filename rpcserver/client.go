@@ -10,11 +10,11 @@ func DiscoverHighWay(
 	discoverPeerAddress string,
 	shardsStr []string,
 ) (
-	map[string][]string,
+	map[string][]HighwayAddr,
 	error,
 ) {
 	if discoverPeerAddress == "" {
-		return nil, errors.Errorf("Not config discovery peer")
+		return nil, errors.Errorf("empty address")
 	}
 	client := new(rpc.Client)
 	var err error

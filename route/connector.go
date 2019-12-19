@@ -105,7 +105,7 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 		logger.Infof("Received highway_enlist msg: %+v", em)
 
 		// Update supported shards of peer
-		hc.hmap.AddPeer(em.Peer, em.SupportShards)
+		hc.hmap.AddPeer(em.Peer, em.SupportShards, em.RPCUrl)
 		hc.hmap.ConnectToShardOfPeer(em.Peer) // TODO(@0xbunyip): why connect?
 	}
 }
@@ -154,4 +154,5 @@ func (no *notifiee) ClosedStream(network.Network, network.Stream) {}
 type enlistMessage struct {
 	SupportShards []byte
 	Peer          peer.AddrInfo
+	RPCUrl        string
 }

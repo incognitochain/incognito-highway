@@ -9,19 +9,21 @@ import (
 type Map struct {
 	Peers    map[byte][]peer.AddrInfo // shard => peers
 	Supports map[peer.ID][]byte       // peerID => shards supported
+	RPCs     map[peer.ID]string       // peerID => RPC endpoint (to call GetPeers)
 
 	connected []byte // keep track of connected shards
 	*sync.RWMutex
 }
 
-func NewMap(p peer.AddrInfo, supportShards []byte) *Map {
+func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 	m := &Map{
 		Peers:     map[byte][]peer.AddrInfo{},
 		Supports:  map[peer.ID][]byte{},
+		RPCs:      map[peer.ID]string{},
 		connected: supportShards,
 		RWMutex:   &sync.RWMutex{},
 	}
-	m.AddPeer(p, supportShards)
+	m.AddPeer(p, supportShards, rpcUrl)
 	return m
 }
 
@@ -56,7 +58,7 @@ func (h *Map) IsEnlisted(p peer.AddrInfo) bool {
 	return ok
 }
 
-func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
+func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
 	h.Lock()
 	defer h.Unlock()
 	mcopy := func(b []byte) []byte { // Create new slice and copy
@@ -69,12 +71,14 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
 	for _, s := range supportShards {
 		h.Peers[s] = append(h.Peers[s], p) // TODO(@0xbunyip): clear h.Peers before appending
 	}
+	h.RPCs[p.ID] = rpcUrl
 }
 
 func (h *Map) RemovePeer(p peer.AddrInfo) {
 	h.Lock()
 	defer h.Unlock()
 	delete(h.Supports, p.ID)
+	delete(h.RPCs, p.ID)
 	for i, addrs := range h.Peers {
 		k := 0
 		for _, addr := range addrs {
@@ -112,6 +116,16 @@ func (h *Map) CopySupports() map[peer.ID][]byte {
 		c := make([]byte, len(cids))
 		copy(c, cids)
 		m[pid] = c
+	}
+	return m
+}
+
+func (h *Map) CopyRPCUrls() map[peer.ID]string {
+	h.RLock()
+	defer h.RUnlock()
+	m := map[peer.ID]string{}
+	for pid, rpc := range h.RPCs {
+		m[pid] = rpc
 	}
 	return m
 }

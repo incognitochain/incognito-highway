@@ -3,7 +3,6 @@ package route
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"highway/common"
 	"highway/process"
 	"highway/proto"
@@ -18,7 +17,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
-	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/stathat/consistent"
 )
@@ -37,12 +35,13 @@ func NewManager(
 	masternode peer.ID,
 	h host.Host,
 	prtc *p2pgrpc.GRPCProtocol,
+	rpcUrl string,
 ) *Manager {
 	p := peer.AddrInfo{
 		ID:    h.ID(),
 		Addrs: h.Addrs(),
 	}
-	hmap := hmap.NewMap(p, supportShards)
+	hmap := hmap.NewMap(p, supportShards, rpcUrl)
 
 	hw := &Manager{
 		ID:   h.ID(),
@@ -91,11 +90,15 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	watchTimestep := 30 * time.Second
 	removeDeadline := time.Duration(30 * time.Minute)
 	for ; true; <-time.Tick(watchTimestep) {
+		// Map from peerID to RPCUrl
+		urls := h.Hmap.CopyRPCUrls()
+
 		// Get a random highway from map to get list highway
 		if randomPeer, ok := getRandomPeer(h.Hmap.CopyPeersMap(), []peer.ID{h.ID}); ok {
-			hInfos, err := h.getListHighwaysFromPeer(randomPeer)
+			url := urls[randomPeer.ID]
+			hInfos, err := h.getListHighwaysFromPeer(url)
 			if err != nil {
-				logger.Warnf("Failed getting list highway from peer %+v: err = %+v", randomPeer, err)
+				logger.Warnf("Failed getting list highway from peer %+v, url = %+v err = %+v", randomPeer, url, err)
 			} else {
 				h.updateHighwayMap(hInfos)
 			}
@@ -163,14 +166,14 @@ func (h *Manager) updateHighwayMap(hInfos []HighwayInfo) {
 		for _, s := range b.SupportShards {
 			ss = append(ss, byte(s))
 		}
-		h.Hmap.AddPeer(*addrInfo, ss)
+		h.Hmap.AddPeer(*addrInfo, ss, b.RPCUrl)
 	}
 }
 
-// getRandomPeer returns the address (ip:port) of a random peer, exluding some
-// peers to make sure we don't connect to ourself
-func getRandomPeer(peers map[byte][]peer.AddrInfo, excludes []peer.ID) (string, bool) {
-	includes := []string{} // List of ip:port
+// getRandomPeer returns the a random peer, exluding some peers to
+// make sure we don't connect to ourself
+func getRandomPeer(peers map[byte][]peer.AddrInfo, excludes []peer.ID) (peer.AddrInfo, bool) {
+	includes := []peer.AddrInfo{}
 	for _, addrs := range peers {
 		for _, p := range addrs {
 			found := false
@@ -181,20 +184,12 @@ func getRandomPeer(peers map[byte][]peer.AddrInfo, excludes []peer.ID) (string, 
 				}
 			}
 			if !found {
-				ip, err := p.Addrs[0].ValueForProtocol(ma.P_IP4)
-				if err != nil {
-					continue
-				}
-				port, err := p.Addrs[0].ValueForProtocol(ma.P_TCP)
-				if err != nil {
-					continue
-				}
-				includes = append(includes, fmt.Sprintf("%s:%s", ip, port))
+				includes = append(includes, p)
 			}
 		}
 	}
 	if len(includes) == 0 {
-		return "", false
+		return peer.AddrInfo{}, false
 	}
 	return includes[rand.Intn(len(includes))], true
 }
@@ -219,7 +214,8 @@ func (h *Manager) getListHighwaysFromPeer(addr string) ([]HighwayInfo, error) {
 	hInfos := []HighwayInfo{}
 	for _, resp := range resps["all"] {
 		hInfos = append(hInfos, HighwayInfo{
-			AddrInfo:      resp,
+			AddrInfo:      resp.Libp2pAddr,
+			RPCUrl:        resp.RPCUrl,
 			SupportShards: ss,
 		})
 	}
@@ -344,5 +340,6 @@ func (h *Manager) GetShardsConnected() []byte {
 
 type HighwayInfo struct {
 	AddrInfo      string
+	RPCUrl        string
 	SupportShards []int
 }
