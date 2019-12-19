@@ -47,5 +47,6 @@ windows:
       root: ./
       panes:
         - ./run.sh "hw1" 2>&1 | tee hw1.log
-        - ./run.sh "hw2" 2>&1 | tee hw2.log
+        - sleep 2s && ./run.sh "hw2" 2>&1 | tee hw2.log
+        - sleep 2s && ./run.sh "hw3" 2>&1 | tee hw3.log
 

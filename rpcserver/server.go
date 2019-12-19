@@ -36,7 +36,7 @@ func (rpcServer *RpcServer) Start() error {
 	listenAddr := fmt.Sprintf(":%d", rpcServer.Config.Port)
 	listenner, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		fmt.Printf("listen in address %v error: %v\n", listenAddr, err)
+		logger.Errorf("listen in address %v error: %v\n", listenAddr, err)
 		return err
 	}
 	rpcServer.server.Accept(listenner)

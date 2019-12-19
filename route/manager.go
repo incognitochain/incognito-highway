@@ -22,7 +22,8 @@ import (
 )
 
 type Manager struct {
-	ID peer.ID
+	ID            peer.ID
+	supportShards []byte
 
 	Hmap *hmap.Map
 	hc   *Connector
@@ -44,14 +45,16 @@ func NewManager(
 	hmap := hmap.NewMap(p, supportShards, rpcUrl)
 
 	hw := &Manager{
-		ID:   h.ID(),
-		Hmap: hmap,
+		ID:            h.ID(),
+		supportShards: supportShards,
+		Hmap:          hmap,
 		hc: NewConnector(
 			h,
 			prtc,
 			hmap,
 			&process.GlobalPubsub,
 			masternode,
+			rpcUrl,
 		),
 		host: h,
 	}
@@ -88,7 +91,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	// supported shards, we need to use a new peerID.
 	lastSeen := map[peer.ID]time.Time{}
 	watchTimestep := 30 * time.Second
-	removeDeadline := time.Duration(30 * time.Minute)
+	removeDeadline := time.Duration(2 * time.Minute)
 	for ; true; <-time.Tick(watchTimestep) {
 		// Map from peerID to RPCUrl
 		urls := h.Hmap.CopyRPCUrls()
@@ -116,6 +119,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 					lastSeen[p.ID] = time.Now()
 					continue
 				}
+				logger.Infof("Disconnected to peer %+v", p)
 
 				if _, ok := lastSeen[p.ID]; !ok {
 					lastSeen[p.ID] = time.Now()
@@ -123,7 +127,9 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 
 				// Not connected, remove from map it's been too long
 				if time.Since(lastSeen[p.ID]) > removeDeadline {
+					logger.Infof("Removing peer %+v, lastSeen %v", p, lastSeen[p.ID].Format(time.RFC3339))
 					h.Hmap.RemovePeer(p)
+					h.Hmap.DisconnectToShardOfPeer(p)
 					delete(lastSeen, p.ID)
 				}
 			}
@@ -148,6 +154,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 }
 
 func (h *Manager) updateHighwayMap(hInfos []HighwayInfo) {
+	logger.Infof("Updating highway map with list: %v", hInfos)
 	for _, b := range hInfos {
 		// Get addr info from string
 		addr, err := multiaddr.NewMultiaddr(b.AddrInfo)
@@ -241,10 +248,8 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 }
 
 func (h *Manager) Start() {
-	// Update connection when new highway comes online or old one goes offline
+	// Update connection when new highway comes online
 	for range time.Tick(10 * time.Second) { // TODO(@xbunyip): move params to config
-		// TODO(@0xbunyip) Check for liveness of connected highways
-
 		// New highways online: update map and reconnect to load-balance
 		newManager := true
 		_ = newManager
@@ -255,20 +260,52 @@ func (h *Manager) Start() {
 }
 
 func (h *Manager) UpdateConnection() {
-	// TODO(@0xbunyip): connect to all highway same shards and
-	// one highway of other shard
-	for i := byte(0); i < common.NumberOfShard; i++ {
-		if err := h.connectChain(i); err != nil {
-			logger.Error(err)
+	support := func(sid byte) bool {
+		for _, sup := range h.supportShards {
+			if sup == sid {
+				return true
+			}
 		}
+		return false
 	}
 
-	if err := h.connectChain(common.BEACONID); err != nil {
-		logger.Error(err)
+	sids := make([]byte, common.NumberOfShard+1)
+	for i := byte(0); i < common.NumberOfShard; i++ {
+		sids[i] = i
+	}
+	sids[common.NumberOfShard] = common.BEACONID
+
+	for _, i := range sids {
+		if support(i) { // Connect to all peers of supported shard
+			// No need to check error here, just connect to other highways
+			h.connectToAllPeersOfChain(i)
+		} else { // Connect to one peer of shard
+			if err := h.connectChain(i); err != nil {
+				logger.Error(err)
+			}
+		}
 	}
 }
 
-// connectChain connects this highway to a peer in a chain (shard or beacon) if it hasn't connected to one yet
+// connectToAllPeersOfChain connects this highway to all peers supporting
+// a chain
+func (h *Manager) connectToAllPeersOfChain(sid byte) error {
+	highways := h.Hmap.Peers[sid]
+
+	for _, p := range highways {
+		if p.ID == h.ID {
+			continue // self
+		}
+
+		if err := h.connectTo(p); err != nil {
+			logger.Errorf("could not connect to peer %v of chain %d: %+v", p, sid, errors.WithStack(err))
+		}
+	}
+	return nil
+}
+
+// connectChain connects this highway to a peer in a chain (shard or beacon)
+// if it hasn't connected to one yet
 func (h *Manager) connectChain(sid byte) error {
 	if h.Hmap.IsConnectedToShard(sid) {
 		return nil

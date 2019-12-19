@@ -11,17 +11,19 @@ type Map struct {
 	Supports map[peer.ID][]byte       // peerID => shards supported
 	RPCs     map[peer.ID]string       // peerID => RPC endpoint (to call GetPeers)
 
-	connected []byte // keep track of connected shards
+	peerConnected map[peer.ID]bool // keep track of connected peers
+	connected     []byte           // keep track of connected shards
 	*sync.RWMutex
 }
 
 func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 	m := &Map{
-		Peers:     map[byte][]peer.AddrInfo{},
-		Supports:  map[peer.ID][]byte{},
-		RPCs:      map[peer.ID]string{},
-		connected: supportShards,
-		RWMutex:   &sync.RWMutex{},
+		Peers:         map[byte][]peer.AddrInfo{},
+		Supports:      map[peer.ID][]byte{},
+		RPCs:          map[peer.ID]string{},
+		connected:     supportShards,
+		peerConnected: map[peer.ID]bool{},
+		RWMutex:       &sync.RWMutex{},
 	}
 	m.AddPeer(p, supportShards, rpcUrl)
 	return m
@@ -48,6 +50,14 @@ func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
 	for _, s := range h.Supports[p.ID] {
 		h.connectToShard(s)
 	}
+	h.peerConnected[p.ID] = true
+}
+
+func (h *Map) DisconnectToShardOfPeer(p peer.AddrInfo) {
+	h.Lock()
+	defer h.Unlock()
+	// TODO(@0xbunyip): remove shards from connected list
+	h.peerConnected[p.ID] = false
 }
 
 // IsEnlisted checks if a peer has already registered as a valid highway
@@ -67,9 +77,23 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
 		return c
 	}
 
+	added := false
 	h.Supports[p.ID] = mcopy(supportShards)
 	for _, s := range supportShards {
-		h.Peers[s] = append(h.Peers[s], p) // TODO(@0xbunyip): clear h.Peers before appending
+		found := false
+		for _, q := range h.Peers[s] {
+			if q.ID == p.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			added = true
+			h.Peers[s] = append(h.Peers[s], p)
+		}
+	}
+	if added {
+		logger.Infof("Adding peer %+v, rpcUrl %s, support %v", p, rpcUrl, supportShards)
 	}
 	h.RPCs[p.ID] = rpcUrl
 }
@@ -89,7 +113,7 @@ func (h *Map) RemovePeer(p peer.AddrInfo) {
 			k++
 		}
 		if k < len(h.Peers[i]) {
-			logger.Infof("Remove peer from map of shard %d: %+v", i, p)
+			logger.Infof("Removed peer from map of shard %d: %+v", i, p)
 		}
 		h.Peers[i] = h.Peers[i][:k]
 	}

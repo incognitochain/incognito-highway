@@ -29,6 +29,7 @@ type Connector struct {
 	outPeers chan peer.AddrInfo
 
 	masternode peer.ID
+	rpcUrl     string
 }
 
 func NewConnector(
@@ -37,6 +38,7 @@ func NewConnector(
 	hmap *hmap.Map,
 	ps *process.PubSubManager,
 	masternode peer.ID,
+	rpcUrl string,
 ) *Connector {
 	hc := &Connector{
 		host:       h,
@@ -46,6 +48,7 @@ func NewConnector(
 		hwc:        NewClient(prtc),       // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
 		masternode: masternode,
+		rpcUrl:     rpcUrl,
 	}
 
 	// Register to receive notif when new connection is established
@@ -106,12 +109,16 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 
 		// Update supported shards of peer
 		hc.hmap.AddPeer(em.Peer, em.SupportShards, em.RPCUrl)
-		hc.hmap.ConnectToShardOfPeer(em.Peer) // TODO(@0xbunyip): why connect?
+		// hc.hmap.ConnectToShardOfPeer(em.Peer) // TODO(@0xbunyip): why connect?
 	}
 }
 
 func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
-	logger.Debugf("Dialing to peer %+v", p)
+	if hc.host.Network().Connectedness(p.ID) == network.Connected {
+		return nil
+	}
+
+	logger.Infof("Dialing to peer %+v", p)
 	err := hc.Dial(p)
 	if err != nil {
 		return err
@@ -124,12 +131,13 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 			Addrs: hc.host.Addrs(),
 		},
 		SupportShards: hc.hmap.Supports[hc.host.ID()],
+		RPCUrl:        hc.rpcUrl,
 	}
 	msg, err := json.Marshal(data)
 	if err != nil {
 		return errors.Wrapf(err, "enlistMessage: %v", data)
 	}
-	logger.Debugf("Publishing msg highway_enlist: %s", msg)
+	logger.Infof("Publishing msg highway_enlist: %s", msg)
 	if err := hc.ps.FloodMachine.Publish("highway_enlist", msg); err != nil {
 		return errors.WithStack(err)
 	}

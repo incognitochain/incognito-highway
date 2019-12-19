@@ -26,6 +26,7 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 
 	// List of all connected highway, their full addrinfo and supported shards
 	peers := r.manager.Hmap.CopyPeersMap()
+	urls := r.manager.Hmap.CopyRPCUrls()
 	supports := r.manager.Hmap.CopySupports()
 	highwayConnected := map[string]highwayInfo{}
 	for pid, cids := range supports {
@@ -42,6 +43,7 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 		highwayConnected[pid.String()] = highwayInfo{
 			AddrInfo: addrInfo,
 			Supports: common.BytesToInts(cids),
+			RPCUrl:   urls[pid],
 		}
 	}
 
@@ -64,4 +66,5 @@ func NewReporter(manager *Manager) *Reporter {
 type highwayInfo struct {
 	AddrInfo peer.AddrInfo `json:"addr_info"`
 	Supports []int         `json:"shards_support"`
+	RPCUrl   string        `json:"rpc_url"`
 }

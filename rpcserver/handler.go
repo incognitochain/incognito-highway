@@ -1,7 +1,6 @@
 package rpcserver
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -70,6 +69,5 @@ func filterLocalAddrs(mas []ma.Multiaddr) []ma.Multiaddr {
 			nonLocal = append(nonLocal, ma)
 		}
 	}
-	fmt.Println(mas, nonLocal)
 	return nonLocal
 }
