@@ -1,6 +1,7 @@
 package hmap
 
 import (
+	"highway/common"
 	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -12,7 +13,6 @@ type Map struct {
 	RPCs     map[peer.ID]string       // peerID => RPC endpoint (to call GetPeers)
 
 	peerConnected map[peer.ID]bool // keep track of connected peers
-	connected     []byte           // keep track of connected shards
 	*sync.RWMutex
 }
 
@@ -21,42 +21,40 @@ func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 		Peers:         map[byte][]peer.AddrInfo{},
 		Supports:      map[peer.ID][]byte{},
 		RPCs:          map[peer.ID]string{},
-		connected:     supportShards,
 		peerConnected: map[peer.ID]bool{},
 		RWMutex:       &sync.RWMutex{},
 	}
 	m.AddPeer(p, supportShards, rpcUrl)
+	m.ConnectToShardOfPeer(p)
 	return m
 }
 
 func (h *Map) IsConnectedToShard(s byte) bool {
 	h.RLock()
 	defer h.RUnlock()
-	for _, c := range h.connected {
-		if c == s {
-			return true
+	for pid, conn := range h.peerConnected {
+		if conn == false {
+			continue
+		}
+
+		for _, sup := range h.Supports[pid] {
+			if sup == s {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func (h *Map) connectToShard(s byte) {
-	h.connected = append(h.connected, s)
-}
-
 func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
 	h.Lock()
 	defer h.Unlock()
-	for _, s := range h.Supports[p.ID] {
-		h.connectToShard(s)
-	}
 	h.peerConnected[p.ID] = true
 }
 
 func (h *Map) DisconnectToShardOfPeer(p peer.AddrInfo) {
 	h.Lock()
 	defer h.Unlock()
-	// TODO(@0xbunyip): remove shards from connected list
 	h.peerConnected[p.ID] = false
 }
 
@@ -117,7 +115,6 @@ func (h *Map) RemovePeer(p peer.AddrInfo) {
 		}
 		h.Peers[i] = h.Peers[i][:k]
 	}
-	// TODO(@0xbunyip): update connected
 }
 
 func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
@@ -157,7 +154,14 @@ func (h *Map) CopyRPCUrls() map[peer.ID]string {
 func (h *Map) CopyConnected() []byte {
 	h.RLock()
 	defer h.RUnlock()
-	c := make([]byte, len(h.connected))
-	copy(c, h.connected)
+	c := []byte{}
+	for i := byte(0); i < common.NumberOfShard; i++ {
+		if h.IsConnectedToShard(i) {
+			c = append(c, i)
+		}
+	}
+	if h.IsConnectedToShard(common.BEACONID) {
+		c = append(c, common.BEACONID)
+	}
 	return c
 }

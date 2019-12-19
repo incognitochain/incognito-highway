@@ -5,6 +5,7 @@ import (
 	"highway/common"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -40,10 +41,16 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 			}
 		}
 
+		status := "reconnecting"
+		if pid == r.manager.ID || r.manager.host.Network().Connectedness(pid) == network.Connected {
+			status = "ok"
+		}
+
 		highwayConnected[pid.String()] = highwayInfo{
 			AddrInfo: addrInfo,
 			Supports: common.BytesToInts(cids),
 			RPCUrl:   urls[pid],
+			Status:   status,
 		}
 	}
 
@@ -67,4 +74,5 @@ type highwayInfo struct {
 	AddrInfo peer.AddrInfo `json:"addr_info"`
 	Supports []int         `json:"shards_support"`
 	RPCUrl   string        `json:"rpc_url"`
+	Status   string        `json:"status"`
 }

@@ -117,6 +117,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 
 				if h.host.Network().Connectedness(p.ID) == network.Connected {
 					lastSeen[p.ID] = time.Now()
+					h.Hmap.ConnectToShardOfPeer(p) // Reupdate here to make sure inbound connection is accounted
 					continue
 				}
 				logger.Infof("Disconnected to peer %+v", p)
