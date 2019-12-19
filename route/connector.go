@@ -109,7 +109,6 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 
 		// Update supported shards of peer
 		hc.hmap.AddPeer(em.Peer, em.SupportShards, em.RPCUrl)
-		// hc.hmap.ConnectToShardOfPeer(em.Peer) // TODO(@0xbunyip): why connect?
 	}
 }
 
