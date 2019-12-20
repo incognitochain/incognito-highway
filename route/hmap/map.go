@@ -46,6 +46,12 @@ func (h *Map) IsConnectedToShard(s byte) bool {
 	return false
 }
 
+func (h *Map) IsConnectedToPeer(p peer.ID) bool {
+	h.RLock()
+	defer h.RUnlock()
+	return h.peerConnected[p]
+}
+
 func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
 	h.Lock()
 	defer h.Unlock()
