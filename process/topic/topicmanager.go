@@ -8,6 +8,7 @@ import (
 
 type listPairByCID map[byte]proto.MessageTopicPair
 
+// TODO(@0xakk0r0kamui): remove global var
 var Handler TopicManager
 
 type TopicManager struct {
@@ -18,13 +19,7 @@ type TopicManager struct {
 	isInit                 bool
 	allCommitteeID         []byte
 	supportShards          []byte
-}
-
-func init() {
-	Handler = TopicManager{
-		isInit: false,
-	}
-	Handler.Init()
+	selfID                 string
 }
 
 func (topicManager *TopicManager) UpdateSupportShards(supportShards []byte) {
@@ -36,7 +31,8 @@ func (topicManager *TopicManager) UpdateSupportShards(supportShards []byte) {
 	}
 }
 
-func (topicManager *TopicManager) Init() {
+func (topicManager *TopicManager) Init(selfID string) {
+	topicManager.selfID = selfID
 	if topicManager.isInit {
 		return
 	}
@@ -105,45 +101,45 @@ func (topicManager *TopicManager) getTopicPairForNode(
 	listAction := []proto.MessageTopicPair_Action{}
 	switch msgType {
 	case CmdBFT:
-		listTopic = append(listTopic, getTopicForPubSub(msgType, int(cID)))
+		listTopic = append(listTopic, getTopicForPubSub(msgType, int(cID), topicManager.selfID))
 		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 	case CmdPeerState:
 		if forPub {
-			listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID)))
+			listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID), topicManager.selfID))
 			listAction = append(listAction, proto.MessageTopicPair_PUB)
 		} else {
-			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID)))
+			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID), topicManager.selfID))
 			listAction = append(listAction, proto.MessageTopicPair_SUB)
 		}
 	case CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken:
 		if cID != common.BEACONID {
 			if forPub {
-				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID)))
+				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID), topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_PUB)
 			} else {
-				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID)))
+				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID), topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_SUB)
 			}
 		}
 	case CmdBlockBeacon:
 		if forPub {
 			if cID == common.BEACONID {
-				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic))
+				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_PUB)
 			}
 		} else {
-			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic))
+			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 			listAction = append(listAction, proto.MessageTopicPair_SUB)
 		}
 	case CmdBlkShardToBeacon:
 		if forPub {
 			if cID != common.BEACONID {
-				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic))
+				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_PUB)
 			}
 		} else {
 			if cID == common.BEACONID {
-				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic))
+				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_SUB)
 			}
 		}
@@ -152,12 +148,12 @@ func (topicManager *TopicManager) getTopicPairForNode(
 			if forPub {
 				for _, s := range topicManager.allCommitteeID {
 					if (s != byte(cID)) && (s != common.BEACONID) {
-						listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(s)))
+						listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(s), topicManager.selfID))
 						listAction = append(listAction, proto.MessageTopicPair_PUB)
 					}
 				}
 			} else {
-				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID)))
+				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID), topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_SUB)
 			}
 		}

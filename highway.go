@@ -34,7 +34,7 @@ func main() {
 	initLogger(conf.Loglevel)
 
 	conf.PrintConfig()
-	topic.Handler.UpdateSupportShards(conf.SupportShards)
+
 	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
 		logger.Error(err)
@@ -46,6 +46,11 @@ func main() {
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, conf.PrivateKey)
+
+	// Setup topic
+	topic.Handler = topic.TopicManager{}
+	topic.Handler.Init(proxyHost.Host.ID().String())
+	topic.Handler.UpdateSupportShards(conf.SupportShards)
 
 	// Pubsub
 	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {

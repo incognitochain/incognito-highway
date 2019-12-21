@@ -91,7 +91,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	// supported shards, we need to use a new peerID.
 	lastSeen := map[peer.ID]time.Time{}
 	watchTimestep := 30 * time.Second
-	removeDeadline := time.Duration(30 * time.Minute)
+	removeDeadline := time.Duration(3 * time.Minute)
 	for ; true; <-time.Tick(watchTimestep) {
 		// Map from peerID to RPCUrl
 		urls := h.Hmap.CopyRPCUrls()

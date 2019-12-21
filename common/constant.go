@@ -1,12 +1,5 @@
 package common
 
-var (
-	SelfID string = "aaaaa"
-	//Remove soon
-	// CommitteeGenesis        map[string]byte
-	// CommitteeKeyByMiningKey map[string]string
-)
-
 const (
 	BEACONID      byte = 255
 	NumberOfShard      = 8
