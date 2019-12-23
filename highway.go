@@ -34,7 +34,7 @@ func main() {
 	initLogger(conf.Loglevel)
 
 	conf.PrintConfig()
-	topic.Handler.UpdateSupportShards(conf.SupportShards)
+
 	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
 		logger.Error(err)
@@ -47,17 +47,10 @@ func main() {
 	// New libp2p host
 	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, conf.PrivateKey)
 
-	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.PublicIP, conf.ProxyPort, proxyHost.Host.ID().String())
-	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
-	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
-		Port:     conf.BootnodePort,
-		IPFSAddr: selfIPFSAddr,
-	})
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	go rpcServer.Start()
+	// Setup topic
+	topic.Handler = topic.TopicManager{}
+	topic.Handler.Init(proxyHost.Host.ID().String())
+	topic.Handler.UpdateSupportShards(conf.SupportShards)
 
 	// Pubsub
 	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {
@@ -74,8 +67,22 @@ func main() {
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
+		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 	)
 	go rman.Start()
+
+	// RPCServer
+	rpcServer, err := rpcserver.NewRPCServer(
+		&rpcserver.RpcServerConfig{
+			Port: conf.BootnodePort,
+		},
+		rman.Hmap,
+	)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	go rpcServer.Start()
 
 	// Chain-facing connections
 	chainReporter := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)

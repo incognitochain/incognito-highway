@@ -3,7 +3,6 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -22,8 +21,7 @@ func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor) {
 	http.Handle("/monitor", m)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
-			// TODO(@0xbunyip): change to logger and prevent os.Exit()
-			log.Fatalf("Error in ListenAndServe: %s", err)
+			logger.Errorf("Error in ListenAndServe: %s", err)
 		}
 	}()
 }

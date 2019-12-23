@@ -6,6 +6,7 @@ import (
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
+	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -26,9 +27,11 @@ type Connector struct {
 	hwc  *Client
 	hws  *Server
 
-	outPeers chan peer.AddrInfo
+	outPeers   chan peer.AddrInfo
+	closePeers chan peer.ID
 
 	masternode peer.ID
+	rpcUrl     string
 }
 
 func NewConnector(
@@ -37,6 +40,7 @@ func NewConnector(
 	hmap *hmap.Map,
 	ps *process.PubSubManager,
 	masternode peer.ID,
+	rpcUrl string,
 ) *Connector {
 	hc := &Connector{
 		host:       h,
@@ -45,7 +49,9 @@ func NewConnector(
 		hws:        NewServer(prtc, hmap), // GRPC server serving other highways
 		hwc:        NewClient(prtc),       // GRPC clients to other highways
 		outPeers:   make(chan peer.AddrInfo, 1000),
+		closePeers: make(chan peer.ID, 100),
 		masternode: masternode,
+		rpcUrl:     rpcUrl,
 	}
 
 	// Register to receive notif when new connection is established
@@ -71,6 +77,11 @@ func (hc *Connector) Start() {
 			if err != nil {
 				logger.Error(err, p)
 			}
+		case p := <-hc.closePeers:
+			err := hc.closePeer(p)
+			if err != nil {
+				logger.Error(err, p)
+			}
 		}
 	}
 }
@@ -81,7 +92,21 @@ func (hc *Connector) ConnectTo(p peer.AddrInfo) error {
 }
 
 func (hc *Connector) Dial(p peer.AddrInfo) error {
-	err := hc.host.Connect(context.Background(), p)
+	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	err := hc.host.Connect(ctx, p)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (hc *Connector) CloseConnection(p peer.ID) {
+	hc.closePeers <- p
+}
+
+func (hc *Connector) closePeer(p peer.ID) error {
+	logger.Infof("Closing connection to peer %v", p)
+	err := hc.host.Network().ClosePeer(p)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -105,13 +130,16 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 		logger.Infof("Received highway_enlist msg: %+v", em)
 
 		// Update supported shards of peer
-		hc.hmap.AddPeer(em.Peer, em.SupportShards)
-		hc.hmap.ConnectToShardOfPeer(em.Peer)
+		hc.hmap.AddPeer(em.Peer, em.SupportShards, em.RPCUrl)
 	}
 }
 
 func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
-	logger.Debugf("Dialing to peer %+v", p)
+	if hc.host.Network().Connectedness(p.ID) == network.Connected {
+		return nil
+	}
+
+	logger.Infof("Dialing to peer %+v", p)
 	err := hc.Dial(p)
 	if err != nil {
 		return err
@@ -124,12 +152,13 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 			Addrs: hc.host.Addrs(),
 		},
 		SupportShards: hc.hmap.Supports[hc.host.ID()],
+		RPCUrl:        hc.rpcUrl,
 	}
 	msg, err := json.Marshal(data)
 	if err != nil {
 		return errors.Wrapf(err, "enlistMessage: %v", data)
 	}
-	logger.Debugf("Publishing msg highway_enlist: %s", msg)
+	logger.Infof("Publishing msg highway_enlist: %s", msg)
 	if err := hc.ps.FloodMachine.Publish("highway_enlist", msg); err != nil {
 		return errors.WithStack(err)
 	}
@@ -154,4 +183,5 @@ func (no *notifiee) ClosedStream(network.Network, network.Stream) {}
 type enlistMessage struct {
 	SupportShards []byte
 	Peer          peer.AddrInfo
+	RPCUrl        string
 }

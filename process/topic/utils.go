@@ -2,7 +2,6 @@ package topic
 
 import (
 	"fmt"
-	"highway/common"
 	"sort"
 	"strconv"
 	"strings"
@@ -81,18 +80,18 @@ func GetCommitteeIDOfTopic(topic string) int {
 	return cID
 }
 
-func getTopicForPubSub(msgType string, cID int) string {
+func getTopicForPubSub(msgType string, cID int, selfID string) string {
 	if isBroadcastMessage(msgType) {
 		return fmt.Sprintf("%s-%d-", msgType, cID)
 	}
 	if cID == NoCIDInTopic {
-		return fmt.Sprintf("%s--%s", msgType, common.SelfID)
+		return fmt.Sprintf("%s--%s", msgType, selfID)
 	}
-	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
+	return fmt.Sprintf("%s-%d-%s", msgType, cID, selfID)
 }
 
-func getTopicForPub(side, msgType string, cID int) string {
-	commonTopic := getTopicForPubSub(msgType, cID)
+func getTopicForPub(side, msgType string, cID int, selfID string) string {
+	commonTopic := getTopicForPubSub(msgType, cID, selfID)
 	if side == HIGHWAYSIDE {
 		return commonTopic + NODESUB
 	} else {
@@ -100,8 +99,8 @@ func getTopicForPub(side, msgType string, cID int) string {
 	}
 }
 
-func getTopicForSub(side, msgType string, cID int) string {
-	commonTopic := getTopicForPubSub(msgType, cID)
+func getTopicForSub(side, msgType string, cID int, selfID string) string {
+	commonTopic := getTopicForPubSub(msgType, cID, selfID)
 	if side == NODESIDE {
 		return commonTopic + NODESUB
 	} else {

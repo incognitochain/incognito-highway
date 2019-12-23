@@ -423,12 +423,13 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 	cc.conns.Lock()
 	defer cc.conns.Unlock()
 
-	logger.Infof("Closing connection to pID %s", peerID.String())
 	if conn, ok := cc.conns.connMap[peerID]; ok {
+		logger.Infof("Closing connection to pID %s", peerID.String())
 		if err := conn.Close(); err != nil {
 			logger.Warnf("Failed closing connection to pID %s: %s", peerID.String(), errors.WithStack(err))
 		} else {
 			delete(cc.conns.connMap, peerID)
+			logger.Infof("Closed connection to pID %s successfully", peerID.String())
 		}
 	}
 }
