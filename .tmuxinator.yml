@@ -43,8 +43,10 @@ root: ./
 # post: tmux -CC attach -t const
 
 windows:
-  - b:
+  - hw:
       root: ./
       panes:
-        - ./run.sh "all" 2>&1 | tee all-hw.log
+        - ./run.sh "hw1" 2>&1 | tee hw1.log
+        - sleep 2s && ./run.sh "hw2" 2>&1 | tee hw2.log
+        - sleep 2s && ./run.sh "hw3" 2>&1 | tee hw3.log
 

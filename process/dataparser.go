@@ -2,11 +2,12 @@ package process
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/hex"
 	"encoding/json"
 	fmt "fmt"
+	"io/ioutil"
 
-	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/wire"
 	"github.com/pkg/errors"
 )
@@ -16,7 +17,7 @@ func ParsePeerStateData(dataStr string) (*wire.MessagePeerState, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "msgStr: %v", dataStr)
 	}
-	jsonDecodeBytes, err := common.GZipToBytes(jsonDecodeBytesRaw)
+	jsonDecodeBytes, err := GZipToBytes(jsonDecodeBytesRaw)
 	if err != nil {
 		fmt.Println("Can not unzip from message")
 		fmt.Println(err)
@@ -48,4 +49,20 @@ func ParsePeerStateData(dataStr string) (*wire.MessagePeerState, error) {
 		return nil, errors.WithStack(err)
 	}
 	return message.(*wire.MessagePeerState), nil
+}
+
+// GZipToBytes receives bytes array which is compressed data using gzip
+// returns decompressed bytes array
+func GZipToBytes(src []byte) ([]byte, error) {
+	reader := bytes.NewReader(src)
+	gz, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, err
+	}
+	defer gz.Close()
+	resultBytes, err := ioutil.ReadAll(gz)
+	if err != nil {
+		return nil, err
+	}
+	return resultBytes, nil
 }

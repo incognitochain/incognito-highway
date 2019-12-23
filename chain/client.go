@@ -15,6 +15,8 @@ import (
 	grpc "google.golang.org/grpc"
 )
 
+const MaxCallRecvMsgSize = 50 << 20 // 50 MBs per gRPC response
+
 func (hc *Client) GetBlockShardByHeight(
 	shardID int32,
 	specific bool,
@@ -45,6 +47,7 @@ func (hc *Client) GetBlockShardByHeight(
 			Heights:    heights,
 			FromPool:   false,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
@@ -76,6 +79,7 @@ func (hc *Client) GetBlockShardByHash(
 			Shard:  shardID,
 			Hashes: hashes,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	logger.Infof("[blkbyhash] Reply: %v", reply)
 	if err != nil {
@@ -114,6 +118,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 			Heights:    heights,
 			FromPool:   false,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
@@ -158,6 +163,7 @@ func (hc *Client) GetBlockCrossShardByHeight(
 			Heights:    heights,
 			FromPool:   fromPool,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
@@ -194,6 +200,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 			Heights:    heights,
 			FromPool:   false,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
@@ -223,6 +230,7 @@ func (hc *Client) GetBlockBeaconByHash(
 		&proto.GetBlockBeaconByHashRequest{
 			Hashes: hashes,
 		},
+		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
 	// logger.Infof("Reply: %v", reply)
 	if err != nil {
@@ -307,6 +315,15 @@ func (hc *Client) supported(cid int) bool {
 	return false
 }
 
+func (hc *Client) Start() {
+	for {
+		select {
+		case pid := <-hc.DisconnectedIDs:
+			hc.cc.CloseDisconnected(pid)
+		}
+	}
+}
+
 func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
 	if len(peers) == 0 {
 		return process.PeerWithBlk{}, errors.Errorf("empty peer list")
@@ -347,6 +364,8 @@ func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint
 }
 
 type Client struct {
+	DisconnectedIDs chan peer.ID
+
 	m             *Manager
 	reporter      *Reporter
 	routeManager  *route.Manager
@@ -364,13 +383,15 @@ func NewClient(
 	supportShards []byte,
 ) *Client {
 	hc := &Client{
-		m:             m,
-		reporter:      reporter,
-		routeManager:  rman,
-		cc:            NewClientConnector(pr),
-		chainData:     incChainData,
-		supportShards: supportShards,
+		m:               m,
+		reporter:        reporter,
+		routeManager:    rman,
+		cc:              NewClientConnector(pr),
+		chainData:       incChainData,
+		supportShards:   supportShards,
+		DisconnectedIDs: make(chan peer.ID, 1000),
 	}
+	go hc.Start()
 	return hc
 }
 
@@ -396,6 +417,21 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	}
 	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
 	return client, nil
+}
+
+func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
+	cc.conns.Lock()
+	defer cc.conns.Unlock()
+
+	if conn, ok := cc.conns.connMap[peerID]; ok {
+		logger.Infof("Closing connection to pID %s", peerID.String())
+		if err := conn.Close(); err != nil {
+			logger.Warnf("Failed closing connection to pID %s: %s", peerID.String(), errors.WithStack(err))
+		} else {
+			delete(cc.conns.connMap, peerID)
+			logger.Infof("Closed connection to pID %s successfully", peerID.String())
+		}
+	}
 }
 
 type ClientConnector struct {

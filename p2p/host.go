@@ -15,18 +15,9 @@ import (
 )
 
 type Peer struct {
-	IP            string
-	Port          int
 	TargetAddress []core.Multiaddr
 	PeerID        peer.ID
 	PublicKey     crypto2.PublicKey
-}
-
-type HostConfig struct {
-	MaxConnection int
-	PublicIP      string
-	Port          int
-	PrivateKey    crypto.PrivKey
 }
 
 type Host struct {
@@ -36,7 +27,7 @@ type Host struct {
 	GRPC     *p2pgrpc.GRPCProtocol
 }
 
-func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
+func NewHost(version string, listenAddr string, listenPort int, privKeyStr string) *Host {
 	var privKey crypto.PrivKey
 	if len(privKeyStr) == 0 {
 		privKey, _, _ = crypto.GenerateKeyPair(crypto.ECDSA, 2048)
@@ -50,23 +41,22 @@ func NewHost(version string, pubIP string, port int, privKeyStr string) *Host {
 		catchError(err)
 	}
 
-	listenAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", pubIP, port))
+	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", listenAddr, listenPort))
 	catchError(err)
 
 	ctx := context.Background()
 	opts := []libp2p.Option{
 		libp2p.ConnectionManager(nil),
-		libp2p.ListenAddrs(listenAddr),
+		libp2p.ListenAddrs(addr),
 		libp2p.Identity(privKey),
 	}
 
 	p2pHost, err := libp2p.New(ctx, opts...)
+	catchError(err)
 
 	selfPeer := &Peer{
 		PeerID:        p2pHost.ID(),
-		IP:            pubIP,
-		Port:          port,
-		TargetAddress: append([]multiaddr.Multiaddr{}, listenAddr),
+		TargetAddress: append([]multiaddr.Multiaddr{}, addr),
 	}
 
 	node := &Host{

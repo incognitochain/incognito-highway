@@ -13,6 +13,7 @@ import (
 )
 
 type Manager struct {
+	client   *Client
 	newPeers chan PeerInfo
 
 	peers struct {
@@ -47,6 +48,7 @@ func ManageChainConnections(
 	// Server and client instance to communicate to Incognito nodes
 	client := NewClient(m, reporter, rman, prtc, chainData, supportShards)
 	RegisterServer(m, prtc.GetGRPCServer(), client, reporter)
+	m.client = client
 
 	h.Network().Notify(m)
 	go m.start()
@@ -158,6 +160,7 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 
 	// Remove from m.peers to prevent Client from requesting later
 	m.peers.ids = remove(m.peers.ids, pid)
+	m.client.DisconnectedIDs <- pid
 }
 
 type PeerInfo struct {
