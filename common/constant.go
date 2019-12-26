@@ -13,6 +13,7 @@ const (
 	WaitingRole   = "waiting"
 	NormalNode    = ""
 
+	MaxCallDepth                = 2
 	MaxBlocksPerRequest         = 100
 	ChoosePeerBlockDelta        = 100
 	RouteClientKeepaliveTime    = 20 * time.Minute

@@ -23,6 +23,7 @@ func (hc *Client) GetBlockShardByHeight(
 	from uint64,
 	to uint64,
 	heights []uint64,
+	callDepth int32,
 ) (resp [][]byte, errOut error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	client, pid, err := hc.getClientWithBlock(int(shardID), to)
@@ -46,6 +47,7 @@ func (hc *Client) GetBlockShardByHeight(
 			ToHeight:   to,
 			Heights:    heights,
 			FromPool:   false,
+			CallDepth:  callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
@@ -59,6 +61,7 @@ func (hc *Client) GetBlockShardByHeight(
 func (hc *Client) GetBlockShardByHash(
 	shardID int32,
 	hashes [][]byte,
+	callDepth int32,
 ) (resp [][]byte, errOut error) {
 	client, pid, err := hc.getClientWithHashes(int(shardID), hashes)
 	logger.Debugf("Requesting Shard block: shard = %v, hashes %v ", shardID, hashes)
@@ -76,8 +79,9 @@ func (hc *Client) GetBlockShardByHash(
 	reply, err := client.GetBlockShardByHash(
 		context.Background(),
 		&proto.GetBlockShardByHashRequest{
-			Shard:  shardID,
-			Hashes: hashes,
+			Shard:     shardID,
+			Hashes:    hashes,
+			CallDepth: callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
@@ -94,6 +98,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	from uint64,
 	to uint64,
 	heights []uint64,
+	callDepth int32,
 ) (resp [][]byte, errOut error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	client, pid, err := hc.getClientWithBlock(int(shardID), to)
@@ -117,6 +122,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 			ToHeight:   to,
 			Heights:    heights,
 			FromPool:   false,
+			CallDepth:  callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
@@ -136,6 +142,7 @@ func (hc *Client) GetBlockCrossShardByHeight(
 	toHeight uint64,
 	heights []uint64,
 	fromPool bool,
+	callDepth int32,
 ) (resp [][]byte, errOut error) {
 	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
 	// => request from peer of shard `fromShard`
@@ -162,6 +169,7 @@ func (hc *Client) GetBlockCrossShardByHeight(
 			ToHeight:   toHeight,
 			Heights:    heights,
 			FromPool:   fromPool,
+			CallDepth:  callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
@@ -177,6 +185,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 	from uint64,
 	to uint64,
 	heights []uint64,
+	callDepth int32,
 ) (resp [][]byte, errOut error) {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	client, pid, err := hc.getClientWithBlock(int(common.BEACONID), to)
@@ -199,6 +208,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 			ToHeight:   to,
 			Heights:    heights,
 			FromPool:   false,
+			CallDepth:  callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
@@ -211,6 +221,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 
 func (hc *Client) GetBlockBeaconByHash(
 	hashes [][]byte,
+	callDepth int32,
 ) (resp [][]byte, errOut error) {
 	client, pid, err := hc.getClientWithHashes(int(common.BEACONID), hashes)
 	logger.Debugf("Requesting Beacon block: shard = %v, hashes %v ", int(common.BEACONID), hashes)
@@ -228,7 +239,8 @@ func (hc *Client) GetBlockBeaconByHash(
 	reply, err := client.GetBlockBeaconByHash(
 		context.Background(),
 		&proto.GetBlockBeaconByHashRequest{
-			Hashes: hashes,
+			Hashes:    hashes,
+			CallDepth: callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
 	)
@@ -249,7 +261,7 @@ func (hc *Client) getClientWithBlock(
 	return hc.routeManager.GetClientSupportShard(cid)
 }
 
-// TODO replace this function, it just for fix special case in "1 HW for all"-mode.
+// TODO(@0xakk0r0kamui) replace this function, it just for fix special case in "1 HW for all"-mode.
 func (hc *Client) getClientWithHashes(
 	cid int,
 	hashes [][]byte,
