@@ -12,6 +12,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 type Peer struct {
@@ -59,11 +61,16 @@ func NewHost(version string, listenAddr string, listenPort int, privKeyStr strin
 		TargetAddress: append([]multiaddr.Multiaddr{}, addr),
 	}
 
+	kasp := keepalive.ServerParameters{
+		MaxConnectionIdle: GRPCMaxConnectionIdle,
+		Time:              GRPCTime,
+		Timeout:           GRPCTimeout,
+	}
 	node := &Host{
 		Host:     p2pHost,
 		SelfPeer: selfPeer,
 		Version:  version,
-		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost),
+		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost, grpc.KeepaliveParams(kasp)),
 	}
 
 	return node
