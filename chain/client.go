@@ -280,12 +280,13 @@ func (hc *Client) getClientWithHashes(
 // This func prioritizes getting from a node to reduce load to highways
 func (hc *Client) getClientOfSupportedShard(cid int, height uint64) (proto.HighwayServiceClient, peer.ID, error) {
 	peerID, hw, err := hc.choosePeerIDWithBlock(cid, height)
-	// logger.Debugf("Chosen peer: %v", peerID)
+	logger.Debugf("Chosen peer: %v", hw.String())
 	if err != nil {
 		return nil, peerID, err
 	}
 
 	if hw != hc.routeManager.ID { // Peer not connected, let ask the other highway
+		logger.Debugf("Chosen peer not connected, connect to hw %s", hw.String())
 		return hc.routeManager.GetHighwayServiceClient(hw)
 	}
 
@@ -301,7 +302,7 @@ func (hc *Client) getClientOfSupportedShard(cid int, height uint64) (proto.Highw
 // and its corresponding highway peerID
 func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
 	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
-	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
+	logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
 	if err != nil {
 		return peer.ID(""), peer.ID(""), err
 	}
@@ -312,6 +313,7 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (pid peer.ID, hw pe
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
 	groups := groupPeersByDistance(peersHasBlk, blk, hc.routeManager.ID, connectedPeers)
+	logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
 	p, err := choosePeerFromGroup(groups)
