@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/pkg/errors"
 )
 
