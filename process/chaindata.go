@@ -26,6 +26,7 @@ type ChainData struct {
 }
 
 type PeerWithBlk struct {
+	HW     peer.ID // TODO(@0xakk0r0kamui): fill this field when GetPeerHasBlk
 	ID     peer.ID
 	Height uint64
 }

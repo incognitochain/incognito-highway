@@ -107,6 +107,7 @@ func (hc *Connector) CloseConnection(p peer.ID) {
 func (hc *Connector) closePeer(p peer.ID) error {
 	logger.Infof("Closing connection to peer %v", p)
 	err := hc.host.Network().ClosePeer(p)
+	// TODO(@0xbunyip): close grpc connection too
 	if err != nil {
 		return errors.WithStack(err)
 	}

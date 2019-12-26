@@ -355,7 +355,15 @@ func choosePeer(peers []peer.AddrInfo, id peer.ID) (peer.AddrInfo, error) {
 	return peer.AddrInfo{}, errors.New("failed choosing peer to connect")
 }
 
-// GetRouteClientWithBlock returns the grpc client with connection to a highway
+func (h *Manager) GetHighwayServiceClient(pid peer.ID) (proto.HighwayServiceClient, peer.ID, error) {
+	conn, err := h.hc.hwc.GetConnection(pid)
+	if err != nil {
+		return nil, peer.ID(""), err
+	}
+	return proto.NewHighwayServiceClient(conn), pid, nil
+}
+
+// GetClientWithBlock returns the grpc client with connection to a highway
 // supporting a specific shard
 func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error) {
 	// TODO(@0xbunyip): make sure peer is still connected
@@ -366,12 +374,7 @@ func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, pe
 
 	// TODO(@0xbunyip): get peer randomly here?
 	pid := peers[0].ID
-	conn, err := h.hc.hwc.GetConnection(pid)
-	if err != nil {
-		return nil, pid, err
-	}
-
-	return proto.NewHighwayServiceClient(conn), pid, nil
+	return h.GetHighwayServiceClient(pid)
 }
 
 func (h *Manager) GetShardsConnected() []byte {

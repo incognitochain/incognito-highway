@@ -244,7 +244,7 @@ func (hc *Client) getClientWithBlock(
 	height uint64,
 ) (proto.HighwayServiceClient, peer.ID, error) {
 	if hc.supported(cid) {
-		return hc.getChainClientWithBlock(cid, height)
+		return hc.getClientOfSupportedShard(cid, height)
 	}
 	return hc.routeManager.GetClientSupportShard(cid)
 }
@@ -263,13 +263,21 @@ func (hc *Client) getClientWithHashes(
 	return client, peerPicked.ID, err
 }
 
-func (hc *Client) getChainClientWithBlock(cid int, height uint64) (proto.HighwayServiceClient, peer.ID, error) {
-	peerID, err := hc.choosePeerIDWithBlock(cid, height)
+// getClientOfSupportedShard returns a client (node or another highway)
+// that has the needed block height
+// This func prioritizes getting from a node to reduce load to highways
+func (hc *Client) getClientOfSupportedShard(cid int, height uint64) (proto.HighwayServiceClient, peer.ID, error) {
+	peerID, hw, err := hc.choosePeerIDWithBlock(cid, height)
 	// logger.Debugf("Chosen peer: %v", peerID)
 	if err != nil {
 		return nil, peerID, err
 	}
 
+	if hw != hc.routeManager.ID { // Peer not connected, let ask the other highway
+		return hc.routeManager.GetHighwayServiceClient(hw)
+	}
+
+	// Connected peer, get connection
 	client, err := hc.cc.GetServiceClient(peerID)
 	if err != nil {
 		return nil, peerID, err
@@ -277,33 +285,96 @@ func (hc *Client) getChainClientWithBlock(cid int, height uint64) (proto.Highway
 	return client, peerID, nil
 }
 
-func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
-	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid))
+// choosePeerIDWithBlock returns peerID of a node that holds some blocks
+// and its corresponding highway peerID
+func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
+	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
 	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
-		return peer.ID(""), err
+		return peer.ID(""), peer.ID(""), err
+	}
+	if len(peersHasBlk) == 0 {
+		return peer.ID(""), peer.ID(""), errors.Errorf("no peer with blk %d %d", cid, blk)
 	}
 
-	// Filter out disconnected peers
-	connectedPeers := hc.m.GetPeers(cid)
+	// Prioritize peers and sort into different groups
+	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
+	groups := groupPeersByDistance(peersHasBlk, blk, hc.routeManager.ID, connectedPeers)
+
+	// Choose a single peer from the sorted groups
+	p, err := choosePeerFromGroup(groups)
+	if err != nil {
+		return peer.ID(""), peer.ID(""), errors.WithMessagef(err, "groups: %+v", groups)
+	}
+
+	// logger.Debugf("Peer picked: %+v", p)
+	return p.ID, p.HW, nil
+}
+
+// groupPeersByDistance prioritizes peers by grouping them into
+// different groups based on their distance to this highway
+func groupPeersByDistance(
+	peers []process.PeerWithBlk,
+	blk uint64,
+	selfPeerID peer.ID,
+	connectedPeers []PeerInfo,
+) [][]process.PeerWithBlk {
+	// Group peers into 4 groups:
+	a := []process.PeerWithBlk{} // 1. Nodes connected to this highway and have all needed blocks
+	b := []process.PeerWithBlk{} // 2. Nodes from other highways and have all needed blocks
+	h := uint64(0)               // Find maximum height
+	for _, p := range peers {
+		if p.Height >= blk {
+			if p.HW == selfPeerID {
+				a = append(a, p)
+			} else {
+				b = append(b, p)
+			}
+		}
+		if p.Height > h {
+			h = p.Height
+		}
+	}
+	a = filterPeers(a, connectedPeers) // Retain only connected peers
+
+	c := []process.PeerWithBlk{} // 3. Nodes connected to this highway and have the largest amount of blocks
+	d := []process.PeerWithBlk{} // 4. Nodes from other highways and have the largest amount of blocks
+	for _, p := range peers {
+		if p.Height < blk && p.Height+common.ChoosePeerBlockDelta >= h {
+			if p.HW == selfPeerID {
+				c = append(c, p)
+			} else {
+				d = append(d, p)
+			}
+		}
+	}
+	c = filterPeers(c, connectedPeers) // Retain only connected peers
+	return [][]process.PeerWithBlk{a, b, c, d}
+}
+
+func choosePeerFromGroup(groups [][]process.PeerWithBlk) (process.PeerWithBlk, error) {
+	// Pick randomly
+	for _, group := range groups {
+		if len(group) > 0 {
+			return group[rand.Intn(len(group))], nil
+		}
+	}
+	return process.PeerWithBlk{}, errors.New("no group of peers to choose")
+}
+
+func filterPeers(allPeers []process.PeerWithBlk, allows []PeerInfo) []process.PeerWithBlk {
 	// logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
 	var peers []process.PeerWithBlk
-	for _, p := range peersHasBlk {
-		for _, cp := range connectedPeers {
-			if p.ID == cp.ID {
+	for _, p := range allPeers {
+		for _, a := range allows {
+			if p.ID == a.ID {
 				peers = append(peers, p)
+				break
 			}
 		}
 	}
 	// logger.Debugf("PeersLeft: %+v", peers)
-
-	// Pick randomly
-	p, err := pickWeightedRandomPeer(peers, blk)
-	if err != nil {
-		return peer.ID(""), err
-	}
-	// logger.Debugf("Peer picked: %+v", p)
-	return p.ID, nil
+	return peers
 }
 
 func (hc *Client) supported(cid int) bool {
@@ -322,27 +393,6 @@ func (hc *Client) Start() {
 			hc.cc.CloseDisconnected(pid)
 		}
 	}
-}
-
-func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
-	if len(peers) == 0 {
-		return process.PeerWithBlk{}, errors.Errorf("empty peer list")
-	}
-
-	// Find peers have all the blocks
-	last := -1
-	for i, p := range peers {
-		if p.Height < blk {
-			break
-		}
-		last = i
-	}
-
-	end := last + 1 // Pick only from peers with all the blocks
-	if last <= 0 {
-		end = len(peers) // Otherwise, pick randomly from all peers
-	}
-	return peers[rand.Intn(end)], nil
 }
 
 // capBlocksPerRequest returns the maximum height allowed for a single request
