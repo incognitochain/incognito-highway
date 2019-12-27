@@ -2,14 +2,15 @@ package route
 
 import (
 	"context"
+	"highway/common"
 	"highway/proto"
 	"sync"
-	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 func (c *Client) GetClient(peerID peer.ID) (proto.HighwayConnectorServiceClient, error) {
@@ -26,16 +27,21 @@ func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 	c.conns.Lock()
 	defer c.conns.Unlock()
 	if _, ok := c.conns.connMap[peerID]; !ok {
+		ctx, cancel := context.WithTimeout(context.Background(), common.RouteClientDialTimeout)
 		conn, err := c.pr.Dial(
-			context.Background(),
+			ctx,
 			peerID,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
-			grpc.WithTimeout(3*time.Second),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:    common.RouteClientKeepaliveTime,
+				Timeout: common.RouteClientKeepaliveTimeout,
+			}),
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		cancel()
 		c.conns.connMap[peerID] = conn
 	}
 	return c.conns.connMap[peerID], nil

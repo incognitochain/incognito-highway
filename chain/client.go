@@ -13,6 +13,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 const MaxCallRecvMsgSize = 50 << 20 // 50 MBs per gRPC response
@@ -413,17 +414,23 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	_, ok := cc.conns.connMap[peerID]
 
 	if !ok {
+		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		conn, err := cc.pr.Dial(
-			context.Background(),
+			ctx,
 			peerID,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:    common.ChainClientKeepaliveTime,
+				Timeout: common.ChainClientKeepaliveTimeout,
+			}),
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
 		cc.conns.connMap[peerID] = conn
+		cancel()
 	}
 	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
 	return client, nil
