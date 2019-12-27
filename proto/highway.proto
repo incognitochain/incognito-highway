@@ -39,6 +39,7 @@ message GetBlockShardByHeightRequest {
     uint64 ToHeight = 4;
     repeated uint64 Heights = 5;
     bool FromPool = 6;
+    int32 CallDepth = 7;
 }
 
 message GetBlockShardByHeightResponse {
@@ -48,6 +49,7 @@ message GetBlockShardByHeightResponse {
 message GetBlockShardByHashRequest {
     int32 Shard = 1;
     repeated bytes Hashes = 2;
+    int32 CallDepth = 3;
 }
 
 message GetBlockShardByHashResponse {
@@ -60,6 +62,7 @@ message GetBlockBeaconByHeightRequest {
     uint64 ToHeight = 3;
     repeated uint64 Heights = 4;
     bool FromPool = 5;
+    int32 CallDepth = 6;
 }
 
 message GetBlockBeaconByHeightResponse {
@@ -68,6 +71,7 @@ message GetBlockBeaconByHeightResponse {
 
 message GetBlockBeaconByHashRequest {
     repeated bytes Hashes = 1;
+    int32 CallDepth = 2;
 }
 
 message GetBlockBeaconByHashResponse {
@@ -82,6 +86,7 @@ message GetBlockCrossShardByHeightRequest {
     uint64 ToHeight = 5;
     repeated uint64 Heights = 6;
     bool FromPool = 7;
+    int32 CallDepth = 8;
 }
 
 message GetBlockCrossShardByHeightResponse {
@@ -95,6 +100,7 @@ message GetBlockShardToBeaconByHeightRequest {
     uint64 ToHeight = 4;
     repeated uint64 Heights = 5;
     bool FromPool = 6;
+    int32 CallDepth = 7;
 }
 
 message GetBlockShardToBeaconByHeightResponse {
@@ -105,6 +111,7 @@ message GetBlockCrossShardByHashRequest {
     int32 FromShard = 1;
     int32 ToShard = 2;
     repeated bytes Hashes = 3;
+    int32 CallDepth = 4;
 }
 
 message GetBlockCrossShardByHashResponse {

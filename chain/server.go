@@ -90,6 +90,10 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockShardByHeight(
@@ -98,6 +102,7 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 		req.FromHeight,
 		req.ToHeight,
 		req.Heights,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -112,11 +117,16 @@ func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockSha
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockShardByHash(
 		req.Shard,
 		req.Hashes,
+		req.CallDepth,
 	)
 	if err != nil {
 		logger.Infof("[blkbyhash] Receive GetBlockShardByHash response error: %v ", err)
@@ -133,6 +143,10 @@ func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlock
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockBeaconByHeight(
@@ -140,6 +154,7 @@ func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlock
 		req.FromHeight,
 		req.ToHeight,
 		req.Heights,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -159,12 +174,17 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
 		req.GetFromShard(),
 		req.Specific,
 		req.FromHeight,
 		req.ToHeight,
 		req.Heights,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -180,10 +200,15 @@ func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBe
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockBeaconByHash(
 		req.Hashes,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -196,6 +221,10 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_cross_shard")
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	data, err := s.hc.GetBlockCrossShardByHeight(
 		req.FromShard,
 		req.ToShard,
@@ -204,6 +233,7 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 		req.ToHeight,
 		req.Heights,
 		req.FromPool,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
