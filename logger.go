@@ -2,8 +2,10 @@ package main
 
 import (
 	"highway/chain"
+	"highway/chaindata"
 	"highway/health"
 	"highway/process"
+	"highway/process/datahandler"
 	"highway/process/topic"
 	"highway/route"
 	"highway/route/hmap"
@@ -33,10 +35,12 @@ func initLogger(level string) {
 
 	// Initialize children's loggers
 	chain.InitLogger(logger)
+	chaindata.InitLogger(logger)
 	route.InitLogger(logger)
 	process.InitLogger(logger)
 	topic.InitLogger(logger)
 	health.InitLogger(logger)
 	rpcserver.InitLogger(logger)
 	hmap.InitLogger(logger)
+	datahandler.InitLogger(logger)
 }

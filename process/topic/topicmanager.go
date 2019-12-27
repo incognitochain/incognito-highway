@@ -8,9 +8,8 @@ import (
 )
 
 type listPairByCID map[byte]proto.MessageTopicPair
-type listPairByMsg map[string]proto.MessageTopicPair
 
-// TODO(@0xakk0r0kamui): remove global var
+// TODO @0xakk0r0kamui remove this global param in next pull request
 var Handler TopicManager
 
 type TopicManager struct {
@@ -65,34 +64,56 @@ func (topicManager *TopicManager) getAllTopicPairForNode(
 	return res
 }
 
-// func (topicManager *TopicManager) getAllTopicPairForHW(
-// 	forPub bool,
-// ) map[string][]string {
-// 	res := map[string][]string{}
-// 	var locker *sync.RWMutex
-// 	var allTopic map[string]listPairByCID
-// 	if !forPub {
-// 		locker = topicManager.rwLockTopicNodePub
-// 		allTopic = topicManager.allTopicPairForNodePub
-// 	} else {
-// 		locker = topicManager.rwLockTopicNodeSub
-// 		allTopic = topicManager.allTopicPairForNodeSub
-// 	}
-// 	locker.RLock()
-// 	for msg, listPair := range allTopic {
-// 		listTopic := []string{}
-// 		for _, cID := range topicManager.supportShards {
-// 			for _, t := range listPair[cID].Topic {
-// 				if common.HasStringAt(listTopic, t) == -1 {
-// 					listTopic = append(listTopic, t)
-// 				}
-// 			}
-// 		}
-// 		res[msg] = listTopic
-// 	}
-// 	locker.RUnlock()
-// 	return res
-// }
+func (topicManager *TopicManager) GetAllTopicOutsideForHW() []string {
+	allTopics := []string{}
+	for _, msg := range Message4Process {
+		listTopics := []string{}
+		for _, cID := range topicManager.supportShards {
+			pair := getTopicPairOutsideForHW(msg, cID)
+			listTopics = append(listTopics, pair.Topic...)
+		}
+
+		for _, topicOutside := range listTopics {
+			if (len(topicOutside) > 0) && (common.HasStringAt(allTopics, topicOutside) == -1) {
+				allTopics = append(allTopics, topicOutside)
+			}
+		}
+	}
+	return allTopics
+}
+
+func getTopicPairOutsideForHW(
+	msgType string,
+	cID byte,
+) proto.MessageTopicPair {
+	listTopic := []string{}
+	listAction := []proto.MessageTopicPair_Action{}
+	switch msgType {
+	case CmdBFT, CmdPeerState:
+		listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, int(cID)))
+		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
+	case CmdBlockBeacon:
+		listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, NoCIDInTopic))
+		listAction = append(listAction, proto.MessageTopicPair_PUB)
+	case CmdBlkShardToBeacon:
+		if cID == common.BEACONID {
+			listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, NoCIDInTopic))
+			listAction = append(listAction, proto.MessageTopicPair_PUB)
+		}
+	case CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken, CmdCrossShard:
+		if cID != common.BEACONID {
+			listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, int(cID)))
+			listAction = append(listAction, proto.MessageTopicPair_PUB)
+		}
+	}
+
+	pair := proto.MessageTopicPair{
+		Message: msgType,
+		Topic:   listTopic,
+		Act:     listAction,
+	}
+	return pair
+}
 
 func (topicManager *TopicManager) getTopicPairForNode(
 	msgType string,
@@ -266,8 +287,15 @@ func (topicManager *TopicManager) GetHWPubTopicsFromMsg(msg string, cID int) []s
 	return []string{}
 }
 
+func getTopicOutSideFromMsg(msg string, cID int) string {
+	if cID == NoCIDInTopic {
+		return fmt.Sprintf("%v--", msg)
+	}
+	return fmt.Sprintf("%v-%d-", msg, cID)
+}
+
 func (topicManager *TopicManager) GetHWPubSubOutSideFromMsg(msg string, cID int) string {
-	if cID == noCIDInTopic {
+	if cID == NoCIDInTopic {
 		return fmt.Sprintf("%v--", msg)
 	}
 	return fmt.Sprintf("%v-%d-", msg, cID)
