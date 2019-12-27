@@ -2,6 +2,7 @@ package process
 
 import (
 	"encoding/json"
+	"highway/chaindata"
 	"highway/common"
 	"sync"
 	"time"
@@ -10,10 +11,10 @@ import (
 type Reporter struct {
 	name string
 
-	chainData    *ChainData
+	chainData    *chaindata.ChainData
 	networkState struct {
 		sync.RWMutex
-		state NetworkState
+		state chaindata.NetworkState
 	}
 }
 
@@ -40,12 +41,12 @@ func (r *Reporter) updateNetworkState() {
 	r.networkState.Unlock()
 }
 
-func NewReporter(chainData *ChainData) *Reporter {
+func NewReporter(chainData *chaindata.ChainData) *Reporter {
 	r := &Reporter{
 		chainData: chainData,
 		name:      "process",
 	}
-	r.networkState.state = NetworkState{}
+	r.networkState.state = chaindata.NetworkState{}
 	r.networkState.RWMutex = sync.RWMutex{}
 	return r
 }

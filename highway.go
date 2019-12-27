@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"highway/chain"
+	"highway/chaindata"
 	"highway/common"
 	"highway/config"
 	"highway/health"
@@ -41,7 +42,7 @@ func main() {
 		return
 	}
 
-	chainData := new(process.ChainData)
+	chainData := new(chaindata.ChainData)
 	chainData.Init(common.NumberOfShard)
 
 	// New libp2p host

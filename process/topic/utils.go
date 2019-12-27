@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-var TypeOfTopicProcessor map[string]byte
-
 func isBroadcastMessage(message string) bool {
 	if message == CmdBFT {
 		return true
@@ -27,20 +25,6 @@ func isValidMessage(message string) bool {
 	return true
 }
 
-func InitTypeOfProcessor() {
-	TypeOfTopicProcessor = map[string]byte{}
-	for _, mess := range Message4Process {
-		switch mess {
-		case CmdPeerState:
-			TypeOfTopicProcessor[mess] = ProcessAndPublishAfter
-		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard, CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken:
-			TypeOfTopicProcessor[mess] = ProcessAndPublish
-		default:
-			TypeOfTopicProcessor[mess] = DoNothing
-		}
-	}
-}
-
 func IsJustPubOrSubMsg(msg string) bool {
 	switch msg {
 	case CmdPeerState, CmdBlkShardToBeacon, CmdBlockBeacon, CmdCrossShard, CmdBlockShard:
@@ -48,14 +32,6 @@ func IsJustPubOrSubMsg(msg string) bool {
 	default:
 		return false
 	}
-}
-
-func GetTypeOfProcess(topic string) byte {
-	topicElements := strings.Split(topic, "-")
-	if len(topicElements) == 0 {
-		return WTFisThis
-	}
-	return TypeOfTopicProcessor[topicElements[0]]
 }
 
 // GetMsgTypeOfTopic handle error later

@@ -2,8 +2,8 @@ package chain
 
 import (
 	context "context"
+	"highway/chaindata"
 	"highway/common"
-	"highway/process"
 	"highway/proto"
 	"highway/route"
 	"math/rand"
@@ -287,7 +287,7 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (peer.ID, error) {
 	// Filter out disconnected peers
 	connectedPeers := hc.m.GetPeers(cid)
 	// logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
-	var peers []process.PeerWithBlk
+	var peers []chaindata.PeerWithBlk
 	for _, p := range peersHasBlk {
 		for _, cp := range connectedPeers {
 			if p.ID == cp.ID {
@@ -324,9 +324,9 @@ func (hc *Client) Start() {
 	}
 }
 
-func pickWeightedRandomPeer(peers []process.PeerWithBlk, blk uint64) (process.PeerWithBlk, error) {
+func pickWeightedRandomPeer(peers []chaindata.PeerWithBlk, blk uint64) (chaindata.PeerWithBlk, error) {
 	if len(peers) == 0 {
-		return process.PeerWithBlk{}, errors.Errorf("empty peer list")
+		return chaindata.PeerWithBlk{}, errors.Errorf("empty peer list")
 	}
 
 	// Find peers have all the blocks
@@ -370,7 +370,7 @@ type Client struct {
 	reporter      *Reporter
 	routeManager  *route.Manager
 	cc            *ClientConnector
-	chainData     *process.ChainData
+	chainData     *chaindata.ChainData
 	supportShards []byte // to know if we should query node or other highways
 }
 
@@ -379,7 +379,7 @@ func NewClient(
 	reporter *Reporter,
 	rman *route.Manager,
 	pr *p2pgrpc.GRPCProtocol,
-	incChainData *process.ChainData,
+	incChainData *chaindata.ChainData,
 	supportShards []byte,
 ) *Client {
 	hc := &Client{
