@@ -35,7 +35,7 @@ func (hc *Client) GetBlockShardByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v", shardID, from, to, heights)
+		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v, err = %+v", shardID, from, to, heights, err)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardByHeight(
@@ -72,7 +72,7 @@ func (hc *Client) GetBlockShardByHash(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v", shardID, hashes)
+		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v, err = %+v", shardID, hashes, err)
 		return nil, err
 	}
 
@@ -108,7 +108,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v", shardID, from, to, heights)
+		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v, err = %+v", shardID, from, to, heights, err)
 		return nil, err
 	}
 	reply, err := client.GetBlockShardToBeaconByHeight(
@@ -154,7 +154,7 @@ func (hc *Client) GetBlockCrossShardByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v", fromShard, toShard, fromHeight, toHeight, heights)
+		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v, err = %+v", fromShard, toShard, fromHeight, toHeight, heights, err)
 		return nil, err
 	}
 	reply, err := client.GetBlockCrossShardByHeight(
@@ -195,7 +195,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v", from, to, heights)
+		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v, err = %+v", from, to, heights, err)
 		return nil, err
 	}
 	reply, err := client.GetBlockBeaconByHeight(
@@ -230,7 +230,7 @@ func (hc *Client) GetBlockBeaconByHash(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v", int(common.BEACONID), hashes)
+		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v, err = %+v", int(common.BEACONID), hashes, err)
 		return nil, err
 	}
 
