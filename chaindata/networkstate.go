@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +35,7 @@ type NetworkState struct {
 	beaconLocker         *sync.RWMutex
 	ShardState           map[byte]map[string]ChainState // map[<ShardID>]map[<Committee Public Key>]Chainstate
 	shardLocker          *sync.RWMutex
-	HighwayIDOfPublicKey map[string]string
+	HighwayIDOfPublicKey map[string]peer.ID
 	hwInfoLocker         *sync.RWMutex
 	PeerStateLastUpdate  map[string]time.Time
 	peerInfoLocker       *sync.RWMutex
@@ -49,7 +50,7 @@ func (nwState *NetworkState) Init(numberOfShard int) {
 	for i := byte(0); i < byte(numberOfShard); i++ {
 		nwState.ShardState[i] = map[string]ChainState{}
 	}
-	nwState.HighwayIDOfPublicKey = map[string]string{}
+	nwState.HighwayIDOfPublicKey = map[string]peer.ID{}
 	nwState.hwInfoLocker = new(sync.RWMutex)
 	nwState.PeerStateLastUpdate = map[string]time.Time{}
 	nwState.peerInfoLocker = new(sync.RWMutex)
@@ -58,7 +59,7 @@ func (nwState *NetworkState) Init(numberOfShard int) {
 func (nwState *NetworkState) GetHWIDOfPubKey(
 	pubKey string,
 ) (
-	string,
+	peer.ID,
 	error,
 ) {
 	nwState.hwInfoLocker.RLock()
@@ -70,7 +71,7 @@ func (nwState *NetworkState) GetHWIDOfPubKey(
 }
 
 func (nwState *NetworkState) SetHWIDOfPubKey(
-	hwID string,
+	hwID peer.ID,
 	pubKey string,
 ) error {
 	nwState.hwInfoLocker.Lock()

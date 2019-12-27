@@ -78,7 +78,13 @@ func (chainData *ChainData) GetPeerHasBlk(
 	peers := []PeerWithBlk{}
 	for miningPubkey, nodeState := range committeeState {
 		if peerID, ok := chainData.PeerIDByMiningPubkey[miningPubkey]; ok {
+			HWID, err := chainData.CurrentNetworkState.GetHWIDOfPubKey(miningPubkey)
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
 			peers = append(peers, PeerWithBlk{
+				HW:     HWID,
 				ID:     peerID,
 				Height: nodeState.Height,
 			})
@@ -177,7 +183,7 @@ func (chainData *ChainData) UpdatePeerState(publisher string, data []byte) error
 	return nil
 }
 
-func (chainData *ChainData) UpdatePeerStateFromHW(publisher string, data []byte) error {
+func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte) error {
 	//TODO check Highway signature
 	msgPeerState, err := common.ParsePeerStateData(string(data))
 	if err != nil {
