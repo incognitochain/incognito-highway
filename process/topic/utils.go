@@ -83,12 +83,3 @@ func getTopicForSub(side, msgType string, cID int, selfID string) string {
 		return commonTopic + NODEPUB
 	}
 }
-
-// FromInsideToOutsideTopic
-// input a topic inside committee, such as crossshard-2-<self ID>-<optinal>
-// output a topic for communication between HW, like crossshard-2
-func FromInsideToOutsideTopic(topic string) string {
-	msgType := GetMsgTypeOfTopic(topic)
-	cID := GetCommitteeIDOfTopic(topic)
-	return fmt.Sprintf("%v-%v", msgType, cID)
-}
