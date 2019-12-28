@@ -79,18 +79,6 @@ func TestTopicManager_GetHWPubTopicsFromMsg(t *testing.T) {
 	}
 }
 
-func TestTopicManager_GetHWPubTopicsFromHWSub(t *testing.T) {
-	tm := new(TopicManager)
-	tm.Init("aa")
-	tm.UpdateSupportShards([]byte{0})
-	fmt.Printf("Highway supports cIDs: %v\n", tm.supportShards)
-	listHWSub := tm.GetListSubTopicForHW()
-	for _, subTopic := range listHWSub {
-		pubFromSubTopics := tm.GetHWPubTopicsFromHWSub(subTopic)
-		fmt.Printf("HW pub %v if receive %v\n", pubFromSubTopics, subTopic)
-	}
-}
-
 func Test_getTopicPairOutsideForHW(t *testing.T) {
 	supportShards := []byte{0, 255, 3}
 	for _, msgType := range Message4Process {

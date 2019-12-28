@@ -49,7 +49,6 @@ func (topicManager *TopicManager) Init(selfID string) {
 	topicManager.isInit = true
 }
 
-// func (topicManager *TopicManager) Update(supportShards)
 func (topicManager *TopicManager) getAllTopicPairForNode(
 	forPub bool,
 ) map[string]listPairByCID {
@@ -94,16 +93,16 @@ func getTopicPairOutsideForHW(
 		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 	case CmdBlockBeacon:
 		listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, NoCIDInTopic))
-		listAction = append(listAction, proto.MessageTopicPair_PUB)
+		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 	case CmdBlkShardToBeacon:
 		if cID == common.BEACONID {
 			listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, NoCIDInTopic))
-			listAction = append(listAction, proto.MessageTopicPair_PUB)
+			listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 		}
 	case CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken, CmdCrossShard:
 		if cID != common.BEACONID {
 			listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, int(cID)))
-			listAction = append(listAction, proto.MessageTopicPair_PUB)
+			listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 		}
 	}
 
@@ -261,13 +260,6 @@ func (topicManager *TopicManager) GetListSubTopicForHW() []string {
 	return res
 }
 
-func (topicManager *TopicManager) GetHWPubTopicsFromHWSub(topicReceived string) []string {
-	//TODO Add handle error
-	msg := GetMsgTypeOfTopic(topicReceived)
-	cID := GetCommitteeIDOfTopic(topicReceived)
-	return topicManager.GetHWPubTopicsFromMsg(msg, cID)
-}
-
 func (topicManager *TopicManager) GetHWPubTopicsFromMsg(msg string, cID int) []string {
 	if cID == NoCIDInTopic {
 		for _, cid := range topicManager.supportShards {
@@ -295,8 +287,5 @@ func getTopicOutSideFromMsg(msg string, cID int) string {
 }
 
 func (topicManager *TopicManager) GetHWPubSubOutSideFromMsg(msg string, cID int) string {
-	if cID == NoCIDInTopic {
-		return fmt.Sprintf("%v--", msg)
-	}
-	return fmt.Sprintf("%v-%d-", msg, cID)
+	return getTopicOutSideFromMsg(msg, cID)
 }
