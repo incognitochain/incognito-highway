@@ -258,7 +258,6 @@ func (chainData *ChainData) CopyNetworkState() NetworkState {
 		BeaconState: map[string]ChainState{},
 		ShardState:  map[byte]map[string]ChainState{},
 	}
-	delete(map[byte]string{}, byte(0))
 	for key, cs := range chainData.CurrentNetworkState.BeaconState {
 		state.BeaconState[key] = cs
 	}
