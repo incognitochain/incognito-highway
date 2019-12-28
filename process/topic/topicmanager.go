@@ -87,25 +87,30 @@ func getTopicPairOutsideForHW(
 ) proto.MessageTopicPair {
 	listTopic := []string{}
 	listAction := []proto.MessageTopicPair_Action{}
+	act := proto.MessageTopicPair_PUBSUB
+	cIDint := int(cID)
+	isHasTopics := true
 	switch msgType {
 	case CmdBFT, CmdPeerState:
-		listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, int(cID)))
-		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 	case CmdBlockBeacon:
-		listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, NoCIDInTopic))
-		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
+		cIDint = NoCIDInTopic
 	case CmdBlkShardToBeacon:
 		if cID == common.BEACONID {
-			listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, NoCIDInTopic))
-			listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
+			cIDint = NoCIDInTopic
+		} else {
+			isHasTopics = false
 		}
 	case CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken, CmdCrossShard:
-		if cID != common.BEACONID {
-			listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, int(cID)))
-			listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
+		if cID == common.BEACONID {
+			isHasTopics = false
 		}
+	default:
+		isHasTopics = false
 	}
-
+	if isHasTopics {
+		listTopic = append(listTopic, getTopicOutSideFromMsg(msgType, cIDint))
+		listAction = append(listAction, act)
+	}
 	pair := proto.MessageTopicPair{
 		Message: msgType,
 		Topic:   listTopic,
