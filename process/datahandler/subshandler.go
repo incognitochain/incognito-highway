@@ -7,23 +7,21 @@ import (
 	"highway/common"
 	"highway/database"
 	"highway/process/topic"
-	"sync"
 
 	libp2p "github.com/libp2p/go-libp2p-pubsub"
 )
 
 type SubsHandler struct {
-	Locker         *sync.RWMutex
 	PubSub         *libp2p.PubSub
 	BlockchainData *chaindata.ChainData
-	DataHandler    DataHandler
+	dataHandler    DataHandler
 	FromInside     bool
 }
 
 func (handler *SubsHandler) HandlerNewSubs(subs *libp2p.Subscription) error {
 	var err error
-	if handler.DataHandler == nil {
-		handler.DataHandler, err = handler.GetDataHandler(subs.Topic(), handler.FromInside)
+	if handler.dataHandler == nil {
+		handler.dataHandler, err = handler.GetDataHandler(subs.Topic(), handler.FromInside)
 		if err != nil {
 			return err
 		}
@@ -32,16 +30,13 @@ func (handler *SubsHandler) HandlerNewSubs(subs *libp2p.Subscription) error {
 		data, err := subs.Next(context.Background())
 		if (err == nil) && (data != nil) {
 			dataBytes := data.GetData()
-			handler.Locker.Lock()
 			data4cache := common.NewKeyForCacheDataOfTopic(subs.Topic(), dataBytes)
 			if database.IsMarkedData(data4cache) {
-				handler.Locker.Unlock()
 				continue
 			}
 			database.MarkData(data4cache)
-			handler.Locker.Unlock()
 			go func() {
-				err := handler.DataHandler.HandleDataFromTopic(subs.Topic(), *data)
+				err := handler.dataHandler.HandleDataFromTopic(subs.Topic(), *data)
 				if err != nil {
 					logger.Errorf("Can not process data from topic %v, handler return error %v", subs.Topic(), err)
 				}
