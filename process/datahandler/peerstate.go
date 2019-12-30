@@ -31,9 +31,9 @@ func (handler *PeerStateHandler) HandleDataFromTopic(topicReceived string, dataR
 		}
 	} else {
 		logger.Debugf("[msgpeerstate] Received Peerstate from highway %v", dataReceived.GetFrom())
-		err := handler.BlockchainData.UpdatePeerStateFromHW(dataReceived.GetFrom(), dataReceived.GetData())
+		err := handler.BlockchainData.UpdatePeerStateFromHW(dataReceived.GetFrom(), dataReceived.GetData(), byte(cID))
 		if err != nil {
-			logger.Errorf("Update peerState when received message from %v return error %v ", dataReceived.GetFrom(), dataReceived.GetData())
+			logger.Errorf("Update peerState when received message from %v return error %v ", dataReceived.GetFrom(), err)
 		}
 	}
 	return nil

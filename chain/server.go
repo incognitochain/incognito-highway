@@ -67,11 +67,7 @@ func (s *Server) Register(
 	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
 		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
-		err := s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
-		if err != nil {
-			return nil, err
-		}
-
+		s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
 	} else {
