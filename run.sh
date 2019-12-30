@@ -38,3 +38,7 @@ if [ "$1" == "hw3" ]; then
 go build -o highway && ./highway -privatekey CAMSeTB3AgEBBCAykkTQRzJaBV81t58HSyt6DUSRS68kvr0bnH8IGSnaqaAKBggqhkjOPQMBB6FEA0IABPZuAn3egjeNwZEC2hSEfY8LaPKKt63UBaQ8eL5AwUy6PnZjwgsuDl0dLzxAqm8eU9NuuADxLS9mwucAsfxOE+4= -support_shards all -host "0.0.0.0" -admin_port 8082 -proxy_port 7339 -bootnode_port 9332 --bootstrap "0.0.0.0:9330" --loglevel debug
 fi
 
+if [ "$1" == "hw4" ]; then
+go build -o highway && ./highway -privatekey CAMSeTB3AgEBBCCSIsG5e3ESqesSDqAcN3WIMUn9IoX9XTROixfYSQEMmKAKBggqhkjOPQMBB6FEA0IABDZNozvtHZvMkVVsks85svDPvvy0bw+/Zt7yCu7N66Cd1hchsR1CIe6U2q5E9uWke5Q+DZdjB5BPxq+ChnsDOeE= -support_shards all -host "0.0.0.0" -admin_port 8083 -proxy_port 7340 -bootnode_port 9333 --bootstrap "0.0.0.0:9330" --loglevel debug
+fi
+
