@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"highway/process"
+	"highway/chaindata"
 	"highway/route"
 	"sync"
 
@@ -31,7 +31,7 @@ func ManageChainConnections(
 	h host.Host,
 	rman *route.Manager,
 	prtc *p2pgrpc.GRPCProtocol,
-	chainData *process.ChainData,
+	chainData *chaindata.ChainData,
 	supportShards []byte,
 ) *Reporter {
 	// Manage incoming connections

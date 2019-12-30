@@ -2,8 +2,8 @@ package chain
 
 import (
 	"context"
+	"highway/chaindata"
 	"highway/common"
-	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
@@ -50,7 +50,7 @@ func (s *Server) Register(
 	if len(cIDs) > 0 {
 		cID = cIDs[0] // For validators, cIDs must contain exactly 1 value that is the shard that the they are validating on
 	}
-	r := process.GetUserRole(reqRole, cID)
+	r := chaindata.GetUserRole(reqRole, cID)
 	pid, err := peer.IDB58Decode(req.PeerID)
 	if err != nil {
 		logger.Warnf("Invalid peerID: %v", req.PeerID)

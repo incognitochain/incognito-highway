@@ -2,8 +2,8 @@ package chain
 
 import (
 	context "context"
+	"highway/chaindata"
 	"highway/common"
-	"highway/process"
 	"highway/proto"
 	"highway/route"
 	"math/rand"
@@ -328,15 +328,15 @@ func (hc *Client) choosePeerIDWithBlock(cid int, blk uint64) (pid peer.ID, hw pe
 // groupPeersByDistance prioritizes peers by grouping them into
 // different groups based on their distance to this highway
 func groupPeersByDistance(
-	peers []process.PeerWithBlk,
+	peers []chaindata.PeerWithBlk,
 	blk uint64,
 	selfPeerID peer.ID,
 	connectedPeers []PeerInfo,
-) [][]process.PeerWithBlk {
+) [][]chaindata.PeerWithBlk {
 	// Group peers into 4 groups:
-	a := []process.PeerWithBlk{} // 1. Nodes connected to this highway and have all needed blocks
-	b := []process.PeerWithBlk{} // 2. Nodes from other highways and have all needed blocks
-	h := uint64(0)               // Find maximum height
+	a := []chaindata.PeerWithBlk{} // 1. Nodes connected to this highway and have all needed blocks
+	b := []chaindata.PeerWithBlk{} // 2. Nodes from other highways and have all needed blocks
+	h := uint64(0)                 // Find maximum height
 	for _, p := range peers {
 		if p.Height >= blk {
 			if p.HW == selfPeerID {
@@ -351,8 +351,8 @@ func groupPeersByDistance(
 	}
 	a = filterPeers(a, connectedPeers) // Retain only connected peers
 
-	c := []process.PeerWithBlk{} // 3. Nodes connected to this highway and have the largest amount of blocks
-	d := []process.PeerWithBlk{} // 4. Nodes from other highways and have the largest amount of blocks
+	c := []chaindata.PeerWithBlk{} // 3. Nodes connected to this highway and have the largest amount of blocks
+	d := []chaindata.PeerWithBlk{} // 4. Nodes from other highways and have the largest amount of blocks
 	for _, p := range peers {
 		if p.Height < blk && p.Height+common.ChoosePeerBlockDelta >= h {
 			if p.HW == selfPeerID {
@@ -363,22 +363,22 @@ func groupPeersByDistance(
 		}
 	}
 	c = filterPeers(c, connectedPeers) // Retain only connected peers
-	return [][]process.PeerWithBlk{a, b, c, d}
+	return [][]chaindata.PeerWithBlk{a, b, c, d}
 }
 
-func choosePeerFromGroup(groups [][]process.PeerWithBlk) (process.PeerWithBlk, error) {
+func choosePeerFromGroup(groups [][]chaindata.PeerWithBlk) (chaindata.PeerWithBlk, error) {
 	// Pick randomly
 	for _, group := range groups {
 		if len(group) > 0 {
 			return group[rand.Intn(len(group))], nil
 		}
 	}
-	return process.PeerWithBlk{}, errors.New("no group of peers to choose")
+	return chaindata.PeerWithBlk{}, errors.New("no group of peers to choose")
 }
 
-func filterPeers(allPeers []process.PeerWithBlk, allows []PeerInfo) []process.PeerWithBlk {
+func filterPeers(allPeers []chaindata.PeerWithBlk, allows []PeerInfo) []chaindata.PeerWithBlk {
 	// logger.Debugf("ConnectedPeers for cid %v: %+v", cid, connectedPeers)
-	var peers []process.PeerWithBlk
+	var peers []chaindata.PeerWithBlk
 	for _, p := range allPeers {
 		for _, a := range allows {
 			if p.ID == a.ID {
@@ -434,7 +434,7 @@ type Client struct {
 	reporter      *Reporter
 	routeManager  *route.Manager
 	cc            *ClientConnector
-	chainData     *process.ChainData
+	chainData     *chaindata.ChainData
 	supportShards []byte // to know if we should query node or other highways
 }
 
@@ -443,7 +443,7 @@ func NewClient(
 	reporter *Reporter,
 	rman *route.Manager,
 	pr *p2pgrpc.GRPCProtocol,
-	incChainData *process.ChainData,
+	incChainData *chaindata.ChainData,
 	supportShards []byte,
 ) *Client {
 	hc := &Client{
