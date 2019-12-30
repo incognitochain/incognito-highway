@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/ethereum/go-ethereum v1.9.5 // indirect
 	github.com/golang/protobuf v1.3.2
+	github.com/google/uuid v1.1.1
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20191225095939-98e504cb1c95
 	github.com/incognitochain/incognito-chain v0.0.0-20191101095820-aa5b73f50a1b
 	github.com/libp2p/go-libp2p v0.3.1
