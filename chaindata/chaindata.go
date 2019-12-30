@@ -153,7 +153,13 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 	}
 
 	// Store committeeID, peerID and pubkey of a peer
-	chainData.UpdateCommittee(pkey, peer.ID(msgPeerState.SenderID), committeeID)
+	pid, err := peer.IDB58Decode(msgPeerState.SenderID)
+	if err != nil {
+		logger.Warnf("Received invalid peerID from msg peerstate: %v %s", err, msgPeerState.SenderID)
+	} else {
+		logger.Debugf("Updating committee: pkey = %v pid = %s cid = %v", pkey, pid.String(), committeeID)
+		chainData.UpdateCommittee(pkey, pid, committeeID)
+	}
 
 	// Save peerstate by miningPubkey
 	chainData.Locker.Lock()
@@ -197,8 +203,9 @@ func (chainData *ChainData) CopyNetworkState() NetworkState {
 	chainData.Locker.RLock()
 	defer chainData.Locker.RUnlock()
 	state := NetworkState{
-		BeaconState: map[string]ChainState{},
-		ShardState:  map[byte]map[string]ChainState{},
+		BeaconState:          map[string]ChainState{},
+		ShardState:           map[byte]map[string]ChainState{},
+		HighwayIDOfPublicKey: map[string]peer.ID{},
 	}
 	for key, cs := range chainData.CurrentNetworkState.BeaconState {
 		state.BeaconState[key] = cs
@@ -208,6 +215,9 @@ func (chainData *ChainData) CopyNetworkState() NetworkState {
 		for key, cs := range states {
 			state.ShardState[cid][key] = cs
 		}
+	}
+	for pkey, pid := range chainData.CurrentNetworkState.HighwayIDOfPublicKey {
+		state.HighwayIDOfPublicKey[pkey] = pid
 	}
 	return state
 }
