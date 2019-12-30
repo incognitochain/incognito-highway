@@ -3,13 +3,6 @@ package topic
 import "highway/common"
 
 const (
-	DoNothing byte = iota
-	ProcessAndPublishAfter
-	ProcessAndPublish
-	WTFisThis
-)
-
-const (
 	NODEPUB      = "-nodepub"
 	NODESUB      = "-nodesub"
 	NODESIDE     = "incnode"
