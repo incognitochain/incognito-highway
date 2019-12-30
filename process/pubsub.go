@@ -118,9 +118,7 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 		logger.Infof("Success subscribe topic %v", topicSub)
 		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
 		handler := datahandler.SubsHandler{
-			Locker:         new(sync.RWMutex),
 			PubSub:         pubsub.FloodMachine,
-			DataHandler:    nil, // this field will be assign inside function handle subscription
 			FromInside:     fromInside,
 			BlockchainData: pubsub.BlockChainData,
 		}
