@@ -15,6 +15,7 @@ const (
 
 	MaxCallDepth                = 2
 	MaxBlocksPerRequest         = 100
+	MaxTimePerRequest           = 10 * time.Second
 	ChoosePeerBlockDelta        = 100
 	RouteClientKeepaliveTime    = 20 * time.Minute
 	RouteClientKeepaliveTimeout = 20 * time.Second
