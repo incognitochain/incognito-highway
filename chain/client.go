@@ -8,6 +8,7 @@ import (
 	"highway/route"
 	"math/rand"
 	"sync"
+	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -458,8 +459,10 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	_, ok := cc.conns.connMap[peerID]
 
 	if !ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
 		conn, err := cc.pr.Dial(
-			context.Background(),
+			ctx,
 			peerID,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
