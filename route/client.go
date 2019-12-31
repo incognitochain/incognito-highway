@@ -26,12 +26,13 @@ func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 	c.conns.Lock()
 	defer c.conns.Unlock()
 	if _, ok := c.conns.connMap[peerID]; !ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
 		conn, err := c.pr.Dial(
-			context.Background(),
+			ctx,
 			peerID,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
-			grpc.WithTimeout(3*time.Second),
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)
