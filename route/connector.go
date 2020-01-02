@@ -92,7 +92,8 @@ func (hc *Connector) ConnectTo(p peer.AddrInfo) error {
 }
 
 func (hc *Connector) Dial(p peer.AddrInfo) error {
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	err := hc.host.Connect(ctx, p)
 	if err != nil {
 		return errors.WithStack(err)

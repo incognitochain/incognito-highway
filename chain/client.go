@@ -8,6 +8,7 @@ import (
 	"highway/route"
 	"math/rand"
 	"sync"
+	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -41,8 +42,10 @@ func (hc *Client) GetBlockShardByHeight(
 		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v", shardID, from, to, heights)
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
+	defer cancel()
 	reply, err := client.GetBlockShardByHeight(
-		context.Background(),
+		ctx,
 		&proto.GetBlockShardByHeightRequest{
 			Shard:      shardID,
 			Specific:   specific,
@@ -85,8 +88,10 @@ func (hc *Client) GetBlockShardByHash(
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
+	defer cancel()
 	reply, err := client.GetBlockShardByHash(
-		context.Background(),
+		ctx,
 		&proto.GetBlockShardByHashRequest{
 			Shard:     shardID,
 			Hashes:    hashes,
@@ -128,8 +133,11 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v", shardID, from, to, heights)
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
+	defer cancel()
 	reply, err := client.GetBlockShardToBeaconByHeight(
-		context.Background(),
+		ctx,
 		&proto.GetBlockShardToBeaconByHeightRequest{
 			FromShard:  shardID,
 			Specific:   specific,
@@ -180,8 +188,10 @@ func (hc *Client) GetBlockCrossShardByHeight(
 		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v", fromShard, toShard, fromHeight, toHeight, heights)
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
+	defer cancel()
 	reply, err := client.GetBlockCrossShardByHeight(
-		context.Background(),
+		ctx,
 		&proto.GetBlockCrossShardByHeightRequest{
 			FromShard:  fromShard,
 			ToShard:    toShard,
@@ -227,8 +237,11 @@ func (hc *Client) GetBlockBeaconByHeight(
 		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v", from, to, heights)
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
+	defer cancel()
 	reply, err := client.GetBlockBeaconByHeight(
-		context.Background(),
+		ctx,
 		&proto.GetBlockBeaconByHeightRequest{
 			Specific:   specific,
 			FromHeight: from,
@@ -269,8 +282,10 @@ func (hc *Client) GetBlockBeaconByHash(
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
+	defer cancel()
 	reply, err := client.GetBlockBeaconByHash(
-		context.Background(),
+		ctx,
 		&proto.GetBlockBeaconByHashRequest{
 			Hashes:    hashes,
 			CallDepth: callDepth + 1,
@@ -509,8 +524,10 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	_, ok := cc.conns.connMap[peerID]
 
 	if !ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
 		conn, err := cc.pr.Dial(
-			context.Background(),
+			ctx,
 			peerID,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
