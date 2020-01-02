@@ -9,6 +9,7 @@ import (
 
 type listPairByCID map[byte]proto.MessageTopicPair
 
+// TODO @0xakk0r0kamui remove this global param in next pull request
 var Handler TopicManager
 
 type TopicManager struct {
