@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 	"highway/chaindata"
+	"highway/common"
 	"highway/process/datahandler"
 	"highway/process/topic"
 	"sync"
@@ -10,10 +11,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/host"
 	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/patrickmn/go-cache"
 )
 
 // TODO @0xakk0r0kamui remove this global param in next pull request
-var GlobalPubsub PubSubManager
+// var GlobalPubsub PubSubManager
 
 type SubHandler struct {
 	Topic   string
@@ -25,36 +27,49 @@ type SubHandler struct {
 type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
-	GossipMachine        *p2pPubSub.PubSub
 	SubHandlers          chan SubHandler
-	OutSideMessage       chan string
 	followedTopic        []string
-	ForwardNow           chan p2pPubSub.Message
 	SpecialPublishTicker *time.Ticker
 	BlockChainData       *chaindata.ChainData
 }
 
-func InitPubSub(
+func NewPubSub(
 	s host.Host,
 	supportShards []byte,
 	chainData *chaindata.ChainData,
-) error {
+) (
+	*PubSubManager,
+	error,
+) {
+	pubsub := new(PubSubManager)
 	ctx := context.Background()
 	var err error
-	GlobalPubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s)
+	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	GlobalPubsub.SubHandlers = make(chan SubHandler, 100)
-	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
-	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
-	GlobalPubsub.SupportShards = supportShards
-	topic.Handler.UpdateSupportShards(supportShards)
+	pubsub.SubHandlers = make(chan SubHandler, 100)
+	pubsub.SpecialPublishTicker = time.NewTicker(common.TimeIntervalPublishStates)
+	pubsub.SupportShards = supportShards
+	pubsub.BlockChainData = chainData
+	// if cacher == nil {
+	// 	pubsub.Cacher = cache.New(common.MaxTimeKeepPubSubData, common.MaxTimeKeepPubSubData)
+	// } else {
+	// 	pubsub.Cacher = cacher
+	// }
+	// topic.Handler.UpdateSupportShards(supportShards)
 	logger.Infof("Supported shard %v", supportShards)
-	GlobalPubsub.BlockChainData = chainData
-	GlobalPubsub.SubKnownTopics(true)
-	GlobalPubsub.SubKnownTopics(false)
-	return nil
+	err = pubsub.SubKnownTopics(true)
+	if err != nil {
+		logger.Errorf("Subscribe topic from node return error %v", err)
+		return nil, err
+	}
+	err = pubsub.SubKnownTopics(false)
+	if err != nil {
+		logger.Errorf("Subscribe topic from other HWs return error %v", err)
+		return nil, err
+	}
+	return pubsub, nil
 }
 
 func (pubsub *PubSubManager) WatchingChain() {
@@ -102,6 +117,7 @@ func (pubsub *PubSubManager) PublishPeerStateToNode() {
 }
 
 func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
+	cacher := cache.New(common.MaxTimeKeepPubSubData, common.MaxTimeKeepPubSubData)
 	var topicSubs []string
 	if fromInside {
 		topicSubs = topic.Handler.GetListSubTopicForHW()
@@ -121,6 +137,7 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 			PubSub:         pubsub.FloodMachine,
 			FromInside:     fromInside,
 			BlockchainData: pubsub.BlockChainData,
+			Cacher:         cacher,
 		}
 		go func() {
 			err := handler.HandlerNewSubs(subs)
@@ -132,3 +149,34 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 	}
 	return nil
 }
+
+// func deletePeerIDinSlice(target peer.ID, slice []peer.ID) []peer.ID {
+// 	i := 0
+// 	for _, peerID := range slice {
+// 		if peerID.String() != target.String() {
+// 			slice[i] = peerID
+// 			i++
+// 		}
+// 	}
+// 	return slice[:i]
+// }
+
+// For Grafana, will complete in next pull request
+// func (pubsub *PubSubManager) WatchingSubs(subs *p2pPubSub.Subscription) {
+// 	for {
+// 		event, err := subs.NextPeerEvent(context.Background())
+// 		if err != nil {
+// 			logger.Error(err)
+// 		}
+// 		if event.Type == p2pPubSub.PeerJoin {
+// 			pubsub.pubsubInfo.Locker.Lock()
+// 			pubsub.pubsubInfo.Info[subs.Topic()] = append(pubsub.pubsubInfo.Info[subs.Topic()], event.Peer)
+// 			pubsub.pubsubInfo.Locker.Unlock()
+// 		}
+// 		if event.Type == p2pPubSub.PeerLeave {
+// 			pubsub.pubsubInfo.Locker.Lock()
+// 			pubsub.pubsubInfo.Info[subs.Topic()] = deletePeerIDinSlice(event.Peer, pubsub.pubsubInfo.Info[subs.Topic()])
+// 			pubsub.pubsubInfo.Locker.Unlock()
+// 		}
+// 	}
+// }
