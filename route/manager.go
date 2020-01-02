@@ -77,12 +77,15 @@ func NewManager(
 // Therefore after awhile, the offline highway will be removed from all maps.
 func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	if len(bootstrap) > 0 && len(bootstrap[0]) > 0 {
-		// TODO(@0xbunyip): retry bootstrap
-		hInfos, err := h.getListHighwaysFromPeer(bootstrap[0])
-		if err != nil {
-			logger.Warnf("Failed getting list of highways from peer %+v, err = %+v", bootstrap[0], err)
-		} else {
-			h.updateHighwayMap(hInfos)
+		bootstrapTimestep := time.Duration(30 * time.Second)
+		for ; true; <-time.Tick(bootstrapTimestep) {
+			hInfos, err := h.getListHighwaysFromPeer(bootstrap[0])
+			if err != nil {
+				logger.Warnf("Failed getting list of highways from peer %+v, err = %+v", bootstrap[0], err)
+			} else {
+				h.updateHighwayMap(hInfos)
+				break
+			}
 		}
 	}
 
