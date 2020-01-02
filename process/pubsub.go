@@ -14,9 +14,6 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-// TODO @0xakk0r0kamui remove this global param in next pull request
-// var GlobalPubsub PubSubManager
-
 type SubHandler struct {
 	Topic   string
 	Handler func(*p2pPubSub.Subscription)
@@ -52,12 +49,6 @@ func NewPubSub(
 	pubsub.SpecialPublishTicker = time.NewTicker(common.TimeIntervalPublishStates)
 	pubsub.SupportShards = supportShards
 	pubsub.BlockChainData = chainData
-	// if cacher == nil {
-	// 	pubsub.Cacher = cache.New(common.MaxTimeKeepPubSubData, common.MaxTimeKeepPubSubData)
-	// } else {
-	// 	pubsub.Cacher = cacher
-	// }
-	// topic.Handler.UpdateSupportShards(supportShards)
 	logger.Infof("Supported shard %v", supportShards)
 	err = pubsub.SubKnownTopics(true)
 	if err != nil {
@@ -129,7 +120,6 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 		if err != nil {
 			logger.Info(err)
 			continue
-			// TODO retry subscribe
 		}
 		logger.Infof("Success subscribe topic %v", topicSub)
 		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
@@ -144,7 +134,6 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 			if err != nil {
 				logger.Errorf("Handle Subsciption topic %v return error %v", subs.Topic(), err)
 			}
-			// TODO close subsciption and retry subscribe
 		}()
 	}
 	return nil

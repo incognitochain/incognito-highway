@@ -64,14 +64,15 @@ func (nwState *NetworkState) GetHWIDOfPubKey(
 	return hwIDFromCache.(peer.ID), nil
 }
 
-func (nwState *NetworkState) GetAllHWIDInfo() map[string]peer.ID {
-	hwInfo := map[string]peer.ID{}
+func (nwState *NetworkState) GetAllHWIDInfo() map[string]string {
+	hwInfo := map[string]string{}
 	hwInfoCached := nwState.highwayIDOfPublicKey.Items()
 	for pk, peerCached := range hwInfoCached {
 		if peerCached.Object == nil {
 			continue
 		}
-		hwInfo[pk] = peerCached.Object.(peer.ID)
+		pID := peerCached.Object.(peer.ID)
+		hwInfo[pk] = pID.String()
 	}
 	return hwInfo
 }
@@ -84,7 +85,6 @@ func (nwState *NetworkState) SetHWIDOfPubKey(
 	return nil
 }
 
-// TODO Complete in next pull request
 func (nwState *NetworkState) DeletePeerInfo(peerPK string, highwayID interface{}) {
 	logger.Infof("[delpeerstate] key %v", peerPK)
 	nwState.beaconLocker.Lock()
