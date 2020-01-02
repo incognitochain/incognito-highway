@@ -3,10 +3,11 @@ package chaindata
 import (
 	"encoding/json"
 	"fmt"
+	"highway/common"
 	"sync"
-	"time"
 
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 )
 
@@ -35,11 +36,7 @@ type NetworkState struct {
 	beaconLocker         *sync.RWMutex
 	ShardState           map[byte]map[string]ChainState // map[<ShardID>]map[<Committee Public Key>]Chainstate
 	shardLocker          *sync.RWMutex
-	HighwayIDOfPublicKey map[string]peer.ID
-	hwInfoLocker         *sync.RWMutex
-	PeerStateLastUpdate  map[string]time.Time
-	peerInfoLocker       *sync.RWMutex
-	MaxTimeKeepPeerState uint64
+	highwayIDOfPublicKey *cache.Cache
 }
 
 func (nwState *NetworkState) Init(numberOfShard int) {
@@ -50,10 +47,8 @@ func (nwState *NetworkState) Init(numberOfShard int) {
 	for i := byte(0); i < byte(numberOfShard); i++ {
 		nwState.ShardState[i] = map[string]ChainState{}
 	}
-	nwState.HighwayIDOfPublicKey = map[string]peer.ID{}
-	nwState.hwInfoLocker = new(sync.RWMutex)
-	nwState.PeerStateLastUpdate = map[string]time.Time{}
-	nwState.peerInfoLocker = new(sync.RWMutex)
+	nwState.highwayIDOfPublicKey = cache.New(common.MaxTimeKeepPeerState, common.MaxTimeKeepPeerState)
+	nwState.highwayIDOfPublicKey.OnEvicted(nwState.DeletePeerInfo)
 }
 
 func (nwState *NetworkState) GetHWIDOfPubKey(
@@ -62,67 +57,42 @@ func (nwState *NetworkState) GetHWIDOfPubKey(
 	peer.ID,
 	error,
 ) {
-	nwState.hwInfoLocker.RLock()
-	defer nwState.hwInfoLocker.RUnlock()
-	if hwID, ok := nwState.HighwayIDOfPublicKey[pubKey]; ok {
-		return hwID, nil
+	hwIDFromCache, ok := nwState.highwayIDOfPublicKey.Get(pubKey)
+	if (!ok) || (hwIDFromCache == nil) {
+		return "", errors.Errorf("Can not found highway ID for pubkey %v", pubKey)
 	}
-	return "", errors.Errorf("Can not found highway ID for pubkey %v", pubKey)
+	return hwIDFromCache.(peer.ID), nil
+}
+
+func (nwState *NetworkState) GetAllHWIDInfo() map[string]peer.ID {
+	hwInfo := map[string]peer.ID{}
+	hwInfoCached := nwState.highwayIDOfPublicKey.Items()
+	for pk, peerCached := range hwInfoCached {
+		if peerCached.Object == nil {
+			continue
+		}
+		hwInfo[pk] = peerCached.Object.(peer.ID)
+	}
+	return hwInfo
 }
 
 func (nwState *NetworkState) SetHWIDOfPubKey(
 	hwID peer.ID,
 	pubKey string,
 ) error {
-	nwState.hwInfoLocker.Lock()
-	defer nwState.hwInfoLocker.Unlock()
-	nwState.HighwayIDOfPublicKey[pubKey] = hwID
-	return nil
-}
-
-func (nwState *NetworkState) GetLastUpdateOfPubKey(
-	pubKey string,
-) (
-	time.Time,
-	error,
-) {
-	nwState.peerInfoLocker.RLock()
-	defer nwState.peerInfoLocker.RUnlock()
-	if lastTime, ok := nwState.PeerStateLastUpdate[pubKey]; ok {
-		return lastTime, nil
-	}
-
-	return time.Time{}, errors.Errorf("Can not found last time updated of pubkey %v", pubKey)
-}
-
-func (nwState *NetworkState) SetLastUpdateOfPubKey(
-	pubKey string,
-	lastTime time.Time,
-) error {
-	nwState.peerInfoLocker.Lock()
-	defer nwState.peerInfoLocker.Unlock()
-	nwState.PeerStateLastUpdate[pubKey] = lastTime
+	nwState.highwayIDOfPublicKey.Set(pubKey, hwID, common.MaxTimeKeepPeerState)
 	return nil
 }
 
 // TODO Complete in next pull request
-// func (nwState *NetworkState) DeleteOutdatedPeerInfo() []string {
-// 	listOutdated := []string{}
-// 	currentTime := time.Now()
-// 	nwState.peerInfoLocker.Lock()
-// 	defer nwState.peerInfoLocker.Unlock()
-// 	for peerPK, lastTime := range nwState.PeerStateLastUpdate {
-// 		if uint64(currentTime.Sub(lastTime).Milliseconds()) >= nwState.MaxTimeKeepPeerState {
-// 			delete(nwState.PeerStateLastUpdate, peerPK)
-// 			delete(nwState.HighwayIDOfPublicKey, peerPK)
-// 			nwState.beaconLocker.Lock()
-// 			delete(nwState.BeaconState, peerPK)
-// 			nwState.beaconLocker.Unlock()
-// 			nwState.shardLocker.Lock()
-// 			for _, shardState :=
-// 			nwState.shardLocker.Unlock()
-// 		}
-// 	}
-
-// 	return []string{}
-// }
+func (nwState *NetworkState) DeletePeerInfo(peerPK string, highwayID interface{}) {
+	logger.Infof("[delpeerstate] key %v", peerPK)
+	nwState.beaconLocker.Lock()
+	delete(nwState.BeaconState, peerPK)
+	nwState.beaconLocker.Unlock()
+	nwState.shardLocker.Lock()
+	for cID := range nwState.ShardState {
+		delete(nwState.ShardState[cID], peerPK)
+	}
+	nwState.shardLocker.Unlock()
+}

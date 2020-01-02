@@ -203,9 +203,8 @@ func (chainData *ChainData) CopyNetworkState() NetworkState {
 	chainData.Locker.RLock()
 	defer chainData.Locker.RUnlock()
 	state := NetworkState{
-		BeaconState:          map[string]ChainState{},
-		ShardState:           map[byte]map[string]ChainState{},
-		HighwayIDOfPublicKey: map[string]peer.ID{},
+		BeaconState: map[string]ChainState{},
+		ShardState:  map[byte]map[string]ChainState{},
 	}
 	for key, cs := range chainData.CurrentNetworkState.BeaconState {
 		state.BeaconState[key] = cs
@@ -215,9 +214,6 @@ func (chainData *ChainData) CopyNetworkState() NetworkState {
 		for key, cs := range states {
 			state.ShardState[cid][key] = cs
 		}
-	}
-	for pkey, pid := range chainData.CurrentNetworkState.HighwayIDOfPublicKey {
-		state.HighwayIDOfPublicKey[pkey] = pid
 	}
 	return state
 }
