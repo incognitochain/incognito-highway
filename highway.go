@@ -54,12 +54,15 @@ func main() {
 	topic.Handler.UpdateSupportShards(conf.SupportShards)
 
 	// Pubsub
-	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {
-		logger.Error(err)
-		return
+	floodPubSub, err := process.NewPubSub(
+		proxyHost.Host,
+		conf.SupportShards,
+		chainData)
+	if err != nil {
+		panic(err)
 	}
 	logger.Info("Init pubsub ok")
-	go process.GlobalPubsub.WatchingChain()
+	go floodPubSub.WatchingChain()
 
 	// Highway manager: connect cross highways
 	rman := route.NewManager(
@@ -69,6 +72,7 @@ func main() {
 		proxyHost.Host,
 		proxyHost.GRPC,
 		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
+		floodPubSub,
 	)
 	go rman.Start()
 

@@ -43,7 +43,6 @@ func GetMsgTypeOfTopic(topic string) string {
 	return topicElements[0]
 }
 
-// GetCommitteeIDOfTopic handle error later TODO handle error pls
 func GetCommitteeIDOfTopic(topic string) int {
 	topicElements := strings.Split(topic, "-")
 	if len(topicElements) == 0 {

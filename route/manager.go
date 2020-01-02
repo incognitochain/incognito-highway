@@ -37,6 +37,7 @@ func NewManager(
 	h host.Host,
 	prtc *p2pgrpc.GRPCProtocol,
 	rpcUrl string,
+	pubsubManager *process.PubSubManager,
 ) *Manager {
 	p := peer.AddrInfo{
 		ID:    h.ID(),
@@ -52,7 +53,7 @@ func NewManager(
 			h,
 			prtc,
 			hmap,
-			&process.GlobalPubsub,
+			pubsubManager,
 			masternode,
 			rpcUrl,
 		),
