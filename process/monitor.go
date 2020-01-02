@@ -14,7 +14,8 @@ type Reporter struct {
 	chainData    *chaindata.ChainData
 	networkState struct {
 		sync.RWMutex
-		state chaindata.NetworkState
+		state     chaindata.NetworkState
+		hwofpeers map[string]string
 	}
 }
 
@@ -30,6 +31,7 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	defer r.networkState.RUnlock()
 	data := map[string]interface{}{
 		"network_state": r.networkState.state,
+		"hwid_of_peers": r.networkState.hwofpeers,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil
@@ -38,6 +40,7 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 func (r *Reporter) updateNetworkState() {
 	r.networkState.Lock()
 	r.networkState.state = r.chainData.CopyNetworkState()
+	r.networkState.hwofpeers = r.chainData.CurrentNetworkState.GetAllHWIDInfo()
 	r.networkState.Unlock()
 }
 
@@ -47,6 +50,7 @@ func NewReporter(chainData *chaindata.ChainData) *Reporter {
 		name:      "process",
 	}
 	r.networkState.state = chaindata.NetworkState{}
+	r.networkState.hwofpeers = map[string]string{}
 	r.networkState.RWMutex = sync.RWMutex{}
 	return r
 }

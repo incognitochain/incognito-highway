@@ -27,14 +27,33 @@ go build -o highway && ./highway -privatekey CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRT
 fi
 
 if [ "$1" == "hw1" ]; then
-go build -o highway && ./highway -privatekey CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= -support_shards all -host "0.0.0.0" -admin_port 8080 -proxy_port 7337 -bootnode_port 9330 --loglevel debug
+./highway -privatekey CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= -support_shards all -host "139.162.9.169" -admin_port 8080 -proxy_port 7337 -bootnode_port 9330 --loglevel debug
 fi
 
 if [ "$1" == "hw2" ]; then
-go build -o highway && ./highway -privatekey CAMSeTB3AgEBBCDg9L4rFdng09R48KDyAEDzAiD0ckpqLsZOFmj6JNNWwqAKBggqhkjOPQMBB6FEA0IABK/dfR6Y+BQMIoBvPka6XXPIkTKFuzZxFbSbrz1PZbMcgAE0fMEvYiu7IAJ0NWKYyzzsg+hOFEIKBK+avbyna+k= -support_shards all -host "0.0.0.0" -admin_port 8081 -proxy_port 7338 -bootnode_port 9331 --bootstrap "0.0.0.0:9330" --loglevel debug
+./highway -privatekey CAMSeTB3AgEBBCDg9L4rFdng09R48KDyAEDzAiD0ckpqLsZOFmj6JNNWwqAKBggqhkjOPQMBB6FEA0IABK/dfR6Y+BQMIoBvPka6XXPIkTKFuzZxFbSbrz1PZbMcgAE0fMEvYiu7IAJ0NWKYyzzsg+hOFEIKBK+avbyna+k= -support_shards all -host "139.162.9.169" -admin_port 8081 -proxy_port 7338 -bootnode_port 9331 --bootstrap "139.162.9.169:9330" --loglevel debug
 fi
 
 if [ "$1" == "hw3" ]; then
-go build -o highway && ./highway -privatekey CAMSeTB3AgEBBCAykkTQRzJaBV81t58HSyt6DUSRS68kvr0bnH8IGSnaqaAKBggqhkjOPQMBB6FEA0IABPZuAn3egjeNwZEC2hSEfY8LaPKKt63UBaQ8eL5AwUy6PnZjwgsuDl0dLzxAqm8eU9NuuADxLS9mwucAsfxOE+4= -support_shards all -host "0.0.0.0" -admin_port 8082 -proxy_port 7339 -bootnode_port 9332 --bootstrap "0.0.0.0:9330" --loglevel debug
+./highway -privatekey CAMSeTB3AgEBBCAykkTQRzJaBV81t58HSyt6DUSRS68kvr0bnH8IGSnaqaAKBggqhkjOPQMBB6FEA0IABPZuAn3egjeNwZEC2hSEfY8LaPKKt63UBaQ8eL5AwUy6PnZjwgsuDl0dLzxAqm8eU9NuuADxLS9mwucAsfxOE+4= -support_shards all -host "139.162.9.169" -admin_port 8082 -proxy_port 7339 -bootnode_port 9332 --bootstrap "139.162.9.169:9330" --loglevel debug
 fi
 
+if [ "$1" == "hw4" ]; then
+./highway -privatekey CAMSeTB3AgEBBCCSIsG5e3ESqesSDqAcN3WIMUn9IoX9XTROixfYSQEMmKAKBggqhkjOPQMBB6FEA0IABDZNozvtHZvMkVVsks85svDPvvy0bw+/Zt7yCu7N66Cd1hchsR1CIe6U2q5E9uWke5Q+DZdjB5BPxq+ChnsDOeE= -support_shards all -host "139.162.9.169" -admin_port 8083 -proxy_port 7340 -bootnode_port 9333 --bootstrap "139.162.9.169:9330" --loglevel debug
+fi
+
+if [ "$1" == "lc1" ]; then
+./highway -privatekey CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= -support_shards all -host "0.0.0.0" -admin_port 8080 -proxy_port 7337 -bootnode_port 9330 --loglevel debug
+fi
+
+if [ "$1" == "lc2" ]; then
+./highway -privatekey CAMSeTB3AgEBBCDg9L4rFdng09R48KDyAEDzAiD0ckpqLsZOFmj6JNNWwqAKBggqhkjOPQMBB6FEA0IABK/dfR6Y+BQMIoBvPka6XXPIkTKFuzZxFbSbrz1PZbMcgAE0fMEvYiu7IAJ0NWKYyzzsg+hOFEIKBK+avbyna+k= -support_shards all -host "0.0.0.0" -admin_port 8081 -proxy_port 7338 -bootnode_port 9331 --bootstrap "0.0.0.0:9330" --loglevel debug
+fi
+
+if [ "$1" == "lc3" ]; then
+./highway -privatekey CAMSeTB3AgEBBCAykkTQRzJaBV81t58HSyt6DUSRS68kvr0bnH8IGSnaqaAKBggqhkjOPQMBB6FEA0IABPZuAn3egjeNwZEC2hSEfY8LaPKKt63UBaQ8eL5AwUy6PnZjwgsuDl0dLzxAqm8eU9NuuADxLS9mwucAsfxOE+4= -support_shards all -host "0.0.0.0" -admin_port 8082 -proxy_port 7339 -bootnode_port 9332 --bootstrap "0.0.0.0:9330" --loglevel debug
+fi
+
+if [ "$1" == "lc4" ]; then
+./highway -privatekey CAMSeTB3AgEBBCCSIsG5e3ESqesSDqAcN3WIMUn9IoX9XTROixfYSQEMmKAKBggqhkjOPQMBB6FEA0IABDZNozvtHZvMkVVsks85svDPvvy0bw+/Zt7yCu7N66Cd1hchsR1CIe6U2q5E9uWke5Q+DZdjB5BPxq+ChnsDOeE= -support_shards all -host "0.0.0.0" -admin_port 8083 -proxy_port 7340 -bootnode_port 9333 --bootstrap "0.0.0.0:9330" --loglevel debug
+fi

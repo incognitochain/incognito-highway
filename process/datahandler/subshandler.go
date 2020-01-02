@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"highway/chaindata"
 	"highway/common"
-	"highway/database"
 	"highway/process/topic"
 
 	libp2p "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/patrickmn/go-cache"
 )
 
 type SubsHandler struct {
 	PubSub         *libp2p.PubSub
 	BlockchainData *chaindata.ChainData
 	dataHandler    DataHandler
+	Cacher         *cache.Cache
 	FromInside     bool
 }
 
@@ -31,10 +32,10 @@ func (handler *SubsHandler) HandlerNewSubs(subs *libp2p.Subscription) error {
 		if (err == nil) && (data != nil) {
 			dataBytes := data.GetData()
 			data4cache := common.NewKeyForCacheDataOfTopic(subs.Topic(), dataBytes)
-			if database.IsMarkedData(data4cache) {
+			if _, isExist := handler.Cacher.Get(string(data4cache)); isExist {
 				continue
 			}
-			database.MarkData(data4cache)
+			handler.Cacher.Set(string(data4cache), nil, common.MaxTimeKeepPubSubData)
 			go func() {
 				err := handler.dataHandler.HandleDataFromTopic(subs.Topic(), *data)
 				if err != nil {
