@@ -18,7 +18,8 @@ type ProxyConfig struct {
 	PrivateKey    string
 	Bootstrap     []string
 	Version       string
-	Host          string
+	ListenAddr    string
+	PublicIP      string
 	Masternode    string
 	Loglevel      string
 	BootnodePort  int
@@ -34,7 +35,8 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	privateKey := flag.String("privatekey", "", "private key of this proxy, use  for authentication with other node")
 	bootstrap := flag.String("bootstrap", "", "specify other proxy node to join proxy network as bootstrap node")
 	version := flag.String("version", "0.1", "proxy version")
-	host := flag.String("host", "0.0.0.0", "listenning address")
+	listenAddr := flag.String("listenAddr", "0.0.0.0", "listenning address")
+	publicIP := flag.String("host", "127.0.0.1", "public ip address")
 	masternode := flag.String("masternode", "QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV", "libp2p PeerID of master node")
 	loglevel := flag.String("loglevel", "info", "loglevel for highway, info or debug")
 	flag.Parse()
@@ -52,7 +54,8 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		PrivateKey:    *privateKey,
 		Bootstrap:     strings.Split(*bootstrap, ","),
 		Version:       *version,
-		Host:          *host,
+		ListenAddr:    *listenAddr,
+		PublicIP:      *publicIP,
 		Masternode:    *masternode,
 		Loglevel:      *loglevel,
 		BootnodePort:  *bootnodePort,
@@ -96,7 +99,8 @@ func parseSupportShards(s string) ([]byte, error) {
 func (s ProxyConfig) PrintConfig() {
 	fmt.Println("============== Config =============")
 	fmt.Println("Bootstrap node: ", s.Bootstrap)
-	fmt.Println("Host: ", s.Host)
+	fmt.Println("ListenAddr: ", s.ListenAddr)
+	fmt.Println("PublicIP: ", s.PublicIP)
 	fmt.Println("Proxy: ", s.ProxyPort)
 	fmt.Println("Admin: ", s.AdminPort)
 	fmt.Println("IsProfiling: ", s.IsProfiling)

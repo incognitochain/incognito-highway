@@ -5,9 +5,9 @@ go 1.12
 require (
 	github.com/ethereum/go-ethereum v1.9.5 // indirect
 	github.com/golang/protobuf v1.3.2
-	github.com/incognitochain/go-libp2p-grpc v0.0.0-20181024123959-d1f24bf49b50
+	github.com/google/uuid v1.1.1
+	github.com/incognitochain/go-libp2p-grpc v0.0.0-20191225095939-98e504cb1c95
 	github.com/incognitochain/incognito-chain v0.0.0-20191101095820-aa5b73f50a1b
-	github.com/jessevdk/go-flags v1.4.0
 	github.com/libp2p/go-libp2p v0.3.1
 	github.com/libp2p/go-libp2p-core v0.2.2
 	github.com/libp2p/go-libp2p-peer v0.2.0
@@ -18,6 +18,6 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/stathat/consistent v1.0.0
 	go.uber.org/zap v1.12.0
-	google.golang.org/grpc v1.20.1
+	google.golang.org/grpc v1.25.1
 	stathat.com/c/consistent v1.0.0 // indirect
 )

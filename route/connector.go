@@ -6,6 +6,7 @@ import (
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
+	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -81,7 +82,9 @@ func (hc *Connector) ConnectTo(p peer.AddrInfo) error {
 }
 
 func (hc *Connector) Dial(p peer.AddrInfo) error {
-	err := hc.host.Connect(context.Background(), p)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := hc.host.Connect(ctx, p)
 	if err != nil {
 		return errors.WithStack(err)
 	}
