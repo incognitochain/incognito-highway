@@ -15,6 +15,7 @@ const (
 
 	MaxCallDepth                = 2
 	MaxBlocksPerRequest         = 100
+	MaxTimePerRequest           = 10 * time.Second
 	MaxTimeKeepPeerState        = 90 * time.Second
 	MaxTimeKeepPubSubData       = 30 * time.Second
 	ChoosePeerBlockDelta        = 100
