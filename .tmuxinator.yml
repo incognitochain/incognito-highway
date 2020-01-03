@@ -46,7 +46,7 @@ windows:
   - hw:
       root: ./
       panes:
-        - ./run.sh "hw1" 2>&1 | tee hw1.log
-        - ./run.sh "hw2" 2>&1 | tee hw2.log
-        - ./run.sh "hw3" 2>&1 | tee hw3.log
+        - ./run.sh "lc1" 2>&1 | tee hw1.log
+        - ./run.sh "lc2" 2>&1 | tee hw2.log
+        - ./run.sh "lc3" 2>&1 | tee hw3.log
 
