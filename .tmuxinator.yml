@@ -49,4 +49,9 @@ windows:
         - ./run.sh "lc1" 2>&1 | tee hw1.log
         - ./run.sh "lc2" 2>&1 | tee hw2.log
         - ./run.sh "lc3" 2>&1 | tee hw3.log
+        # - ./run.sh "lc4" 2>&1 | tee hw4.log
+        # - ./run.sh "lc5" 2>&1 | tee hw5.log
+        # - ./run.sh "lc6" 2>&1 | tee hw6.log
+        # - ./run.sh "lc7" 2>&1 | tee hw7.log
+        # - ./run.sh "lc8" 2>&1 | tee hw8.log
 
