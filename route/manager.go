@@ -28,6 +28,7 @@ type Manager struct {
 	Hmap       *hmap.Map
 	hc         *Connector
 	host       host.Host
+	lastSeen   map[peer.ID]time.Time
 	discoverer HighwayDiscoverer
 }
 
@@ -51,6 +52,7 @@ func NewManager(
 		supportShards: supportShards,
 		Hmap:          hmap,
 		discoverer:    new(rpcserver.RPCClient),
+		lastSeen:      map[peer.ID]time.Time{},
 		hc: NewConnector(
 			h,
 			prtc,
@@ -96,9 +98,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	// when the same highway is rerun with different supported shards.
 	// Therefore, if we rerun a highway (in a short period of time) with different
 	// supported shards, we need to use a new peerID.
-	lastSeen := map[peer.ID]time.Time{}
 	watchTimestep := time.Duration(common.RouteKeepConnectionTimestep)
-	removeDeadline := time.Duration(common.RouteHighwayKeepaliveTime)
 	for ; true; <-time.Tick(watchTimestep) {
 		// Map from peerID to RPCUrl
 		urls := h.Hmap.CopyRPCUrls()
@@ -114,35 +114,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 			}
 		}
 
-		peerMap := h.Hmap.CopyPeersMap()
-		for _, peers := range peerMap {
-			for _, p := range peers {
-				// No need to connect to ourself
-				if p.ID == h.ID {
-					continue
-				}
-
-				if h.host.Network().Connectedness(p.ID) == network.Connected {
-					lastSeen[p.ID] = time.Now()
-					h.Hmap.ConnectToShardOfPeer(p) // Reupdate here to make sure inbound connection is accounted
-					continue
-				}
-				logger.Infof("Disconnected to peer %+v", p)
-
-				if _, ok := lastSeen[p.ID]; !ok {
-					lastSeen[p.ID] = time.Now()
-				}
-
-				// Not connected, remove from map it's been too long
-				if time.Since(lastSeen[p.ID]) > removeDeadline {
-					logger.Infof("Removing peer %+v, lastSeen %v", p, lastSeen[p.ID].Format(time.RFC3339))
-					h.Hmap.RemovePeer(p)
-					h.Hmap.DisconnectToShardOfPeer(p)
-					h.hc.CloseConnection(p.ID)
-					delete(lastSeen, p.ID)
-				}
-			}
-		}
+		h.checkConnectionStatus()
 	}
 
 	// TODO(@0xbunyip): Get latest committee from bootstrap highways if available
@@ -160,6 +132,40 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	// logger.Info("Received chain committee:", cc)
 
 	// // TOOD(@0xbunyip): update chain committee to ChainData here
+}
+
+func (h *Manager) checkConnectionStatus() {
+	removeDeadline := time.Duration(common.RouteHighwayKeepaliveTime)
+	peerMap := h.Hmap.CopyPeersMap()
+	lastSeen := h.lastSeen
+	for _, peers := range peerMap {
+		for _, p := range peers {
+			// No need to connect to ourself
+			if p.ID == h.ID {
+				continue
+			}
+
+			if h.host.Network().Connectedness(p.ID) == network.Connected {
+				lastSeen[p.ID] = time.Now()
+				h.Hmap.ConnectToShardOfPeer(p) // Reupdate here to make sure inbound connection is accounted
+				continue
+			}
+			logger.Infof("Disconnected to peer %+v", p)
+
+			if _, ok := lastSeen[p.ID]; !ok {
+				lastSeen[p.ID] = time.Now()
+			}
+
+			// Not connected, remove from map it's been too long
+			if time.Since(lastSeen[p.ID]) > removeDeadline {
+				logger.Infof("Removing peer %+v, lastSeen %v", p, lastSeen[p.ID].Format(time.RFC3339))
+				h.Hmap.RemovePeer(p)
+				h.Hmap.DisconnectToShardOfPeer(p)
+				h.hc.CloseConnection(p.ID)
+				delete(lastSeen, p.ID)
+			}
+		}
+	}
 }
 
 func (h *Manager) updateHighwayMap(hInfos []HighwayInfo) {

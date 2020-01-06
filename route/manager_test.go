@@ -37,17 +37,23 @@ func TestQueryRandomPeer(t *testing.T) {
 	assert.Len(t, rpcUsed, 3)
 }
 
+func TestConnectInboundPeers(t *testing.T) {
+	discoverer, _ := setupDiscoverer(1)
+	manager := setupKeepConnectionTest(discoverer)
+	manager.Hmap.AddPeer(peer.AddrInfo{ID: peer.ID(pids[0])}, []byte{0, 1, 2}, "")
+	manager.Hmap.AddPeer(peer.AddrInfo{ID: peer.ID(pids[1])}, []byte{0, 1, 2}, "")
+	manager.Hmap.AddPeer(peer.AddrInfo{ID: peer.ID(pids[2])}, []byte{0, 1, 2}, "")
+	manager.checkConnectionStatus()
+	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[0])))
+	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[1])))
+	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[2])))
+}
+
 func setupDiscoverer(cnt int) (*mocks.HighwayDiscoverer, map[string]int) {
 	addrPort := 7337
 	rpcPort := 9330
 	hwAddrs := map[string][]rpcserver.HighwayAddr{
 		"all": []rpcserver.HighwayAddr{},
-	}
-	pids := []string{
-		"QmQMsPDbhHZyQMLYPY5WZCLKa2uR9f9QrZWNjE8Yz7gaDF",
-		"QmSxPwHv8FPKAcimQ73gL2TTqRwohsTymuDarBckVuR3yK",
-		"QmYdTMj3T3eswGoBtvUYD8ifDcaL9ZZssyLqqRqx9vEAhL",
-		"QmdeNyfdr6mvcMfDRDbwwoQYpdyw8LyaYwgoc58bLTWVvx",
 	}
 	for i := 0; i < cnt; i++ {
 		hwAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%d/p2p/%s", addrPort+i, pids[i])
@@ -71,6 +77,7 @@ func setupKeepConnectionTest(discoverer HighwayDiscoverer) *Manager {
 	manager := &Manager{
 		host:       h,
 		discoverer: discoverer,
+		lastSeen:   map[peer.ID]time.Time{},
 		Hmap:       hmap,
 	}
 	return manager
@@ -109,4 +116,11 @@ func init() {
 	// rpcserver.InitLogger(logger)
 	hmap.InitLogger(logger)
 	// datahandler.InitLogger(logger)
+}
+
+var pids = []string{
+	"QmQMsPDbhHZyQMLYPY5WZCLKa2uR9f9QrZWNjE8Yz7gaDF",
+	"QmSxPwHv8FPKAcimQ73gL2TTqRwohsTymuDarBckVuR3yK",
+	"QmYdTMj3T3eswGoBtvUYD8ifDcaL9ZZssyLqqRqx9vEAhL",
+	"QmdeNyfdr6mvcMfDRDbwwoQYpdyw8LyaYwgoc58bLTWVvx",
 }
