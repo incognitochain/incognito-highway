@@ -222,3 +222,8 @@ type enlistMessage struct {
 type Publisher interface {
 	Publish(topic string, msg []byte) error
 }
+
+type ConnKeeper interface {
+	GetClient(peer.ID) (proto.HighwayConnectorServiceClient, error)
+	CloseConnection(peerID peer.ID) error
+}
