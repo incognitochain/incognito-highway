@@ -11,6 +11,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -124,6 +125,7 @@ func setupHost() (*mocks.Host, *mocks.Network) {
 	h := &mocks.Host{}
 	h.On("Network").Return(net)
 	h.On("ID").Return(peer.ID(""))
+	h.On("Addrs").Return([]ma.Multiaddr{})
 	return h, net
 }
 

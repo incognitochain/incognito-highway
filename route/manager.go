@@ -57,9 +57,11 @@ func NewManager(
 			h,
 			prtc,
 			hmap,
-			pubsubManager,
+			pubsubManager.SubHandlers,
+			pubsubManager.FloodMachine,
 			masternode,
 			rpcUrl,
+			supportShards,
 		),
 		host: h,
 	}
