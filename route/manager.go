@@ -25,9 +25,10 @@ type Manager struct {
 	ID            peer.ID
 	supportShards []byte
 
-	Hmap *hmap.Map
-	hc   *Connector
-	host host.Host
+	Hmap       *hmap.Map
+	hc         *Connector
+	host       host.Host
+	discoverer HighwayDiscoverer
 }
 
 func NewManager(
@@ -49,6 +50,7 @@ func NewManager(
 		ID:            h.ID(),
 		supportShards: supportShards,
 		Hmap:          hmap,
+		discoverer:    new(rpcserver.RPCClient),
 		hc: NewConnector(
 			h,
 			prtc,
@@ -209,7 +211,7 @@ func getRandomPeer(peers map[byte][]peer.AddrInfo, excludes []peer.ID) (peer.Add
 }
 
 func (h *Manager) getListHighwaysFromPeer(addr string) ([]HighwayInfo, error) {
-	resps, err := rpcserver.DiscoverHighWay(addr, []string{"all"})
+	resps, err := h.discoverer.DiscoverHighway(addr, []string{"all"})
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +251,8 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 
 	comm := &incognitokey.ChainCommittee{}
 	if err := json.Unmarshal(resp.Data, comm); err != nil {
-		return nil, errors.Wrapf(err, "comm: %s", comm)
+		return nil, err
+		// return nil, errors.Wrapf(err, "comm: %s", comm)
 	}
 	return comm, nil
 }
@@ -389,4 +392,8 @@ type HighwayInfo struct {
 	AddrInfo      string
 	RPCUrl        string
 	SupportShards []int
+}
+
+type HighwayDiscoverer interface {
+	DiscoverHighway(discoverPeerAddress string, shardsStr []string) (map[string][]rpcserver.HighwayAddr, error)
 }
