@@ -36,12 +36,13 @@ func NewManager(
 	masternode peer.ID,
 	h host.Host,
 	prtc *p2pgrpc.GRPCProtocol,
+	addr multiaddr.Multiaddr,
 	rpcUrl string,
 	pubsubManager *process.PubSubManager,
 ) *Manager {
 	p := peer.AddrInfo{
 		ID:    h.ID(),
-		Addrs: h.Addrs(),
+		Addrs: []multiaddr.Multiaddr{addr},
 	}
 	hmap := hmap.NewMap(p, supportShards, rpcUrl)
 

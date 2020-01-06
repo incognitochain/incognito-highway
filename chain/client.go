@@ -8,12 +8,12 @@ import (
 	"highway/route"
 	"math/rand"
 	"sync"
-	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 const MaxCallRecvMsgSize = 50 << 20 // 50 MBs per gRPC response
@@ -39,7 +39,7 @@ func (hc *Client) GetBlockShardByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v", shardID, from, to, heights)
+		logger.Debugf("No client with Shard block, shardID = %v, height %v -> %v, specificHeights = %v, err = %+v", shardID, from, to, heights, err)
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
@@ -84,7 +84,7 @@ func (hc *Client) GetBlockShardByHash(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v", shardID, hashes)
+		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v, err = %+v", shardID, hashes, err)
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func (hc *Client) GetBlockShardToBeaconByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v", shardID, from, to, heights)
+		logger.Debugf("No client with S2B block, shardID = %v, from %v to %v, specificHeights = %v, err = %+v", shardID, from, to, heights, err)
 		return nil, err
 	}
 
@@ -185,7 +185,7 @@ func (hc *Client) GetBlockCrossShardByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v", fromShard, toShard, fromHeight, toHeight, heights)
+		logger.Debugf("No client with CrossShard block, shard %v -> %v, height %v -> %v, specificHeights = %v, err = %+v", fromShard, toShard, fromHeight, toHeight, heights, err)
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
@@ -234,7 +234,7 @@ func (hc *Client) GetBlockBeaconByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v", from, to, heights)
+		logger.Debugf("No client with Beacon block, height %v -> %v, specificHeights = %v, err = %+v", from, to, heights, err)
 		return nil, err
 	}
 
@@ -278,7 +278,7 @@ func (hc *Client) GetBlockBeaconByHash(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v", int(common.BEACONID), hashes)
+		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v, err = %+v", int(common.BEACONID), hashes, err)
 		return nil, err
 	}
 
@@ -524,13 +524,17 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	_, ok := cc.conns.connMap[peerID]
 
 	if !ok {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
 		conn, err := cc.pr.Dial(
 			ctx,
 			peerID,
 			grpc.WithInsecure(),
 			grpc.WithBlock(),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:    common.ChainClientKeepaliveTime,
+				Timeout: common.ChainClientKeepaliveTimeout,
+			}),
 		)
 		if err != nil {
 			return nil, errors.WithStack(err)

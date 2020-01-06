@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 var _ monitor.Monitor = (*config.Reporter)(nil)
@@ -59,18 +60,26 @@ func main() {
 		conf.SupportShards,
 		chainData)
 	if err != nil {
-		panic(err)
+		logger.Fatal(err)
+		return
 	}
 	logger.Info("Init pubsub ok")
 	go floodPubSub.WatchingChain()
 
 	// Highway manager: connect cross highways
+	multiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", conf.PublicIP, conf.ProxyPort))
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
 	rman := route.NewManager(
 		conf.SupportShards,
 		conf.Bootstrap,
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
+		multiAddr,
 		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 		floodPubSub,
 	)
@@ -84,7 +93,7 @@ func main() {
 		rman.Hmap,
 	)
 	if err != nil {
-		logger.Error(err)
+		logger.Fatal(err)
 		return
 	}
 	go rpcServer.Start()
