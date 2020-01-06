@@ -21,6 +21,8 @@ const (
 	ChoosePeerBlockDelta        = 100
 	RouteClientKeepaliveTime    = 20 * time.Minute
 	RouteClientKeepaliveTimeout = 20 * time.Second
+	RouteHighwayKeepaliveTime   = 40 * time.Second
+	BroadcastMsgEnlistTimestep  = 5 * time.Minute
 	TimeIntervalPublishStates   = 5 * time.Second
 
 	DefaultRPCServerPort = 9330

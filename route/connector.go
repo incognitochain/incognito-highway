@@ -3,6 +3,7 @@ package route
 import (
 	"context"
 	"encoding/json"
+	"highway/common"
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
@@ -70,18 +71,28 @@ func (hc *Connector) GetHWClient(pid peer.ID) (proto.HighwayConnectorServiceClie
 }
 
 func (hc *Connector) Start() {
+	enlistTimestep := time.Tick(common.BroadcastMsgEnlistTimestep)
 	for {
+		var err error
 		select {
+		case <-enlistTimestep:
+			err = hc.enlist()
+
 		case p := <-hc.outPeers:
-			err := hc.dialAndEnlist(p)
+			err = hc.dialAndEnlist(p)
 			if err != nil {
-				logger.Error(err, p)
+				err = errors.WithMessagef(err, "peer: %+v", p)
 			}
+
 		case p := <-hc.closePeers:
-			err := hc.closePeer(p)
+			err = hc.closePeer(p)
 			if err != nil {
-				logger.Error(err, p)
+				err = errors.WithMessagef(err, "peer: %+v", p)
 			}
+		}
+
+		if err != nil {
+			logger.Error(err)
 		}
 	}
 }
@@ -139,17 +150,7 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 	}
 }
 
-func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
-	if hc.host.Network().Connectedness(p.ID) == network.Connected {
-		return nil
-	}
-
-	logger.Infof("Dialing to peer %+v", p)
-	err := hc.Dial(p)
-	if err != nil {
-		return err
-	}
-
+func (hc *Connector) enlist() error {
 	// Broadcast enlist message
 	data := &enlistMessage{
 		Peer: peer.AddrInfo{
@@ -163,14 +164,30 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 	if err != nil {
 		return errors.Wrapf(err, "enlistMessage: %v", data)
 	}
+
 	logger.Infof("Publishing msg highway_enlist: %s", msg)
 	if err := hc.ps.FloodMachine.Publish("highway_enlist", msg); err != nil {
 		return errors.WithStack(err)
 	}
+	return nil
+}
+
+func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
+	if hc.host.Network().Connectedness(p.ID) == network.Connected {
+		return nil
+	}
+
+	logger.Infof("Dialing to peer %+v", p)
+	err := hc.Dial(p)
+	if err != nil {
+		return err
+	}
 
 	// Update list of connected shards
 	hc.hmap.ConnectToShardOfPeer(p)
-	return nil
+
+	// Publish msg enlist
+	return hc.enlist()
 }
 
 type notifiee Connector
