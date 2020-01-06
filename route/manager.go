@@ -306,9 +306,9 @@ func (h *Manager) UpdateConnection() {
 // connectToAllPeersOfChain connects this highway to all peers supporting
 // a chain
 func (h *Manager) connectToAllPeersOfChain(sid byte) error {
-	highways := h.Hmap.Peers[sid]
+	highways := h.Hmap.CopyPeersMap()
 
-	for _, p := range highways {
+	for _, p := range highways[sid] {
 		if p.ID == h.ID {
 			continue // self
 		}
