@@ -2,8 +2,8 @@ package chain
 
 import (
 	"context"
+	"highway/chaindata"
 	"highway/common"
-	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
@@ -20,6 +20,8 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
+	ctx = WithRequestID(ctx)
+	logger := Logger(ctx)
 	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
 
 	// Monitor status
@@ -50,7 +52,7 @@ func (s *Server) Register(
 	if len(cIDs) > 0 {
 		cID = cIDs[0] // For validators, cIDs must contain exactly 1 value that is the shard that the they are validating on
 	}
-	r := process.GetUserRole(reqRole, cID)
+	r := chaindata.GetUserRole(reqRole, cID)
 	pid, err := peer.IDB58Decode(req.PeerID)
 	if err != nil {
 		logger.Warnf("Invalid peerID: %v", req.PeerID)
@@ -65,11 +67,7 @@ func (s *Server) Register(
 	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
 		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
-		err := s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
-		if err != nil {
-			return nil, err
-		}
-
+		s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
 	} else {
@@ -85,19 +83,27 @@ func (s *Server) Register(
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
+	ctx = WithRequestID(ctx)
+
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard")
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockShardByHeight(
+		ctx,
 		req.Shard,
 		req.Specific,
 		req.FromHeight,
 		req.ToHeight,
 		req.Heights,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -107,16 +113,25 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
+	ctx = WithRequestID(ctx)
+	logger := Logger(ctx)
+
 	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
 	defer s.reporter.watchRequestCounts("get_block_shard")
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockShardByHash(
+		ctx,
 		req.Shard,
 		req.Hashes,
+		req.CallDepth,
 	)
 	if err != nil {
 		logger.Infof("[blkbyhash] Receive GetBlockShardByHash response error: %v ", err)
@@ -128,18 +143,26 @@ func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockSha
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
+	ctx = WithRequestID(ctx)
+
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_beacon")
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockBeaconByHeight(
+		ctx,
 		req.Specific,
 		req.FromHeight,
 		req.ToHeight,
 		req.Heights,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -156,15 +179,23 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
+	ctx = WithRequestID(ctx)
+
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	data, err := s.hc.GetBlockShardToBeaconByHeight(
+		ctx,
 		req.GetFromShard(),
 		req.Specific,
 		req.FromHeight,
 		req.ToHeight,
 		req.Heights,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -175,15 +206,23 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
+	ctx = WithRequestID(ctx)
+	logger := Logger(ctx)
 	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
 	defer s.reporter.watchRequestCounts("get_block_beacon")
 
 	// TODO(@0xbunyip): check if block in cache
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	// Call node to get blocks
 	// TODO(@0xbunyip): use fromPool
 	data, err := s.hc.GetBlockBeaconByHash(
+		ctx,
 		req.Hashes,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -193,10 +232,17 @@ func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBe
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
+	ctx = WithRequestID(ctx)
+
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_cross_shard")
 
+	if req.CallDepth > common.MaxCallDepth {
+		return nil, errors.New("reached max call depth")
+	}
+
 	data, err := s.hc.GetBlockCrossShardByHeight(
+		ctx,
 		req.FromShard,
 		req.ToShard,
 		req.Specific,
@@ -204,6 +250,7 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 		req.ToHeight,
 		req.Heights,
 		req.FromPool,
+		req.CallDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -214,6 +261,8 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 }
 
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
+	ctx = WithRequestID(ctx)
+	logger := Logger(ctx)
 	logger.Errorf("Receive GetBlockCrossShardByHash request: %d %d %x", req.FromShard, req.ToShard, req.Hashes)
 	return nil, errors.New("not supported")
 }

@@ -1,4 +1,4 @@
-package process
+package chaindata
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ type ChainData struct {
 }
 
 type PeerWithBlk struct {
+	HW     peer.ID
 	ID     peer.ID
 	Height uint64
 }
@@ -76,14 +77,24 @@ func (chainData *ChainData) GetPeerHasBlk(
 	}
 	peers := []PeerWithBlk{}
 	for miningPubkey, nodeState := range committeeState {
-		if peerID, ok := chainData.PeerIDByMiningPubkey[miningPubkey]; ok {
-			peers = append(peers, PeerWithBlk{
-				ID:     peerID,
-				Height: nodeState.Height,
-			})
-		} else {
-			logger.Warnf("Committee publickey %v not found in PeerID map", miningPubkey)
+		HWID, err := chainData.CurrentNetworkState.GetHWIDOfPubKey(miningPubkey)
+		if err != nil {
+			logger.Error(err)
+			continue
 		}
+		peer := PeerWithBlk{
+			HW:     HWID,
+			ID:     peer.ID(""),
+			Height: nodeState.Height,
+		}
+
+		// peerID is not mandatory, for peers connected to other highways, we
+		// don't really care about their peerID
+		if peerID, ok := chainData.PeerIDByMiningPubkey[miningPubkey]; ok {
+			peer.ID = peerID
+			// logger.Warnf("Committee publickey %v not found in PeerID map", miningPubkey)
+		}
+		peers = append(peers, peer)
 	}
 
 	// Sort based on block height
@@ -94,7 +105,7 @@ func (chainData *ChainData) GetPeerHasBlk(
 }
 
 // UpdateCommittee saves peerID, mining pubkey and committeeID of a validator
-func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID peer.ID, cid byte) error {
+func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID peer.ID, cid byte) {
 	// Convert from CommitteePubkey to MiningPubKey if user submitted one
 	miningPubkey := string(pubkey)
 
@@ -104,65 +115,69 @@ func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID p
 	chainData.MiningPubkeyByPeerID[peerID] = miningPubkey
 	chainData.PeerIDByMiningPubkey[miningPubkey] = peerID
 	chainData.ShardByMiningPubkey[miningPubkey] = cid
-	return nil
 }
 
-func (chainData *ChainData) UpdateCommitteeState(
+func (chainData *ChainData) UpdateStateWithMsgPeerState(
 	committeeID byte,
-	committeeState *CommitteeState,
+	committeePublicKey string,
+	msgPeerState *wire.MessagePeerState,
 ) error {
-
 	chainData.Locker.Lock()
-	for key, peerState := range *committeeState {
-		// logger.Infof(key)
-		msgPeerState, err := ParsePeerStateData(string(peerState))
-		if err != nil {
-			logger.Error(errors.Wrapf(err, "Parse PeerState for committee %v false", committeeID))
-			return err
-		} else {
-			// logger.Info(msgPeerState)
-		}
-		if committeeID == common.BEACONID {
-			chainData.CurrentNetworkState.BeaconState[key] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
-		} else {
-			chainData.CurrentNetworkState.ShardState[committeeID][key] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
-		}
+	if committeeID == common.BEACONID {
+		chainData.CurrentNetworkState.BeaconState[committeePublicKey] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
+	} else {
+		chainData.CurrentNetworkState.ShardState[committeeID][committeePublicKey] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
 	}
 	defer chainData.Locker.Unlock()
 	return nil
 }
 
-func (chainData *ChainData) UpdatePeerState(publisher string, data []byte) error {
-	pkey, err := common.PreprocessKey(publisher)
+func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte, committeeID byte) error {
+	//TODO check Highway signature
+	msgPeerState, err := common.ParsePeerStateData(string(data))
 	if err != nil {
 		return err
 	}
-	miningPubkey := string(pkey)
-
-	committeeID, err := chainData.GetCommitteeIDOfValidator(pkey)
+	peerPublicKey := msgPeerState.SenderMiningPublicKey
+	pkey, err := common.PreprocessKey(peerPublicKey)
 	if err != nil {
-		logger.Infof("This publisher not belong to current committee %v %v", publisher, committeeID)
 		return err
+	}
+
+	// Store peerID of HW connected to a peer
+	miningPubkey := string(pkey)
+	err = chainData.CurrentNetworkState.SetHWIDOfPubKey(publisher, miningPubkey)
+	if err != nil {
+		logger.Errorf(err.Error())
+		return err
+	}
+
+	// Store committeeID, peerID and pubkey of a peer
+	pid, err := peer.IDB58Decode(msgPeerState.SenderID)
+	if err != nil {
+		logger.Warnf("Received invalid peerID from msg peerstate: %v %s", err, msgPeerState.SenderID)
+	} else {
+		logger.Debugf("Updating committee: pkey = %v pid = %s cid = %v", pkey, pid.String(), committeeID)
+		chainData.UpdateCommittee(pkey, pid, committeeID)
 	}
 
 	// Save peerstate by miningPubkey
 	chainData.Locker.Lock()
-	if chainData.ListMsgPeerStateOfShard[byte(committeeID)] == nil {
-		chainData.ListMsgPeerStateOfShard[byte(committeeID)] = map[string][]byte{}
+	if chainData.ListMsgPeerStateOfShard[committeeID] == nil {
+		chainData.ListMsgPeerStateOfShard[committeeID] = map[string][]byte{}
 	}
-	if !bytes.Equal(chainData.ListMsgPeerStateOfShard[byte(committeeID)][miningPubkey], data) {
-		chainData.ListMsgPeerStateOfShard[byte(committeeID)][miningPubkey] = data
+
+	if !bytes.Equal(chainData.ListMsgPeerStateOfShard[committeeID][miningPubkey], data) {
+		chainData.ListMsgPeerStateOfShard[committeeID][miningPubkey] = data
+		chainData.Locker.Unlock()
+		return chainData.UpdateStateWithMsgPeerState(
+			committeeID,
+			miningPubkey,
+			msgPeerState,
+		)
 	}
 	chainData.Locker.Unlock()
-
-	committeeState := chainData.ListMsgPeerStateOfShard[committeeID]
-	return chainData.UpdateCommitteeState(committeeID, &committeeState)
-}
-
-func (chainData *ChainData) GetMiningPubkeyFromPeerID(pid peer.ID) string {
-	chainData.Locker.RLock()
-	defer chainData.Locker.RUnlock()
-	return chainData.MiningPubkeyByPeerID[pid]
+	return nil
 }
 
 func newChainStateFromMsgPeerState(
@@ -191,7 +206,6 @@ func (chainData *ChainData) CopyNetworkState() NetworkState {
 		BeaconState: map[string]ChainState{},
 		ShardState:  map[byte]map[string]ChainState{},
 	}
-
 	for key, cs := range chainData.CurrentNetworkState.BeaconState {
 		state.BeaconState[key] = cs
 	}

@@ -28,6 +28,7 @@ func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 	defer c.conns.Unlock()
 	if _, ok := c.conns.connMap[peerID]; !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.RouteClientDialTimeout)
+		defer cancel()
 		conn, err := c.pr.Dial(
 			ctx,
 			peerID,
@@ -41,10 +42,22 @@ func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		cancel()
 		c.conns.connMap[peerID] = conn
 	}
 	return c.conns.connMap[peerID], nil
+}
+
+func (c *Client) CloseConnection(peerID peer.ID) error {
+	c.conns.Lock()
+	defer c.conns.Unlock()
+	if conn, ok := c.conns.connMap[peerID]; ok {
+		err := conn.Close()
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		c.conns.connMap[peerID] = nil
+	}
+	return nil
 }
 
 type Client struct {
