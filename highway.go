@@ -67,7 +67,7 @@ func main() {
 	go floodPubSub.WatchingChain()
 
 	// Highway manager: connect cross highways
-	multiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", conf.PublicIP, conf.BootnodePort))
+	multiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", conf.PublicIP, conf.ProxyPort))
 	if err != nil {
 		logger.Fatal(err)
 		return
