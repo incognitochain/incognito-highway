@@ -97,7 +97,7 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	// Therefore, if we rerun a highway (in a short period of time) with different
 	// supported shards, we need to use a new peerID.
 	lastSeen := map[peer.ID]time.Time{}
-	watchTimestep := 30 * time.Second
+	watchTimestep := time.Duration(common.RouteKeepConnectionTimestep)
 	removeDeadline := time.Duration(common.RouteHighwayKeepaliveTime)
 	for ; true; <-time.Tick(watchTimestep) {
 		// Map from peerID to RPCUrl
