@@ -55,6 +55,8 @@ func filterLocalAddrs(mas []ma.Multiaddr) []ma.Multiaddr {
 	localAddrs := []string{
 		"127.0.0.1",
 		"0.0.0.0",
+		"192.168.",
+		"/ip4/172.",
 	}
 	nonLocal := []ma.Multiaddr{}
 	for _, ma := range mas {
