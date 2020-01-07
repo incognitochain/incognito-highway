@@ -33,6 +33,7 @@ type Connector struct {
 
 	masternode peer.ID
 	rpcUrl     string
+	addrInfo   peer.AddrInfo
 }
 
 func NewConnector(
@@ -42,6 +43,7 @@ func NewConnector(
 	ps *process.PubSubManager,
 	masternode peer.ID,
 	rpcUrl string,
+	addrInfo peer.AddrInfo,
 ) *Connector {
 	hc := &Connector{
 		host:       h,
@@ -53,6 +55,7 @@ func NewConnector(
 		closePeers: make(chan peer.ID, 100),
 		masternode: masternode,
 		rpcUrl:     rpcUrl,
+		addrInfo:   addrInfo,
 	}
 
 	// Register to receive notif when new connection is established
@@ -153,10 +156,7 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 func (hc *Connector) enlist() error {
 	// Broadcast enlist message
 	data := &enlistMessage{
-		Peer: peer.AddrInfo{
-			ID:    hc.host.ID(),
-			Addrs: hc.host.Addrs(),
-		},
+		Peer:          hc.addrInfo,
 		SupportShards: hc.hmap.Supports[hc.host.ID()],
 		RPCUrl:        hc.rpcUrl,
 	}
