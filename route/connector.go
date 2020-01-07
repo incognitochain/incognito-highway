@@ -16,6 +16,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 // TODO(@0xbunyip): swap connector and client
@@ -26,7 +27,7 @@ type Connector struct {
 	hmap      *hmap.Map
 	publisher Publisher
 
-	hwc *Client
+	hwc ConnKeeper
 	hws *Server
 
 	outPeers   chan peer.AddrInfo
@@ -226,4 +227,5 @@ type Publisher interface {
 type ConnKeeper interface {
 	GetClient(peer.ID) (proto.HighwayConnectorServiceClient, error)
 	CloseConnection(peerID peer.ID) error
+	GetConnection(peerID peer.ID) (*grpc.ClientConn, error)
 }

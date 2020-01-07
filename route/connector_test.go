@@ -27,8 +27,14 @@ func TestEnlistLoop(t *testing.T) {
 func TestCloseBothStreams(t *testing.T) {
 	h, net := setupHost()
 	net.On("ClosePeer", mock.Anything).Return(nil)
-	connector := &Connector{host: h}
-	h.closePeer(peer.ID(""))
+	keeper := &mocks.ConnKeeper{}
+	keeper.On("CloseConnection", mock.Anything).Return(nil)
+	connector := &Connector{
+		host: h,
+		hwc:  keeper,
+	}
+	connector.closePeer(peer.ID(""))
 
 	net.AssertNumberOfCalls(t, "ClosePeer", 1)
+	keeper.AssertNumberOfCalls(t, "CloseConnection", 1)
 }
