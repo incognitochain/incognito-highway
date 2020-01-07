@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -37,4 +38,18 @@ func TestCloseBothStreams(t *testing.T) {
 
 	net.AssertNumberOfCalls(t, "ClosePeer", 1)
 	keeper.AssertNumberOfCalls(t, "CloseConnection", 1)
+}
+
+func TestBroadcastEnlistMsg(t *testing.T) {
+	publisher := &mocks.Publisher{}
+	publisher.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	connector := &Connector{
+		addrInfo:      peer.AddrInfo{},
+		supportShards: []byte{},
+		rpcUrl:        "",
+		publisher:     publisher,
+	}
+	err := connector.enlist()
+	assert.Nil(t, err)
+	publisher.AssertNumberOfCalls(t, "Publish", 1)
 }
