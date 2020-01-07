@@ -1,10 +1,12 @@
 package route
 
 import (
+	hmap "highway/route/hmap"
 	"highway/route/mocks"
 	"testing"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,12 +46,25 @@ func TestBroadcastEnlistMsg(t *testing.T) {
 	publisher := &mocks.Publisher{}
 	publisher.On("Publish", mock.Anything, mock.Anything).Return(nil)
 	connector := &Connector{
-		addrInfo:      peer.AddrInfo{},
-		supportShards: []byte{},
-		rpcUrl:        "",
-		publisher:     publisher,
+		publisher: publisher,
 	}
-	err := connector.enlist()
-	assert.Nil(t, err)
+	assert.Nil(t, connector.enlist())
 	publisher.AssertNumberOfCalls(t, "Publish", 1)
+}
+
+func TestDialAndEnlistNewPeer(t *testing.T) {
+	h, net := setupHost()
+	h.On("Connect", mock.Anything, mock.Anything).Return(nil)
+	setupConnectedness(net, []network.Connectedness{network.NotConnected})
+	publisher := &mocks.Publisher{}
+	publisher.On("Publish", mock.Anything, mock.Anything).Return(nil)
+	hmap := hmap.NewMap(peer.AddrInfo{}, []byte{0, 1, 2, 3}, "")
+	connector := &Connector{
+		host:      h,
+		hmap:      hmap,
+		publisher: publisher,
+	}
+	assert.Nil(t, connector.dialAndEnlist(peer.AddrInfo{}))
+	publisher.AssertNumberOfCalls(t, "Publish", 1)
+	assert.True(t, hmap.IsConnectedToPeer(peer.ID("")))
 }
