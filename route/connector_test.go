@@ -3,6 +3,7 @@ package route
 import (
 	hmap "highway/route/hmap"
 	"highway/route/mocks"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/grpc"
 )
 
 func TestEnlistLoop(t *testing.T) {
@@ -67,4 +69,17 @@ func TestDialAndEnlistNewPeer(t *testing.T) {
 	assert.Nil(t, connector.dialAndEnlist(peer.AddrInfo{}))
 	publisher.AssertNumberOfCalls(t, "Publish", 1)
 	assert.True(t, hmap.IsConnectedToPeer(peer.ID("")))
+}
+
+func TestDialNewClientConnection(t *testing.T) {
+	dialer := &mocks.Dialer{}
+	dialer.On("Dial", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&grpc.ClientConn{}, nil)
+	client := &Client{
+		dialer: dialer,
+	}
+	client.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	client.conns.RWMutex = &sync.RWMutex{}
+
+	_, err := client.GetConnection(peer.ID(""))
+	assert.Nil(t, err)
 }
