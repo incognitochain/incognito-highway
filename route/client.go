@@ -6,7 +6,6 @@ import (
 	"highway/proto"
 	"sync"
 
-	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -29,7 +28,7 @@ func (c *Client) GetConnection(peerID peer.ID) (*grpc.ClientConn, error) {
 	if _, ok := c.conns.connMap[peerID]; !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.RouteClientDialTimeout)
 		defer cancel()
-		conn, err := c.pr.Dial(
+		conn, err := c.dialer.Dial(
 			ctx,
 			peerID,
 			grpc.WithInsecure(),
@@ -61,16 +60,20 @@ func (c *Client) CloseConnection(peerID peer.ID) error {
 }
 
 type Client struct {
-	pr    *p2pgrpc.GRPCProtocol
-	conns struct {
+	dialer Dialer
+	conns  struct {
 		connMap map[peer.ID]*grpc.ClientConn
 		*sync.RWMutex
 	}
 }
 
-func NewClient(pr *p2pgrpc.GRPCProtocol) *Client {
-	client := &Client{pr: pr}
+func NewClient(dialer Dialer) *Client {
+	client := &Client{dialer: dialer}
 	client.conns.connMap = map[peer.ID]*grpc.ClientConn{}
 	client.conns.RWMutex = &sync.RWMutex{}
 	return client
+}
+
+type Dialer interface {
+	Dial(ctx context.Context, peerID peer.ID, dialOpts ...grpc.DialOption) (*grpc.ClientConn, error)
 }

@@ -16,53 +16,61 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 // TODO(@0xbunyip): swap connector and client
 // client provides rpc and connector manages connection
 // also, move server out of connector
 type Connector struct {
-	host host.Host
-	hmap *hmap.Map
-	ps   *process.PubSubManager
-	hwc  *Client
-	hws  *Server
+	host      host.Host
+	hmap      *hmap.Map
+	publisher Publisher
+
+	hwc ConnKeeper
+	hws *Server
 
 	outPeers   chan peer.AddrInfo
 	closePeers chan peer.ID
+	stop       chan int
 
-	masternode peer.ID
-	rpcUrl     string
-	addrInfo   peer.AddrInfo
+	masternode    peer.ID
+	rpcUrl        string
+	addrInfo      peer.AddrInfo
+	supportShards []byte
 }
 
 func NewConnector(
 	h host.Host,
 	prtc *p2pgrpc.GRPCProtocol,
 	hmap *hmap.Map,
-	ps *process.PubSubManager,
+	subHandlers chan process.SubHandler,
+	publisher Publisher,
 	masternode peer.ID,
 	rpcUrl string,
 	addrInfo peer.AddrInfo,
+	supportShards []byte,
 ) *Connector {
 	hc := &Connector{
-		host:       h,
-		hmap:       hmap,
-		ps:         ps,
-		hws:        NewServer(prtc, hmap), // GRPC server serving other highways
-		hwc:        NewClient(prtc),       // GRPC clients to other highways
-		outPeers:   make(chan peer.AddrInfo, 1000),
-		closePeers: make(chan peer.ID, 100),
-		masternode: masternode,
-		rpcUrl:     rpcUrl,
-		addrInfo:   addrInfo,
+		host:          h,
+		hmap:          hmap,
+		publisher:     publisher,
+		hws:           NewServer(prtc, hmap), // GRPC server serving other highways
+		hwc:           NewClient(prtc),       // GRPC clients to other highways
+		outPeers:      make(chan peer.AddrInfo, 1000),
+		closePeers:    make(chan peer.ID, 100),
+		masternode:    masternode,
+		rpcUrl:        rpcUrl,
+		addrInfo:      addrInfo,
+		supportShards: supportShards,
+		stop:          make(chan int),
 	}
 
 	// Register to receive notif when new connection is established
 	h.Network().Notify((*notifiee)(hc))
 
 	// Start subscribing to receive enlist message from other highways
-	hc.ps.SubHandlers <- process.SubHandler{
+	subHandlers <- process.SubHandler{
 		Topic:   "highway_enlist",
 		Handler: hc.enlistHighways,
 	}
@@ -92,6 +100,10 @@ func (hc *Connector) Start() {
 			if err != nil {
 				err = errors.WithMessagef(err, "peer: %+v", p)
 			}
+
+		case <-hc.stop:
+			logger.Infof("Stopping connector loop")
+			return
 		}
 
 		if err != nil {
@@ -157,7 +169,7 @@ func (hc *Connector) enlist() error {
 	// Broadcast enlist message
 	data := &enlistMessage{
 		Peer:          hc.addrInfo,
-		SupportShards: hc.hmap.Supports[hc.host.ID()],
+		SupportShards: hc.supportShards,
 		RPCUrl:        hc.rpcUrl,
 	}
 	msg, err := json.Marshal(data)
@@ -166,7 +178,7 @@ func (hc *Connector) enlist() error {
 	}
 
 	logger.Infof("Publishing msg highway_enlist: %s", msg)
-	if err := hc.ps.FloodMachine.Publish("highway_enlist", msg); err != nil {
+	if err := hc.publisher.Publish("highway_enlist", msg); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -206,4 +218,14 @@ type enlistMessage struct {
 	SupportShards []byte
 	Peer          peer.AddrInfo
 	RPCUrl        string
+}
+
+type Publisher interface {
+	Publish(topic string, msg []byte) error
+}
+
+type ConnKeeper interface {
+	GetClient(peer.ID) (proto.HighwayConnectorServiceClient, error)
+	CloseConnection(peerID peer.ID) error
+	GetConnection(peerID peer.ID) (*grpc.ClientConn, error)
 }

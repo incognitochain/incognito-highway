@@ -29,6 +29,7 @@ const (
 	RouteClientKeepaliveTime    = 20 * time.Minute
 	RouteClientKeepaliveTimeout = 20 * time.Second
 	RouteClientDialTimeout      = 5 * time.Second
+	RouteKeepConnectionTimestep = 40 * time.Second
 	RouteHighwayKeepaliveTime   = 40 * time.Second
 
 	BroadcastMsgEnlistTimestep = 5 * time.Minute
