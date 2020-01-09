@@ -1,10 +1,59 @@
 package chain
 
 import (
+	"highway/chaindata"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestChoosePeerFromGroup(t *testing.T) {
+	buildGroup := func(height uint64) []chaindata.PeerWithBlk {
+		g := []chaindata.PeerWithBlk{}
+		for i := uint64(0); i < 10+height*100; i++ {
+			g = append(g, chaindata.PeerWithBlk{
+				Height: height,
+			})
+		}
+		return g
+	}
+
+	testCases := []struct {
+		desc          string
+		groups        [][]chaindata.PeerWithBlk
+		expectedGroup uint64
+	}{
+		{
+			desc:          "Choose from 1st group",
+			groups:        [][]chaindata.PeerWithBlk{buildGroup(0), buildGroup(1), buildGroup(2), buildGroup(3)},
+			expectedGroup: 0,
+		},
+		{
+			desc:          "Choose from 2nd group",
+			groups:        [][]chaindata.PeerWithBlk{[]chaindata.PeerWithBlk{}, buildGroup(1), buildGroup(2), buildGroup(3)},
+			expectedGroup: 1,
+		},
+		{
+			desc:          "Choose from 3rd group",
+			groups:        [][]chaindata.PeerWithBlk{[]chaindata.PeerWithBlk{}, []chaindata.PeerWithBlk{}, buildGroup(2), buildGroup(3)},
+			expectedGroup: 2,
+		},
+		{
+			desc:          "Choose from 4th group",
+			groups:        [][]chaindata.PeerWithBlk{[]chaindata.PeerWithBlk{}, []chaindata.PeerWithBlk{}, []chaindata.PeerWithBlk{}, buildGroup(3)},
+			expectedGroup: 3,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			p, err := choosePeerFromGroup(tc.groups)
+			if assert.Nil(t, err) {
+				assert.Equal(t, tc.expectedGroup, p.Height)
+			}
+		})
+	}
+}
 
 func TestCapBlocks(t *testing.T) {
 	testCases := []struct {
