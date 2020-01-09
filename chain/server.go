@@ -67,7 +67,7 @@ func (s *Server) Register(
 	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
 		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
-		s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
+		s.chainData.UpdateCommittee(key, pid, byte(cID))
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
 	} else {
@@ -268,14 +268,26 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 }
 
 type Server struct {
-	m  *Manager
-	hc *Client
+	m         *Manager
+	hc        *Client
+	chainData *chaindata.ChainData
 
 	reporter *Reporter
 }
 
-func RegisterServer(m *Manager, gs *grpc.Server, hc *Client, reporter *Reporter) {
-	s := &Server{hc: hc, m: m, reporter: reporter}
+func RegisterServer(
+	m *Manager,
+	gs *grpc.Server,
+	hc *Client,
+	chainData *chaindata.ChainData,
+	reporter *Reporter,
+) {
+	s := &Server{
+		hc:        hc,
+		m:         m,
+		reporter:  reporter,
+		chainData: chainData,
+	}
 	proto.RegisterHighwayServiceServer(gs, s)
 }
 

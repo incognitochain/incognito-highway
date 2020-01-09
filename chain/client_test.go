@@ -1,13 +1,45 @@
 package chain
 
 import (
+	context "context"
+	"highway/chain/mocks"
 	"highway/chaindata"
+	"highway/route"
 	"math/rand"
+	"sync"
 	"testing"
 
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
+
+func TestChoosePeerID(t *testing.T) {
+	ctx := context.Background()
+	cid := 0
+	blk := uint64(123)
+
+	peerStore := &mocks.PeerStore{}
+	peerStore.On("GetPeerHasBlk", mock.Anything, mock.Anything).Return([]chaindata.PeerWithBlk{chaindata.PeerWithBlk{}}, nil)
+
+	m := &Manager{}
+	m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{}}
+	m.peers.RWMutex = sync.RWMutex{}
+
+	client := &Client{
+		m:            m,
+		routeManager: &route.Manager{ID: peer.ID("123")},
+		peerStore:    peerStore,
+	}
+
+	pid, hw, err := client.choosePeerIDWithBlock(ctx, cid, blk)
+	if assert.Nil(t, err) {
+		assert.Equal(t, peer.ID(""), pid)
+		assert.Equal(t, peer.ID(""), hw)
+	}
+}
 
 func TestGroupPeers(t *testing.T) {
 	// Connected, with blk
@@ -170,4 +202,21 @@ func TestCapBlocks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func init() {
+	cf := zap.NewDevelopmentConfig()
+	cf.Level.SetLevel(zapcore.FatalLevel)
+	l, _ := cf.Build()
+	logger = l.Sugar()
+
+	// chain.InitLogger(logger)
+	// chaindata.InitLogger(logger)
+	InitLogger(logger)
+	// process.InitLogger(logger)
+	// topic.InitLogger(logger)
+	// health.InitLogger(logger)
+	// rpcserver.InitLogger(logger)
+	// hmap.InitLogger(logger)
+	// datahandler.InitLogger(logger)
 }

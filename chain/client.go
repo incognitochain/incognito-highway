@@ -355,9 +355,9 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 // choosePeerIDWithBlock returns peerID of a node that holds some blocks
 // and its corresponding highway's peerID
 func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
-	// logger := Logger(ctx)
+	logger := Logger(ctx)
 
-	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
+	peersHasBlk, err := hc.peerStore.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
 	logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
 	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
@@ -491,7 +491,7 @@ type Client struct {
 	reporter      *Reporter
 	routeManager  *route.Manager
 	cc            *ClientConnector
-	chainData     *chaindata.ChainData
+	peerStore     PeerStore
 	supportShards []byte // to know if we should query node or other highways
 }
 
@@ -500,7 +500,7 @@ func NewClient(
 	reporter *Reporter,
 	rman *route.Manager,
 	pr *p2pgrpc.GRPCProtocol,
-	incChainData *chaindata.ChainData,
+	peerStore PeerStore,
 	supportShards []byte,
 ) *Client {
 	hc := &Client{
@@ -508,7 +508,7 @@ func NewClient(
 		reporter:        reporter,
 		routeManager:    rman,
 		cc:              NewClientConnector(pr),
-		chainData:       incChainData,
+		peerStore:       peerStore,
 		supportShards:   supportShards,
 		DisconnectedIDs: make(chan peer.ID, 1000),
 	}
@@ -574,4 +574,8 @@ func NewClientConnector(pr *p2pgrpc.GRPCProtocol) *ClientConnector {
 	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
 	connector.conns.RWMutex = sync.RWMutex{}
 	return connector
+}
+
+type PeerStore interface {
+	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
 }
