@@ -526,7 +526,7 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	if !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
-		conn, err := cc.pr.Dial(
+		conn, err := cc.dialer.Dial(
 			ctx,
 			peerID,
 			grpc.WithInsecure(),
@@ -562,15 +562,15 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 }
 
 type ClientConnector struct {
-	pr    *p2pgrpc.GRPCProtocol
-	conns struct {
+	dialer Dialer
+	conns  struct {
 		connMap map[peer.ID]*grpc.ClientConn
 		sync.RWMutex
 	}
 }
 
-func NewClientConnector(pr *p2pgrpc.GRPCProtocol) *ClientConnector {
-	connector := &ClientConnector{pr: pr}
+func NewClientConnector(dialer Dialer) *ClientConnector {
+	connector := &ClientConnector{dialer: dialer}
 	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
 	connector.conns.RWMutex = sync.RWMutex{}
 	return connector
@@ -578,4 +578,8 @@ func NewClientConnector(pr *p2pgrpc.GRPCProtocol) *ClientConnector {
 
 type PeerStore interface {
 	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
+}
+
+type Dialer interface {
+	Dial(ctx context.Context, peerID peer.ID, dialOpts ...grpc.DialOption) (*grpc.ClientConn, error)
 }

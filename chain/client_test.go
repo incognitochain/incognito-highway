@@ -14,7 +14,29 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	grpc "google.golang.org/grpc"
 )
+
+func TestGetServiceClient(t *testing.T) {
+	peerID := peer.ID("")
+
+	calledWithTimeout := false
+	dialer := &mocks.Dialer{}
+	dialer.On("Dial", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&grpc.ClientConn{}, nil).Run(
+		func(args mock.Arguments) {
+			_, ok := args.Get(0).(context.Context).Deadline()
+			calledWithTimeout = ok
+		},
+	)
+	connector := &ClientConnector{dialer: dialer}
+	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	connector.conns.RWMutex = sync.RWMutex{}
+	_, err := connector.GetServiceClient(peerID)
+	if assert.Nil(t, err) {
+		assert.Len(t, connector.conns.connMap, 1)
+		assert.True(t, calledWithTimeout)
+	}
+}
 
 func TestChoosePeerID(t *testing.T) {
 	ctx := context.Background()
