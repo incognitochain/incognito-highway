@@ -20,7 +20,7 @@ const (
 	MaxCallDepth         = 2
 	ChoosePeerBlockDelta = 100
 	MaxBlocksPerRequest  = 100
-	MaxTimePerRequest    = 10 * time.Second
+	MaxTimePerRequest    = 20 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second
 	MaxTimeKeepPeerState      = 90 * time.Second
