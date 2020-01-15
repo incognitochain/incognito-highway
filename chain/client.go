@@ -5,7 +5,6 @@ import (
 	"highway/chaindata"
 	"highway/common"
 	"highway/proto"
-	"highway/route"
 	"math/rand"
 	"sync"
 
@@ -310,7 +309,7 @@ func (hc *Client) getClientWithBlock(
 	if hc.supported(cid) {
 		return hc.getClientOfSupportedShard(ctx, cid, height)
 	}
-	return hc.routeManager.GetClientSupportShard(cid)
+	return hc.router.GetClientSupportShard(cid)
 }
 
 // TODO(@0xakk0r0kamui) replace this function, it just for fix special case in "1 HW for all"-mode.
@@ -339,9 +338,9 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 		return nil, peerID, err
 	}
 
-	if hw != hc.routeManager.ID { // Peer not connected, let ask the other highway
+	if hw != hc.router.GetID() { // Peer not connected, let ask the other highway
 		logger.Debugf("Chosen peer not connected, connect to hw %s", hw.String())
-		return hc.routeManager.GetHighwayServiceClient(hw)
+		return hc.router.GetHighwayServiceClient(hw)
 	}
 
 	// Connected peer, get connection
@@ -369,7 +368,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
-	groups := groupPeersByDistance(peersHasBlk, blk, hc.routeManager.ID, connectedPeers)
+	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers)
 	logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
@@ -489,7 +488,7 @@ type Client struct {
 
 	m             *Manager
 	reporter      *Reporter
-	routeManager  *route.Manager
+	router        Router
 	cc            *ClientConnector
 	peerStore     PeerStore
 	supportShards []byte // to know if we should query node or other highways
@@ -498,7 +497,7 @@ type Client struct {
 func NewClient(
 	m *Manager,
 	reporter *Reporter,
-	rman *route.Manager,
+	router Router,
 	pr *p2pgrpc.GRPCProtocol,
 	peerStore PeerStore,
 	supportShards []byte,
@@ -506,7 +505,7 @@ func NewClient(
 	hc := &Client{
 		m:               m,
 		reporter:        reporter,
-		routeManager:    rman,
+		router:          router,
 		cc:              NewClientConnector(pr),
 		peerStore:       peerStore,
 		supportShards:   supportShards,
@@ -582,4 +581,10 @@ type PeerStore interface {
 
 type Dialer interface {
 	Dial(ctx context.Context, peerID peer.ID, dialOpts ...grpc.DialOption) (*grpc.ClientConn, error)
+}
+
+type Router interface {
+	GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error)
+	GetHighwayServiceClient(pid peer.ID) (proto.HighwayServiceClient, peer.ID, error)
+	GetID() peer.ID
 }

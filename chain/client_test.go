@@ -4,7 +4,7 @@ import (
 	context "context"
 	"highway/chain/mocks"
 	"highway/chaindata"
-	"highway/route"
+	"highway/proto"
 	"math/rand"
 	"sync"
 	"testing"
@@ -16,6 +16,63 @@ import (
 	"go.uber.org/zap/zapcore"
 	grpc "google.golang.org/grpc"
 )
+
+func TestGetClientNode(t *testing.T) {
+	hwPID := peer.ID("123")
+	peerStore := &mocks.PeerStore{}
+	peerStore.On("GetPeerHasBlk", mock.Anything, mock.Anything).Return([]chaindata.PeerWithBlk{chaindata.PeerWithBlk{HW: hwPID, Height: 1235}}, nil)
+
+	cid := 0
+	m := &Manager{}
+	m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{PeerInfo{ID: peer.ID("")}}}
+	m.peers.RWMutex = sync.RWMutex{}
+
+	connector := &ClientConnector{}
+	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{
+		peer.ID(""): &grpc.ClientConn{},
+	}
+	connector.conns.RWMutex = sync.RWMutex{}
+
+	router := &mocks.Router{}
+	router.On("GetID").Return(hwPID)
+	client := &Client{
+		m:         m,
+		cc:        connector,
+		router:    router,
+		peerStore: peerStore,
+	}
+
+	ctx := context.Background()
+	height := uint64(1234)
+	_, pid, err := client.getClientOfSupportedShard(ctx, cid, height)
+	assert.Nil(t, err)
+	assert.Equal(t, peer.ID(""), pid)
+}
+
+func TestGetClientFromHighway(t *testing.T) {
+	peerStore := &mocks.PeerStore{}
+	peerStore.On("GetPeerHasBlk", mock.Anything, mock.Anything).Return([]chaindata.PeerWithBlk{chaindata.PeerWithBlk{}}, nil)
+
+	cid := 0
+	m := &Manager{}
+	m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{}}
+	m.peers.RWMutex = sync.RWMutex{}
+
+	router := &mocks.Router{}
+	router.On("GetID").Return(peer.ID("123"))
+	router.On("GetHighwayServiceClient", mock.Anything).Return(proto.NewHighwayServiceClient(nil), peer.ID("123"), nil)
+	client := &Client{
+		m:         m,
+		router:    router,
+		peerStore: peerStore,
+	}
+
+	ctx := context.Background()
+	height := uint64(1234)
+	_, pid, err := client.getClientOfSupportedShard(ctx, cid, height)
+	assert.Nil(t, err)
+	assert.Equal(t, peer.ID("123"), pid)
+}
 
 func TestGetServiceClient(t *testing.T) {
 	peerID := peer.ID("")
@@ -50,10 +107,12 @@ func TestChoosePeerID(t *testing.T) {
 	m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{}}
 	m.peers.RWMutex = sync.RWMutex{}
 
+	router := &mocks.Router{}
+	router.On("GetID").Return(peer.ID("123"))
 	client := &Client{
-		m:            m,
-		routeManager: &route.Manager{ID: peer.ID("123")},
-		peerStore:    peerStore,
+		m:         m,
+		router:    router,
+		peerStore: peerStore,
 	}
 
 	pid, hw, err := client.choosePeerIDWithBlock(ctx, cid, blk)
