@@ -56,7 +56,7 @@ func (s *Server) Register(
 	pid, err := peer.IDB58Decode(req.PeerID)
 	if err != nil {
 		logger.Warnf("Invalid peerID: %v", req.PeerID)
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	key, err := common.PreprocessKey(req.GetCommitteePublicKey())

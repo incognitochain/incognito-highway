@@ -4,6 +4,7 @@ import (
 	context "context"
 	"highway/chain/mocks"
 	"highway/chaindata"
+	"highway/common"
 	"highway/proto"
 	"math/rand"
 	"sync"
@@ -16,6 +17,31 @@ import (
 	"go.uber.org/zap/zapcore"
 	grpc "google.golang.org/grpc"
 )
+
+func TestValidatorRegister(t *testing.T) {
+	chainData := &chaindata.ChainData{}
+	chainData.Init(8)
+	s := Server{
+		reporter:  NewReporter(nil),
+		chainData: chainData,
+		m: &Manager{
+			newPeers: make(chan PeerInfo, 10),
+		},
+	}
+
+	req := &proto.RegisterRequest{
+		PeerID:             "QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv",
+		CommitteePublicKey: "1J9fpx9aZme3gF9YRYQAZJrhnHZUgihbwWcxxNFNzRuET7uFwGp2PTpiVA4rPPFKEBjSPs9YFC6vEmuhJ47BoG2oNyKzW8Xmab6A9duRZLnrAb7sBmPnHFvAX7k9yyNZvun1iPEUSJ4m2DB4yq2N6xrUQ2hz1eLNF1wsoChehcfZjPU218LvH",
+		Role:               common.CommitteeRole,
+	}
+	resp, err := s.Register(context.Background(), req)
+	assert.Nil(t, err)
+	assert.NotNil(t, resp)
+	assert.Len(t, chainData.MiningPubkeyByPeerID, 1)
+	assert.Len(t, chainData.PeerIDByMiningPubkey, 1)
+	assert.Len(t, chainData.ShardByMiningPubkey, 1)
+	assert.Len(t, s.m.newPeers, 1)
+}
 
 func TestGetClientNode(t *testing.T) {
 	hwPID := peer.ID("123")
@@ -292,7 +318,7 @@ func init() {
 	logger = l.Sugar()
 
 	// chain.InitLogger(logger)
-	// chaindata.InitLogger(logger)
+	chaindata.InitLogger(logger)
 	InitLogger(logger)
 	// process.InitLogger(logger)
 	// topic.InitLogger(logger)
