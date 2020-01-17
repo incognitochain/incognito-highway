@@ -5,6 +5,7 @@ import (
 	"highway/chain/mocks"
 	"highway/chaindata"
 	"highway/common"
+	"highway/process/topic"
 	"highway/proto"
 	"math/rand"
 	"sync"
@@ -17,6 +18,37 @@ import (
 	"go.uber.org/zap/zapcore"
 	grpc "google.golang.org/grpc"
 )
+
+func TestRegisterTopics(t *testing.T) {
+	s := Server{
+		reporter: NewReporter(nil),
+		m: &Manager{
+			newPeers: make(chan PeerInfo, 10),
+		},
+	}
+
+	req := &proto.RegisterRequest{
+		PeerID:             "QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv",
+		CommitteePublicKey: "1J9fpx9aZme3gF9YRYQAZJrhnHZUgihbwWcxxNFNzRuET7uFwGp2PTpiVA4rPPFKEBjSPs9YFC6vEmuhJ47BoG2oNyKzW8Xmab6A9duRZLnrAb7sBmPnHFvAX7k9yyNZvun1iPEUSJ4m2DB4yq2N6xrUQ2hz1eLNF1wsoChehcfZjPU218LvH",
+		CommitteeID:        []byte{0},
+		Role:               "",
+		WantedMessages:     []string{"blockshard"},
+	}
+	topic.Handler = topic.TopicManager{}
+	topic.Handler.Init("")
+	topic.Handler.UpdateSupportShards([]byte{1})
+
+	resp, err := s.Register(context.Background(), req)
+	assert.Nil(t, err)
+	assert.NotNil(t, resp)
+	assert.Len(t, s.m.newPeers, 1)
+	assert.Len(t, resp.Pair, 1)
+	assert.Equal(t, proto.UserRole{
+		Layer: common.ShardRole,
+		Role:  "",
+		Shard: int32(0),
+	}, *resp.Role)
+}
 
 func TestValidatorRegister(t *testing.T) {
 	chainData := &chaindata.ChainData{}
