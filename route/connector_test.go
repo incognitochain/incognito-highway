@@ -1,6 +1,7 @@
 package route
 
 import (
+	"highway/common"
 	hmap "highway/route/hmap"
 	"highway/route/mocks"
 	"sync"
@@ -24,7 +25,7 @@ func TestEnlistLoop(t *testing.T) {
 		stop:      make(chan int),
 	}
 	go connector.Start()
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * common.BroadcastMsgEnlistTimestep)
 	connector.stop <- 1
 	publisher.AssertNumberOfCalls(t, "Publish", 2)
 }

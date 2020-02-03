@@ -398,6 +398,10 @@ func (h *Manager) GetShardsConnected() []byte {
 	return h.Hmap.CopyConnected()
 }
 
+func (h *Manager) GetID() peer.ID {
+	return h.ID
+}
+
 type HighwayInfo struct {
 	AddrInfo      string
 	RPCUrl        string
