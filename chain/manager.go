@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"highway/process"
+	"highway/chaindata"
 	"highway/route"
 	"sync"
 
@@ -31,7 +31,7 @@ func ManageChainConnections(
 	h host.Host,
 	rman *route.Manager,
 	prtc *p2pgrpc.GRPCProtocol,
-	chainData *process.ChainData,
+	chainData *chaindata.ChainData,
 	supportShards []byte,
 ) *Reporter {
 	// Manage incoming connections
@@ -47,7 +47,7 @@ func ManageChainConnections(
 
 	// Server and client instance to communicate to Incognito nodes
 	client := NewClient(m, reporter, rman, prtc, chainData, supportShards)
-	RegisterServer(m, prtc.GetGRPCServer(), client, reporter)
+	RegisterServer(m, prtc.GetGRPCServer(), client, chainData, reporter)
 	m.client = client
 
 	h.Network().Notify(m)
