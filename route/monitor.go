@@ -5,6 +5,7 @@ import (
 	"highway/common"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -25,8 +26,9 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	shardsConnected := common.BytesToInts(connected)
 
 	// List of all connected highway, their full addrinfo and supported shards
-	peers := r.manager.hmap.CopyPeersMap()
-	supports := r.manager.hmap.CopySupports()
+	peers := r.manager.Hmap.CopyPeersMap()
+	urls := r.manager.Hmap.CopyRPCUrls()
+	supports := r.manager.Hmap.CopySupports()
 	highwayConnected := map[string]highwayInfo{}
 	for pid, cids := range supports {
 		// Find addrInfo from pid
@@ -39,9 +41,16 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 			}
 		}
 
+		status := "reconnecting"
+		if pid == r.manager.ID || r.manager.host.Network().Connectedness(pid) == network.Connected {
+			status = "ok"
+		}
+
 		highwayConnected[pid.String()] = highwayInfo{
 			AddrInfo: addrInfo,
 			Supports: common.BytesToInts(cids),
+			RPCUrl:   urls[pid],
+			Status:   status,
 		}
 	}
 
@@ -64,4 +73,6 @@ func NewReporter(manager *Manager) *Reporter {
 type highwayInfo struct {
 	AddrInfo peer.AddrInfo `json:"addr_info"`
 	Supports []int         `json:"shards_support"`
+	RPCUrl   string        `json:"rpc_url"`
+	Status   string        `json:"status"`
 }

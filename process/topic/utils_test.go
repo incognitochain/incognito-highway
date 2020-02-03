@@ -7,7 +7,7 @@ import (
 
 func TestGetCommitteeIDOfTopic(t *testing.T) {
 	tm := TopicManager{}
-	tm.Init()
+	tm.Init("aa")
 	for msg, listPair := range tm.getAllTopicPairForNode(true) {
 		fmt.Printf("Msg %v:\n", msg)
 		for CID, pair := range listPair {
