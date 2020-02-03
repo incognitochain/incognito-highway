@@ -56,7 +56,7 @@ func (s *Server) Register(
 	pid, err := peer.IDB58Decode(req.PeerID)
 	if err != nil {
 		logger.Warnf("Invalid peerID: %v", req.PeerID)
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
@@ -67,7 +67,7 @@ func (s *Server) Register(
 	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
 		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
-		s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
+		s.chainData.UpdateCommittee(key, pid, byte(cID))
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
 	} else {
@@ -289,14 +289,26 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 }
 
 type Server struct {
-	m  *Manager
-	hc *Client
+	m         *Manager
+	hc        *Client
+	chainData *chaindata.ChainData
 
 	reporter *Reporter
 }
 
-func RegisterServer(m *Manager, gs *grpc.Server, hc *Client, reporter *Reporter) {
-	s := &Server{hc: hc, m: m, reporter: reporter}
+func RegisterServer(
+	m *Manager,
+	gs *grpc.Server,
+	hc *Client,
+	chainData *chaindata.ChainData,
+	reporter *Reporter,
+) {
+	s := &Server{
+		hc:        hc,
+		m:         m,
+		reporter:  reporter,
+		chainData: chainData,
+	}
 	proto.RegisterHighwayServiceServer(gs, s)
 }
 

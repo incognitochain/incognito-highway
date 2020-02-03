@@ -5,7 +5,6 @@ import (
 	"highway/chaindata"
 	"highway/common"
 	"highway/proto"
-	"highway/route"
 	"math/rand"
 	"sync"
 
@@ -310,7 +309,7 @@ func (hc *Client) getClientWithBlock(
 	if hc.supported(cid) {
 		return hc.getClientOfSupportedShard(ctx, cid, height)
 	}
-	return hc.routeManager.GetClientSupportShard(cid)
+	return hc.router.GetClientSupportShard(cid)
 }
 
 // TODO(@0xakk0r0kamui) replace this function, it just for fix special case in "1 HW for all"-mode.
@@ -339,9 +338,9 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 		return nil, peerID, err
 	}
 
-	if hw != hc.routeManager.ID { // Peer not connected, let ask the other highway
+	if hw != hc.router.GetID() { // Peer not connected, let ask the other highway
 		logger.Debugf("Chosen peer not connected, connect to hw %s", hw.String())
-		return hc.routeManager.GetHighwayServiceClient(hw)
+		return hc.router.GetHighwayServiceClient(hw)
 	}
 
 	// Connected peer, get connection
@@ -355,9 +354,9 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 // choosePeerIDWithBlock returns peerID of a node that holds some blocks
 // and its corresponding highway's peerID
 func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
-	// logger := Logger(ctx)
+	logger := Logger(ctx)
 
-	peersHasBlk, err := hc.chainData.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
+	peersHasBlk, err := hc.peerStore.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
 	logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
 	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
@@ -369,7 +368,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
-	groups := groupPeersByDistance(peersHasBlk, blk, hc.routeManager.ID, connectedPeers)
+	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers)
 	logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
@@ -489,26 +488,26 @@ type Client struct {
 
 	m             *Manager
 	reporter      *Reporter
-	routeManager  *route.Manager
+	router        Router
 	cc            *ClientConnector
-	chainData     *chaindata.ChainData
+	peerStore     PeerStore
 	supportShards []byte // to know if we should query node or other highways
 }
 
 func NewClient(
 	m *Manager,
 	reporter *Reporter,
-	rman *route.Manager,
+	router Router,
 	pr *p2pgrpc.GRPCProtocol,
-	incChainData *chaindata.ChainData,
+	peerStore PeerStore,
 	supportShards []byte,
 ) *Client {
 	hc := &Client{
 		m:               m,
 		reporter:        reporter,
-		routeManager:    rman,
+		router:          router,
 		cc:              NewClientConnector(pr),
-		chainData:       incChainData,
+		peerStore:       peerStore,
 		supportShards:   supportShards,
 		DisconnectedIDs: make(chan peer.ID, 1000),
 	}
@@ -526,7 +525,7 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	if !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
-		conn, err := cc.pr.Dial(
+		conn, err := cc.dialer.Dial(
 			ctx,
 			peerID,
 			grpc.WithInsecure(),
@@ -562,16 +561,30 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 }
 
 type ClientConnector struct {
-	pr    *p2pgrpc.GRPCProtocol
-	conns struct {
+	dialer Dialer
+	conns  struct {
 		connMap map[peer.ID]*grpc.ClientConn
 		sync.RWMutex
 	}
 }
 
-func NewClientConnector(pr *p2pgrpc.GRPCProtocol) *ClientConnector {
-	connector := &ClientConnector{pr: pr}
+func NewClientConnector(dialer Dialer) *ClientConnector {
+	connector := &ClientConnector{dialer: dialer}
 	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
 	connector.conns.RWMutex = sync.RWMutex{}
 	return connector
+}
+
+type PeerStore interface {
+	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
+}
+
+type Dialer interface {
+	Dial(ctx context.Context, peerID peer.ID, dialOpts ...grpc.DialOption) (*grpc.ClientConn, error)
+}
+
+type Router interface {
+	GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error)
+	GetHighwayServiceClient(pid peer.ID) (proto.HighwayServiceClient, peer.ID, error)
+	GetID() peer.ID
 }
