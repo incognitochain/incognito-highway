@@ -18,12 +18,12 @@ import (
 func (hc *Client) GetBlockByHeight(
 	ctx context.Context,
 	req requestByHeight,
+	heights []uint64,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
 
-	to, heights := capBlocksPerRequest(req.specific, req.fromHeight, req.toHeight, req.heights)
-	serviceClient, pid, err := hc.getClientWithBlock(ctx, int(req.fromShard), to)
-	logger.Debugf("Requesting block by height: shard %v -> %v, height %v -> %v, heights = %v", req.fromShard, req.toShard, req.fromHeight, to, heights)
+	serviceClient, pid, err := hc.getClientWithBlock(ctx, int(req.fromShard), heights[len(heights)-1])
+	logger.Debugf("Requesting block by height: shard %v -> %v, heights = %v", req.fromShard, req.toShard, heights[:5])
 
 	// Monitor, defer here to make sure even failed requests are logged
 	defer func() {
@@ -31,11 +31,11 @@ func (hc *Client) GetBlockByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No serviceClient with block, shardID = %v, height %v -> %v, specificHeights = %v, err = %+v", req.fromShard, req.fromHeight, to, heights, err)
+		logger.Debugf("No serviceClient with block, shardID = %v, heights = %v, err = %+v", req.fromShard, heights[:5], err)
 		return nil, err
 	}
 
-	data, err := getBlockByHeight(serviceClient, req)
+	data, err := getBlockByHeight(serviceClient, req, heights)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (hc *Client) GetBlockByHeight(
 	return data, nil
 }
 
-func getBlockByHeight(serviceClient proto.HighwayServiceClient, req requestByHeight) ([][]byte, error) {
+func getBlockByHeight(serviceClient proto.HighwayServiceClient, req requestByHeight, heights []uint64) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 
@@ -53,15 +53,15 @@ func getBlockByHeight(serviceClient proto.HighwayServiceClient, req requestByHei
 	beacon := byte(req.fromShard) == common.BEACONID || byte(req.toShard) == common.BEACONID
 	if !crossShard {
 		if !beacon {
-			data, err = getBlockShardByHeight(ctx, serviceClient, req)
+			data, err = getBlockShardByHeight(ctx, serviceClient, req, heights)
 		} else {
-			data, err = getBlockBeaconByHeight(ctx, serviceClient, req)
+			data, err = getBlockBeaconByHeight(ctx, serviceClient, req, heights)
 		}
 	} else {
 		if !beacon {
-			data, err = getBlockCrossShardByHeight(ctx, serviceClient, req)
+			data, err = getBlockCrossShardByHeight(ctx, serviceClient, req, heights)
 		} else {
-			data, err = getBlockShardToBeaconByHeight(ctx, serviceClient, req)
+			data, err = getBlockShardToBeaconByHeight(ctx, serviceClient, req, heights)
 		}
 	}
 
@@ -71,17 +71,20 @@ func getBlockByHeight(serviceClient proto.HighwayServiceClient, req requestByHei
 	return data, nil
 }
 
-func getBlockShardByHeight(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHeight) ([][]byte, error) {
+func getBlockShardByHeight(
+	ctx context.Context,
+	serviceClient proto.HighwayServiceClient,
+	req requestByHeight,
+	heights []uint64,
+) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardByHeight(
 		ctx,
 		&proto.GetBlockShardByHeightRequest{
-			Shard:      req.fromShard,
-			Specific:   req.specific,
-			FromHeight: req.fromHeight,
-			ToHeight:   req.toHeight,
-			Heights:    req.heights,
-			FromPool:   false,
-			CallDepth:  req.callDepth + 1,
+			Shard:     req.fromShard,
+			Specific:  true,
+			Heights:   heights,
+			FromPool:  false,
+			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -91,16 +94,19 @@ func getBlockShardByHeight(ctx context.Context, serviceClient proto.HighwayServi
 	return reply.Data, nil
 }
 
-func getBlockBeaconByHeight(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHeight) ([][]byte, error) {
+func getBlockBeaconByHeight(
+	ctx context.Context,
+	serviceClient proto.HighwayServiceClient,
+	req requestByHeight,
+	heights []uint64,
+) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockBeaconByHeight(
 		ctx,
 		&proto.GetBlockBeaconByHeightRequest{
-			Specific:   req.specific,
-			FromHeight: req.fromHeight,
-			ToHeight:   req.toHeight,
-			Heights:    req.heights,
-			FromPool:   false,
-			CallDepth:  req.callDepth + 1,
+			Specific:  true,
+			Heights:   heights,
+			FromPool:  false,
+			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -110,18 +116,20 @@ func getBlockBeaconByHeight(ctx context.Context, serviceClient proto.HighwayServ
 	return reply.Data, nil
 }
 
-func getBlockCrossShardByHeight(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHeight) ([][]byte, error) {
+func getBlockCrossShardByHeight(
+	ctx context.Context,
+	serviceClient proto.HighwayServiceClient,
+	req requestByHeight,
+	heights []uint64,
+) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockCrossShardByHeight(
 		ctx,
 		&proto.GetBlockCrossShardByHeightRequest{
-			FromShard:  req.fromShard,
-			ToShard:    req.toShard,
-			Specific:   req.specific,
-			FromHeight: req.fromHeight,
-			ToHeight:   req.toHeight,
-			Heights:    req.heights,
-			FromPool:   req.fromPool,
-			CallDepth:  req.callDepth + 1,
+			FromShard: req.fromShard,
+			ToShard:   req.toShard,
+			Heights:   heights,
+			FromPool:  req.fromPool,
+			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -131,17 +139,19 @@ func getBlockCrossShardByHeight(ctx context.Context, serviceClient proto.Highway
 	return reply.Data, nil
 }
 
-func getBlockShardToBeaconByHeight(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHeight) ([][]byte, error) {
+func getBlockShardToBeaconByHeight(
+	ctx context.Context,
+	serviceClient proto.HighwayServiceClient,
+	req requestByHeight,
+	heights []uint64,
+) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardToBeaconByHeight(
 		ctx,
 		&proto.GetBlockShardToBeaconByHeightRequest{
-			FromShard:  req.fromShard,
-			Specific:   req.specific,
-			FromHeight: req.fromHeight,
-			ToHeight:   req.toHeight,
-			Heights:    req.heights,
-			FromPool:   false,
-			CallDepth:  req.callDepth + 1,
+			FromShard: req.fromShard,
+			Heights:   heights,
+			FromPool:  false,
+			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -154,11 +164,12 @@ func getBlockShardToBeaconByHeight(ctx context.Context, serviceClient proto.High
 func (hc *Client) GetBlockByHash(
 	ctx context.Context,
 	req requestByHash,
+	hashes [][]byte,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
 
-	serviceClient, pid, err := hc.getClientWithHashes(int(req.shard), req.hashes)
-	logger.Debugf("Requesting block by hash: shard = %v, hashes %v ", req.shard, req.hashes)
+	serviceClient, pid, err := hc.getClientWithHashes(int(req.shard), hashes)
+	logger.Debugf("Requesting block by hash: shard = %v, hashes %v ", req.shard, hashes)
 
 	// Monitor, defer here to make sure even failed requests are logged
 	defer func() {
@@ -166,11 +177,11 @@ func (hc *Client) GetBlockByHash(
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with block hashes, shardID = %v, hashes %v, err = %+v", req.shard, req.hashes, err)
+		logger.Debugf("No client with block hashes, shardID = %v, hashes %v, err = %+v", req.shard, hashes, err)
 		return nil, err
 	}
 
-	data, err := getBlockByHash(serviceClient, req)
+	data, err := getBlockByHash(serviceClient, req, hashes)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +189,7 @@ func (hc *Client) GetBlockByHash(
 	return data, nil
 }
 
-func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash) ([][]byte, error) {
+func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash, hashes [][]byte) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 
@@ -186,9 +197,9 @@ func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash)
 	var err error
 	beacon := byte(req.shard) == common.BEACONID
 	if !beacon {
-		data, err = getBlockShardByHash(ctx, serviceClient, req)
+		data, err = getBlockShardByHash(ctx, serviceClient, req, hashes)
 	} else {
-		data, err = getBlockBeaconByHash(ctx, serviceClient, req)
+		data, err = getBlockBeaconByHash(ctx, serviceClient, req, hashes)
 	}
 
 	if err != nil {
@@ -197,12 +208,17 @@ func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash)
 	return data, nil
 }
 
-func getBlockShardByHash(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHash) ([][]byte, error) {
+func getBlockShardByHash(
+	ctx context.Context,
+	serviceClient proto.HighwayServiceClient,
+	req requestByHash,
+	hashes [][]byte,
+) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardByHash(
 		ctx,
 		&proto.GetBlockShardByHashRequest{
 			Shard:     req.shard,
-			Hashes:    req.hashes,
+			Hashes:    hashes,
 			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
@@ -213,11 +229,16 @@ func getBlockShardByHash(ctx context.Context, serviceClient proto.HighwayService
 	return reply.Data, nil
 }
 
-func getBlockBeaconByHash(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHash) ([][]byte, error) {
+func getBlockBeaconByHash(
+	ctx context.Context,
+	serviceClient proto.HighwayServiceClient,
+	req requestByHash,
+	hashes [][]byte,
+) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockBeaconByHash(
 		ctx,
 		&proto.GetBlockBeaconByHashRequest{
-			Hashes:    req.hashes,
+			Hashes:    hashes,
 			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
@@ -392,24 +413,6 @@ func (hc *Client) Start() {
 	}
 }
 
-// capBlocksPerRequest returns the maximum height allowed for a single request
-// If the request is for a range, this function returns the maximum block height allowed
-// If the request is for some blocks, this caps the number blocks requested
-func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
-	if specific {
-		if len(heights) > common.MaxBlocksPerRequest {
-			heights = heights[:common.MaxBlocksPerRequest]
-		}
-		return heights[len(heights)-1], heights
-	}
-
-	maxHeight := from + common.MaxBlocksPerRequest
-	if to > maxHeight {
-		return maxHeight, heights
-	}
-	return to, heights
-}
-
 type Client struct {
 	DisconnectedIDs chan peer.ID
 
@@ -517,31 +520,19 @@ type Router interface {
 }
 
 type requestByHeight struct {
-	fromShard  int32
-	toShard    int32
-	specific   bool
-	fromHeight uint64
-	toHeight   uint64
-	heights    []uint64
-	callDepth  int32
-	fromPool   bool
+	fromShard int32
+	toShard   int32
+	callDepth int32
+	fromPool  bool
 }
 
 type getBlockByHeightRequest interface {
-	GetSpecific() bool
-	GetFromHeight() uint64
-	GetToHeight() uint64
-	GetHeights() []uint64
 	GetCallDepth() int32
 	GetFromPool() bool
 }
 
 func ParseGetBlockByHeight(inp getBlockByHeightRequest) requestByHeight {
 	req := requestByHeight{}
-	req.specific = inp.GetSpecific()
-	req.fromHeight = inp.GetFromHeight()
-	req.toHeight = inp.GetToHeight()
-	req.heights = inp.GetHeights()
 	req.callDepth = inp.GetCallDepth()
 	req.fromPool = inp.GetFromPool()
 	return req
@@ -579,14 +570,12 @@ func ParseGetBlockShardToBeaconByHeight(inp *proto.GetBlockShardToBeaconByHeight
 
 type requestByHash struct {
 	shard     int32
-	hashes    [][]byte
 	callDepth int32
 }
 
 func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) requestByHash {
 	req := requestByHash{}
 	req.shard = inp.Shard
-	req.hashes = inp.Hashes
 	req.callDepth = inp.CallDepth
 	return req
 }
@@ -594,7 +583,6 @@ func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) requestByHa
 func ParseGetBlockBeaconByHash(inp *proto.GetBlockBeaconByHashRequest) requestByHash {
 	req := requestByHash{}
 	req.shard = int32(common.BEACONID)
-	req.hashes = inp.Hashes
 	req.callDepth = inp.CallDepth
 	return req
 }
