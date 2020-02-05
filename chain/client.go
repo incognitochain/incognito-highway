@@ -24,13 +24,13 @@ func (hc *Client) GetBlockByHeight(
 	logger := Logger(ctx)
 
 	to, heights := capBlocksPerRequest(req.specific, req.fromHeight, req.toHeight, req.heights)
-	serviceClient, _, err := hc.getClientWithBlock(ctx, int(req.fromShard), to)
-	// logger.Debugf("Requesting Shard block: shard = %v, height %v -> %v, heights = %v", shardID, from, to, heights)
+	serviceClient, pid, err := hc.getClientWithBlock(ctx, int(req.fromShard), to)
+	logger.Debugf("Requesting block by height: shard %v -> %v, height %v -> %v, heights = %v", req.fromShard, req.toShard, req.fromHeight, to, heights)
 
 	// Monitor, defer here to make sure even failed requests are logged
-	// defer func() {
-	// 	hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
-	// }()
+	defer func() {
+		hc.reporter.watchRequestsPerPeer("get_by_height", pid, errOut)
+	}()
 
 	if err != nil {
 		logger.Debugf("No serviceClient with block, shardID = %v, height %v -> %v, specificHeights = %v, err = %+v", req.fromShard, req.fromHeight, to, heights, err)
