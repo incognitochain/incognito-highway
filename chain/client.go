@@ -151,85 +151,80 @@ func getBlockShardToBeaconByHeight(ctx context.Context, serviceClient proto.High
 	return reply.Data, nil
 }
 
-func (hc *Client) GetBlockShardByHash(
+func (hc *Client) GetBlockByHash(
 	ctx context.Context,
-	shardID int32,
-	hashes [][]byte,
-	callDepth int32,
+	req requestByHash,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
 
-	client, pid, err := hc.getClientWithHashes(int(shardID), hashes)
-	logger.Debugf("Requesting Shard block: shard = %v, hashes %v ", shardID, hashes)
+	serviceClient, pid, err := hc.getClientWithHashes(int(req.shard), req.hashes)
+	logger.Debugf("Requesting block by hash: shard = %v, hashes %v ", req.shard, req.hashes)
 
 	// Monitor, defer here to make sure even failed requests are logged
 	defer func() {
-		hc.reporter.watchRequestsPerPeer("get_block_shard", pid, errOut)
+		hc.reporter.watchRequestsPerPeer("get_by_hash", pid, errOut)
 	}()
 
 	if err != nil {
-		logger.Debugf("No client with Shard block hashes, shardID = %v, hashes %v, err = %+v", shardID, hashes, err)
+		logger.Debugf("No client with block hashes, shardID = %v, hashes %v, err = %+v", req.shard, req.hashes, err)
 		return nil, err
 	}
 
+	data, err := getBlockByHash(serviceClient, req)
+	if err != nil {
+		return nil, err
+	}
+	logger.Debugf("Data len: %v", len(data))
+	return data, nil
+}
+
+func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
-	reply, err := client.GetBlockShardByHash(
+
+	var data [][]byte
+	var err error
+	beacon := byte(req.shard) == common.BEACONID
+	if !beacon {
+		data, err = getBlockShardByHash(ctx, serviceClient, req)
+	} else {
+		data, err = getBlockBeaconByHash(ctx, serviceClient, req)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func getBlockShardByHash(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHash) ([][]byte, error) {
+	reply, err := serviceClient.GetBlockShardByHash(
 		ctx,
 		&proto.GetBlockShardByHashRequest{
-			Shard:     shardID,
-			Hashes:    hashes,
-			CallDepth: callDepth + 1,
+			Shard:     req.shard,
+			Hashes:    req.hashes,
+			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if reply == nil {
-		return nil, errors.New("empty reply")
-	}
-	logger.Debugf("Reply len: %v", len(reply.Data))
 	return reply.Data, nil
 }
 
-func (hc *Client) GetBlockBeaconByHash(
-	ctx context.Context,
-	hashes [][]byte,
-	callDepth int32,
-) (resp [][]byte, errOut error) {
-	logger := Logger(ctx)
-
-	client, pid, err := hc.getClientWithHashes(int(common.BEACONID), hashes)
-	logger.Debugf("Requesting Beacon block: shard = %v, hashes %v ", int(common.BEACONID), hashes)
-
-	// Monitor, defer here to make sure even failed requests are logged
-	defer func() {
-		hc.reporter.watchRequestsPerPeer("get_block_beacon", pid, errOut)
-	}()
-
-	if err != nil {
-		logger.Debugf("No client with Beacon block hashes, shardID = %v, hashes %v, err = %+v", int(common.BEACONID), hashes, err)
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
-	defer cancel()
-	reply, err := client.GetBlockBeaconByHash(
+func getBlockBeaconByHash(ctx context.Context, serviceClient proto.HighwayServiceClient, req requestByHash) ([][]byte, error) {
+	reply, err := serviceClient.GetBlockBeaconByHash(
 		ctx,
 		&proto.GetBlockBeaconByHashRequest{
-			Hashes:    hashes,
-			CallDepth: callDepth + 1,
+			Hashes:    req.hashes,
+			CallDepth: req.callDepth + 1,
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if reply == nil {
-		return nil, errors.New("empty reply")
-	}
-	logger.Debugf("Reply len: %v", len(reply.Data))
 	return reply.Data, nil
 }
 
@@ -552,21 +547,21 @@ func ParseGetBlockByHeight(inp getBlockByHeightRequest) requestByHeight {
 	return req
 }
 
-func ParseGetBlockShard(inp *proto.GetBlockShardByHeightRequest) requestByHeight {
+func ParseGetBlockShardByHeight(inp *proto.GetBlockShardByHeightRequest) requestByHeight {
 	req := ParseGetBlockByHeight(inp)
 	req.fromShard = inp.Shard
 	req.toShard = inp.Shard
 	return req
 }
 
-func ParseGetBlockBeacon(inp *proto.GetBlockBeaconByHeightRequest) requestByHeight {
+func ParseGetBlockBeaconByHeight(inp *proto.GetBlockBeaconByHeightRequest) requestByHeight {
 	req := ParseGetBlockByHeight(inp)
 	req.fromShard = int32(common.BEACONID)
 	req.toShard = int32(common.BEACONID)
 	return req
 }
 
-func ParseGetBlockCrossShard(inp *proto.GetBlockCrossShardByHeightRequest) requestByHeight {
+func ParseGetBlockCrossShardByHeight(inp *proto.GetBlockCrossShardByHeightRequest) requestByHeight {
 	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
 	// => request from peer of shard `fromShard`
 	req := ParseGetBlockByHeight(inp)
@@ -575,9 +570,31 @@ func ParseGetBlockCrossShard(inp *proto.GetBlockCrossShardByHeightRequest) reque
 	return req
 }
 
-func ParseGetBlockShardToBeacon(inp *proto.GetBlockShardToBeaconByHeightRequest) requestByHeight {
+func ParseGetBlockShardToBeaconByHeight(inp *proto.GetBlockShardToBeaconByHeightRequest) requestByHeight {
 	req := ParseGetBlockByHeight(inp)
 	req.fromShard = inp.FromShard
 	req.toShard = int32(common.BEACONID)
+	return req
+}
+
+type requestByHash struct {
+	shard     int32
+	hashes    [][]byte
+	callDepth int32
+}
+
+func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) requestByHash {
+	req := requestByHash{}
+	req.shard = inp.Shard
+	req.hashes = inp.Hashes
+	req.callDepth = inp.CallDepth
+	return req
+}
+
+func ParseGetBlockBeaconByHash(inp *proto.GetBlockBeaconByHashRequest) requestByHash {
+	req := requestByHash{}
+	req.shard = int32(common.BEACONID)
+	req.hashes = inp.Hashes
+	req.callDepth = inp.CallDepth
 	return req
 }

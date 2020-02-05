@@ -98,7 +98,7 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 	}
 
 	// Call node to get blocks
-	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockShard(req))
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockShardByHeight(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockShardByHeight: %+v", err)
 		return nil, err
@@ -123,13 +123,7 @@ func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockSha
 	}
 
 	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockShardByHash(
-		ctx,
-		req.Shard,
-		req.Hashes,
-		req.CallDepth,
-	)
+	data, err := s.hc.GetBlockByHash(ctx, ParseGetBlockShardByHash(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockShardByHeight: %+v", err)
 		return nil, err
@@ -155,7 +149,7 @@ func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlock
 	}
 
 	// Call node to get blocks
-	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockBeacon(req))
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockBeaconByHeight(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockBeaconByHeight: %+v", err)
 		return nil, err
@@ -184,7 +178,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 		return nil, err
 	}
 
-	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockShardToBeacon(req))
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockShardToBeaconByHeight(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockShardToBeaconByHeight: %+v", err)
 		return nil, err
@@ -209,12 +203,7 @@ func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBe
 	}
 
 	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockBeaconByHash(
-		ctx,
-		req.Hashes,
-		req.CallDepth,
-	)
+	data, err := s.hc.GetBlockByHash(ctx, ParseGetBlockBeaconByHash(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockBeaconByHash: %+v", err)
 		return nil, err
@@ -236,7 +225,7 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 		return nil, err
 	}
 
-	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockCrossShard(req))
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockCrossShardByHeight(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockCrossShardByHeight: %+v", err)
 		return nil, err
