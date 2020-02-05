@@ -23,7 +23,7 @@ func (hc *Client) GetBlockByHeight(
 	logger := Logger(ctx)
 
 	serviceClient, pid, err := hc.getClientWithBlock(ctx, int(req.fromShard), heights[len(heights)-1])
-	logger.Debugf("Requesting block by height: shard %v -> %v, heights = %v", req.fromShard, req.toShard, heights[:5])
+	logger.Debugf("Requesting block by height: shard %v -> %v, heights = %v", req.fromShard, req.toShard, heights)
 
 	// Monitor, defer here to make sure even failed requests are logged
 	defer func() {
@@ -31,7 +31,7 @@ func (hc *Client) GetBlockByHeight(
 	}()
 
 	if err != nil {
-		logger.Debugf("No serviceClient with block, shardID = %v, heights = %v, err = %+v", req.fromShard, heights[:5], err)
+		logger.Debugf("No serviceClient with block, shardID = %v, heights = %v, err = %+v", req.fromShard, heights, err)
 		return nil, err
 	}
 

@@ -217,7 +217,7 @@ func convertToSpecificHeights(
 ) []uint64 {
 	to, heights = capBlocksPerRequest(specific, from, to, heights)
 	if !specific {
-		heights = make([]uint64, from-to+1)
+		heights = make([]uint64, to-from+1)
 		for i := from; i <= to; i++ {
 			heights[i-from] = i
 		}
