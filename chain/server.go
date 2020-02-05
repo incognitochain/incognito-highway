@@ -98,16 +98,7 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 	}
 
 	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockShardByHeight(
-		ctx,
-		req.Shard,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.CallDepth,
-	)
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockShard(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockShardByHeight: %+v", err)
 		return nil, err
@@ -164,15 +155,7 @@ func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlock
 	}
 
 	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockBeaconByHeight(
-		ctx,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.CallDepth,
-	)
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockBeacon(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockBeaconByHeight: %+v", err)
 		return nil, err
@@ -201,15 +184,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 		return nil, err
 	}
 
-	data, err := s.hc.GetBlockShardToBeaconByHeight(
-		ctx,
-		req.GetFromShard(),
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.CallDepth,
-	)
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockShardToBeacon(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockShardToBeaconByHeight: %+v", err)
 		return nil, err
@@ -261,17 +236,7 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 		return nil, err
 	}
 
-	data, err := s.hc.GetBlockCrossShardByHeight(
-		ctx,
-		req.FromShard,
-		req.ToShard,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.FromPool,
-		req.CallDepth,
-	)
+	data, err := s.hc.GetBlockByHeight(ctx, ParseGetBlockCrossShard(req))
 	if err != nil {
 		logger.Warnf("Failed GetBlockCrossShardByHeight: %+v", err)
 		return nil, err
