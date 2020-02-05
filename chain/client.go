@@ -15,8 +15,6 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-const MaxCallRecvMsgSize = 50 << 20 // 50 MBs per gRPC response
-
 func (hc *Client) GetBlockByHeight(
 	ctx context.Context,
 	req requestByHeight,
@@ -85,7 +83,7 @@ func getBlockShardByHeight(ctx context.Context, serviceClient proto.HighwayServi
 			FromPool:   false,
 			CallDepth:  req.callDepth + 1,
 		},
-		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
+		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -104,7 +102,7 @@ func getBlockBeaconByHeight(ctx context.Context, serviceClient proto.HighwayServ
 			FromPool:   false,
 			CallDepth:  req.callDepth + 1,
 		},
-		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
+		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -125,7 +123,7 @@ func getBlockCrossShardByHeight(ctx context.Context, serviceClient proto.Highway
 			FromPool:   req.fromPool,
 			CallDepth:  req.callDepth + 1,
 		},
-		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
+		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -145,7 +143,7 @@ func getBlockShardToBeaconByHeight(ctx context.Context, serviceClient proto.High
 			FromPool:   false,
 			CallDepth:  req.callDepth + 1,
 		},
-		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
+		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -183,7 +181,7 @@ func (hc *Client) GetBlockShardByHash(
 			Hashes:    hashes,
 			CallDepth: callDepth + 1,
 		},
-		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
+		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -223,7 +221,7 @@ func (hc *Client) GetBlockBeaconByHash(
 			Hashes:    hashes,
 			CallDepth: callDepth + 1,
 		},
-		grpc.MaxCallRecvMsgSize(MaxCallRecvMsgSize),
+		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)

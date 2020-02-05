@@ -13,6 +13,7 @@ const (
 	WaitingRole   = "waiting"
 	NormalNode    = ""
 
+	ChainMaxCallRecvMsgSize     = 50 << 20 // 50 MBs per gRPC response
 	ChainClientKeepaliveTime    = 10 * time.Minute
 	ChainClientKeepaliveTimeout = 20 * time.Second
 	ChainClientDialTimeout      = 5 * time.Second
