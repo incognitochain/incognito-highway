@@ -69,7 +69,7 @@ func (gl *GrafanaLog) Start() {
 			runtime.ReadMemStats(&m)
 			//disk usage
 			fs := syscall.Statfs_t{}
-			err := syscall.Statfs("/.", &fs)
+			err := syscall.Statfs("./", &fs)
 			if err == nil {
 				All := fs.Blocks * uint64(fs.Bsize)
 				Free := fs.Bfree * uint64(fs.Bsize)
