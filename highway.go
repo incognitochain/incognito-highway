@@ -7,6 +7,7 @@ import (
 	"highway/chaindata"
 	"highway/common"
 	"highway/config"
+	"highway/grafana"
 	"highway/health"
 	"highway/monitor"
 	"highway/p2p"
@@ -36,6 +37,14 @@ func main() {
 	initLogger(conf.Loglevel)
 
 	conf.PrintConfig()
+
+	//Init grafana log
+	gl := grafana.NewLog(
+		fmt.Sprintf("%v:%v", conf.PublicIP, conf.ProxyPort),
+		conf.Version,
+		conf.GrafanaDBURL,
+	)
+	gl.Start()
 
 	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {

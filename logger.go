@@ -3,6 +3,7 @@ package main
 import (
 	"highway/chain"
 	"highway/chaindata"
+	"highway/grafana"
 	"highway/health"
 	"highway/process"
 	"highway/process/datahandler"
@@ -43,4 +44,5 @@ func initLogger(level string) {
 	rpcserver.InitLogger(logger)
 	hmap.InitLogger(logger)
 	datahandler.InitLogger(logger)
+	grafana.InitLogger(logger)
 }
