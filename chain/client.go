@@ -127,6 +127,7 @@ func getBlockCrossShardByHeight(
 		&proto.GetBlockCrossShardByHeightRequest{
 			FromShard: req.fromShard,
 			ToShard:   req.toShard,
+			Specific:  true,
 			Heights:   heights,
 			FromPool:  req.fromPool,
 			CallDepth: req.callDepth + 1,
@@ -149,6 +150,7 @@ func getBlockShardToBeaconByHeight(
 		ctx,
 		&proto.GetBlockShardToBeaconByHeightRequest{
 			FromShard: req.fromShard,
+			Specific:  true,
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.callDepth + 1,
@@ -247,6 +249,11 @@ func getBlockBeaconByHash(
 		return nil, errors.WithStack(err)
 	}
 	return reply.Data, nil
+}
+
+func (hc *Client) SetBlockByHeight(_ context.Context, _ requestByHeight, _ []uint64, _ [][]byte) error {
+	// Client no needs to cache block
+	return nil
 }
 
 func (hc *Client) getClientWithBlock(

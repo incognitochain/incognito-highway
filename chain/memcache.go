@@ -65,11 +65,7 @@ func (cache *MemCache) SetBlockByHeight(_ context.Context, req requestByHeight, 
 	return nil
 }
 
-func (cache *MemCache) SetBlockByHash(_ context.Context, req requestByHeight, hashes [][]byte, blocks [][]byte) error {
-	return nil // No need to cache block by hash
-}
-
-func (cache *MemCache) GetBlockByHash(_ context.Context, req requestByHeight, hashes [][]byte) ([][]byte, error) {
+func (cache *MemCache) GetBlockByHash(_ context.Context, req requestByHash, hashes [][]byte) ([][]byte, error) {
 	blocks := make([][]byte, len(hashes)) // Not supported
 	return blocks, nil
 }

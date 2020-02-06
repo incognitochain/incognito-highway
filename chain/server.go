@@ -83,13 +83,14 @@ func (s *Server) Register(
 }
 
 func (s *Server) GetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64) [][]byte {
+	logger := Logger(ctx)
 	idxs := make([]int, len(heights))
 	for i := 0; i < len(idxs); i++ {
 		idxs[i] = i
 	}
 
 	blocks := make([][]byte, len(heights))
-	for _, p := range s.providers {
+	for k, p := range s.providers {
 		if len(heights) == 0 {
 			break
 		}
@@ -98,6 +99,14 @@ func (s *Server) GetBlockByHeight(ctx context.Context, req requestByHeight, heig
 		if err != nil {
 			logger.Warnf("Failed GetBlockByHeight: %+v", err)
 			continue
+		}
+
+		// Cache blocks for all previous providers
+		for _, q := range s.providers[:k] {
+			err := q.SetBlockByHeight(ctx, req, heights, data)
+			if err != nil {
+				logger.Warnf("Fail caching block for provider: %+v", err)
+			}
 		}
 
 		newHeights := []uint64{}
@@ -318,7 +327,8 @@ type Server struct {
 
 type Provider interface {
 	GetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64) ([][]byte, error)
-	GetBlockByHash(ctx context.Context, req requestByHash, hashes [][]byte) ([][]byte, error)
+	SetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64, blocks [][]byte) error
+	GetBlockByHash(ctx context.Context, req requestByHash, hashes [][]byte) ([][]byte, error) // NOTE: no need to cache block by hash
 }
 
 func RegisterServer(
@@ -328,8 +338,9 @@ func RegisterServer(
 	chainData *chaindata.ChainData,
 	reporter *Reporter,
 ) {
+	memcache, _ := NewMemCache()
 	s := &Server{
-		providers: []Provider{hc},
+		providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
 		m:         m,
 		reporter:  reporter,
 		chainData: chainData,
