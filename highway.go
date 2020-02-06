@@ -99,7 +99,11 @@ func main() {
 	go rpcServer.Start()
 
 	// Chain-facing connections
-	chainReporter := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+	chainReporter, err := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
 
 	// // Subscribe to receive new committee
 	// process.GlobalPubsub.SubHandlers <- process.SubHandler{

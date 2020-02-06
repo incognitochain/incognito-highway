@@ -52,11 +52,23 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	}
 	r.requestsPerPeer.RUnlock()
 
+	// Get memcache info
+	cacheInfo := map[string]interface{}{}
+	if cache, ok := r.manager.server.providers[0].(*MemCache); ok {
+		cacheInfo["ratio"] = cache.cacher.Metrics.Ratio()
+		cacheInfo["cost_added"] = cache.cacher.Metrics.CostAdded()
+		cacheInfo["cost_evicted"] = cache.cacher.Metrics.CostEvicted()
+		cacheInfo["gets_kept"] = cache.cacher.Metrics.GetsKept()
+		cacheInfo["keys_added"] = cache.cacher.Metrics.KeysAdded()
+		cacheInfo["keys_evicted"] = cache.cacher.Metrics.KeysEvicted()
+	}
+
 	data := map[string]interface{}{
 		"peers":               validators,
 		"inbound_connections": totalConns,
 		"requests":            requests,
 		"request_per_peer":    requestsPerPeer,
+		"cache":               cacheInfo,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil

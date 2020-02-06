@@ -337,8 +337,12 @@ func RegisterServer(
 	hc *Client,
 	chainData *chaindata.ChainData,
 	reporter *Reporter,
-) {
-	memcache, _ := NewMemCache()
+) (*Server, error) {
+	memcache, err := NewMemCache()
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
 		providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
 		m:         m,
@@ -346,6 +350,7 @@ func RegisterServer(
 		chainData: chainData,
 	}
 	proto.RegisterHighwayServiceServer(gs, s)
+	return s, nil
 }
 
 func (s *Server) processListWantedMessageOfPeer(
