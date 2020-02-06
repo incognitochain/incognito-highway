@@ -3,6 +3,7 @@ module highway
 go 1.12
 
 require (
+	github.com/dgraph-io/ristretto v0.0.1
 	github.com/ethereum/go-ethereum v1.9.5 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
