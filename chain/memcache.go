@@ -9,10 +9,19 @@ import (
 )
 
 type MemCache struct {
-	cacher *ristretto.Cache
+	cacher Cacher
 }
 
-func NewMemCache() (*MemCache, error) {
+type Cacher interface {
+	Get(key interface{}) (interface{}, bool)
+	Set(key, value interface{}, cost int64) bool
+}
+
+func NewMemCache(cacher Cacher) *MemCache {
+	return &MemCache{cacher: cacher}
+}
+
+func NewRistrettoMemCache() (*MemCache, error) {
 	// TODO(@0xbunyip): move constants
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000000,
@@ -23,10 +32,7 @@ func NewMemCache() (*MemCache, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return &MemCache{
-		cacher: cache,
-	}, nil
+	return NewMemCache(cache), nil
 }
 
 func getKeyByHeight(req RequestByHeight, h uint64) string {
@@ -47,7 +53,12 @@ func (cache *MemCache) GetBlockByHeight(_ context.Context, req RequestByHeight, 
 	return blocks, nil
 }
 
-func (cache *MemCache) SetBlockByHeight(_ context.Context, req RequestByHeight, heights []uint64, blocks [][]byte) error {
+func (cache *MemCache) SetBlockByHeight(
+	_ context.Context,
+	req RequestByHeight,
+	heights []uint64,
+	blocks [][]byte,
+) error {
 	if len(heights) != len(blocks) {
 		return errors.Errorf("invalid blocks to cache: len(heights) = %d, len(blocks) = %d", len(heights), len(blocks))
 	}
@@ -68,4 +79,19 @@ func (cache *MemCache) SetBlockByHeight(_ context.Context, req RequestByHeight, 
 func (cache *MemCache) GetBlockByHash(_ context.Context, req RequestByHash, hashes [][]byte) ([][]byte, error) {
 	blocks := make([][]byte, len(hashes)) // Not supported
 	return blocks, nil
+}
+
+func (cache *MemCache) Metrics() map[string]interface{} {
+	metric := map[string]interface{}{}
+	if rcache, ok := cache.cacher.(*ristretto.Cache); ok {
+		metric = map[string]interface{}{
+			"ratio":        rcache.Metrics.Ratio(),
+			"cost_added":   rcache.Metrics.CostAdded(),
+			"cost_evicted": rcache.Metrics.CostEvicted(),
+			"gets_kept":    rcache.Metrics.GetsKept(),
+			"keys_added":   rcache.Metrics.KeysAdded(),
+			"keys_evicted": rcache.Metrics.KeysEvicted(),
+		}
+	}
+	return metric
 }

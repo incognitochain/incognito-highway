@@ -338,7 +338,7 @@ func RegisterServer(
 	chainData *chaindata.ChainData,
 	reporter *Reporter,
 ) (*Server, error) {
-	memcache, err := NewMemCache()
+	memcache, err := NewRistrettoMemCache()
 	if err != nil {
 		return nil, err
 	}
