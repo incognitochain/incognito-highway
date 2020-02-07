@@ -549,18 +549,33 @@ func ParseGetBlockByHeight(inp getBlockByHeightRequest) requestByHeight {
 type requestByHash struct {
 	shard     int32
 	callDepth int32
+	hashes    [][]byte
 }
 
-func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) requestByHash {
+type getBlockByHashRequest interface {
+	GetCallDepth() int32
+	GetCID() int32
+	GetHashes() [][]byte
+}
+
+func ParseGetBlockByHash(inp getBlockByHashRequest) requestByHash {
 	req := requestByHash{}
-	req.shard = inp.Shard
-	req.callDepth = inp.CallDepth
+	req.callDepth = inp.GetCallDepth()
+	req.shard = inp.GetCID()
+	req.hashes = inp.GetHashes()
 	return req
 }
 
-func ParseGetBlockBeaconByHash(inp *proto.GetBlockBeaconByHashRequest) requestByHash {
-	req := requestByHash{}
-	req.shard = int32(common.BEACONID)
-	req.callDepth = inp.CallDepth
-	return req
-}
+// func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) requestByHash {
+// 	req := requestByHash{}
+// 	req.shard = inp.Shard
+// 	req.callDepth = inp.CallDepth
+// 	return req
+// }
+
+// func ParseGetBlockBeaconByHash(inp *proto.GetBlockBeaconByHashRequest) requestByHash {
+// 	req := requestByHash{}
+// 	req.shard = int32(common.BEACONID)
+// 	req.callDepth = inp.CallDepth
+// 	return req
+// }

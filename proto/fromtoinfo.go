@@ -33,3 +33,11 @@ func (req *GetBlockShardToBeaconByHeightRequest) GetFrom() int32 {
 func (req *GetBlockShardToBeaconByHeightRequest) GetTo() int32 {
 	return int32(common.BEACONID)
 }
+
+func (req *GetBlockBeaconByHashRequest) GetCID() int32 {
+	return int32(common.BEACONID)
+}
+
+func (req *GetBlockShardByHashRequest) GetCID() int32 {
+	return req.Shard
+}
