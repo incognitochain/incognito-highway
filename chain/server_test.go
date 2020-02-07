@@ -10,6 +10,39 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func TestGetBlockByHeightCached(t *testing.T) {
+	p1 := &Provider{}
+	d1 := [][]byte{nil, []byte{2}, nil, []byte{4}, []byte{5}, nil}
+	p1.On("GetBlockByHeight", mock.Anything, mock.Anything, mock.Anything).Return(d1, nil)
+	p1Set := [][][]byte{}
+	p1.On("SetBlockByHeight", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		p1Set = append(p1Set, args.Get(3).([][]byte))
+	})
+
+	p2 := &Provider{}
+	d2 := [][]byte{[]byte{1}, []byte{3}, nil}
+	p2Set := [][][]byte{}
+	p2.On("GetBlockByHeight", mock.Anything, mock.Anything, mock.Anything).Return(d2, nil)
+	p2.On("SetBlockByHeight", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		p2Set = append(p2Set, args.Get(3).([][]byte))
+	})
+
+	p3 := &Provider{}
+	d3 := [][]byte{nil}
+	p3.On("GetBlockByHeight", mock.Anything, mock.Anything, mock.Anything).Return(d3, nil)
+
+	providers := []chain.Provider{p1, p2, p3}
+	s := chain.Server{Providers: providers}
+	req := chain.RequestByHeight{}
+	heights := []uint64{1, 2, 3, 4, 5, 6}
+	s.GetBlockByHeight(context.Background(), req, heights)
+
+	expectedP1Set := [][][]byte{[][]byte{[]byte{1}, []byte{3}, nil}, [][]byte{nil}}
+	expectedP2Set := [][][]byte{[][]byte{nil}}
+	assert.Equal(t, expectedP1Set, p1Set)
+	assert.Equal(t, expectedP2Set, p2Set)
+}
+
 func TestGetBlockByHeightFiltered(t *testing.T) {
 	p1 := &Provider{}
 	d1 := [][]byte{nil, []byte{2}, nil, []byte{4}, []byte{5}, nil}
@@ -24,6 +57,7 @@ func TestGetBlockByHeightFiltered(t *testing.T) {
 	p3 := &Provider{}
 	d3 := [][]byte{nil}
 	p3.On("GetBlockByHeight", mock.Anything, mock.Anything, mock.Anything).Return(d3, nil)
+
 	providers := []chain.Provider{p1, p2, p3}
 	s := chain.Server{Providers: providers}
 	req := chain.RequestByHeight{}

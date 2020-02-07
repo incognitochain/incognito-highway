@@ -101,7 +101,7 @@ func (s *Server) GetBlockByHeight(ctx context.Context, req RequestByHeight, heig
 			continue
 		}
 
-		// Cache blocks for all previous.Providers
+		// Cache blocks for all previous providers
 		for _, q := range s.Providers[:k] {
 			err := q.SetBlockByHeight(ctx, req, heights, data)
 			if err != nil {
