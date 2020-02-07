@@ -376,7 +376,7 @@ func (s *Server) processListWantedMessageOfPeer(
 // If the request is for some blocks, this caps the number blocks requested
 func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
 	if specific {
-		if len(heights) > common.MaxBlocksPerRequest {
+		if uint64(len(heights)) > common.MaxBlocksPerRequest {
 			heights = heights[:common.MaxBlocksPerRequest]
 		}
 		return heights[len(heights)-1], heights
