@@ -529,42 +529,20 @@ type requestByHeight struct {
 type getBlockByHeightRequest interface {
 	GetCallDepth() int32
 	GetFromPool() bool
+	GetFrom() int32
+	GetTo() int32
+	GetSpecific() bool
+	GetFromHeight() uint64
+	GetToHeight() uint64
+	GetHeights() []uint64
 }
 
 func ParseGetBlockByHeight(inp getBlockByHeightRequest) requestByHeight {
 	req := requestByHeight{}
 	req.callDepth = inp.GetCallDepth()
 	req.fromPool = inp.GetFromPool()
-	return req
-}
-
-func ParseGetBlockShardByHeight(inp *proto.GetBlockShardByHeightRequest) requestByHeight {
-	req := ParseGetBlockByHeight(inp)
-	req.fromShard = inp.Shard
-	req.toShard = inp.Shard
-	return req
-}
-
-func ParseGetBlockBeaconByHeight(inp *proto.GetBlockBeaconByHeightRequest) requestByHeight {
-	req := ParseGetBlockByHeight(inp)
-	req.fromShard = int32(common.BEACONID)
-	req.toShard = int32(common.BEACONID)
-	return req
-}
-
-func ParseGetBlockCrossShardByHeight(inp *proto.GetBlockCrossShardByHeightRequest) requestByHeight {
-	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
-	// => request from peer of shard `fromShard`
-	req := ParseGetBlockByHeight(inp)
-	req.fromShard = inp.FromShard
-	req.toShard = inp.ToShard
-	return req
-}
-
-func ParseGetBlockShardToBeaconByHeight(inp *proto.GetBlockShardToBeaconByHeightRequest) requestByHeight {
-	req := ParseGetBlockByHeight(inp)
-	req.fromShard = inp.FromShard
-	req.toShard = int32(common.BEACONID)
+	req.fromShard = inp.GetFrom()
+	req.toShard = inp.GetTo()
 	return req
 }
 
