@@ -22,6 +22,9 @@ var (
 	ChainClientKeepaliveTime    = 10 * time.Minute
 	ChainClientKeepaliveTimeout = 20 * time.Second
 	ChainClientDialTimeout      = 5 * time.Second
+	CacheNumCounters            = int64(100000)
+	CacheMaxCost                = int64(8 * 2 << 30) // 8 GiB
+	CacheBufferItems            = int64(64)
 
 	MaxCallDepth         = int32(2)
 	ChoosePeerBlockDelta = uint64(100)

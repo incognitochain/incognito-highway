@@ -3,6 +3,7 @@ package chain
 import (
 	context "context"
 	"fmt"
+	"highway/common"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -22,11 +23,10 @@ func NewMemCache(cacher Cacher) *MemCache {
 }
 
 func NewRistrettoMemCache() (*MemCache, error) {
-	// TODO(@0xbunyip): move constants
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1000000,
-		MaxCost:     8 * 2 << 30, // 8 GiB
-		BufferItems: 64,
+		NumCounters: common.CacheNumCounters,
+		MaxCost:     common.CacheMaxCost,
+		BufferItems: common.CacheBufferItems,
 		Metrics:     true,
 	})
 	if err != nil {
