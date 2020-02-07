@@ -75,66 +75,6 @@ func TestValidatorRegister(t *testing.T) {
 	assert.Len(t, s.m.newPeers, 1)
 }
 
-func TestGetBlockShardCapped(t *testing.T) {
-	// peerStore := &mocks.PeerStore{}
-	// peerStore.On("GetPeerHasBlk", mock.Anything, mock.Anything).Return([]chaindata.PeerWithBlk{chaindata.PeerWithBlk{}}, nil)
-
-	// cid := 0
-	// m := &Manager{}
-	// m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{}}
-	// m.peers.RWMutex = sync.RWMutex{}
-
-	// calledWithTimeout := false
-	// toHeight := uint64(0)
-	// maxRecvMsgSize := 0
-	// serviceClient := &pmocks.HighwayServiceClient{}
-	// serviceClient.On("GetBlockShardByHeight", mock.Anything, mock.Anything, mock.Anything).Return(&proto.GetBlockShardByHeightResponse{}, nil).Run(
-	// 	func(args mock.Arguments) {
-	// 		_, calledWithTimeout = args.Get(0).(context.Context).Deadline()
-	// 		toHeight = args.Get(1).(*proto.GetBlockShardByHeightRequest).ToHeight
-	// 		maxRecvMsgSize = args.Get(2).(grpc.MaxRecvMsgSizeCallOption).MaxRecvMsgSize
-	// 	},
-	// )
-
-	// router := &mocks.Router{}
-	// router.On("GetID").Return(peer.ID("123"))
-	// router.On("GetHighwayServiceClient", mock.Anything).Return(serviceClient, peer.ID("123"), nil)
-
-	// client := &Client{
-	// 	supportShards: []byte{0, 1, 2, 3},
-	// 	m:             m,
-	// 	router:        router,
-	// 	peerStore:     peerStore,
-	// 	reporter:      NewReporter(nil),
-	// }
-
-	// specific := false
-	// from := uint64(123)
-	// to := uint64(456)
-	// heights := []uint64{}
-	// for i := from; i <= to; i++ {
-	// }
-	// req := requestByHeight{
-	// 	fromShard: int32(cid),
-	// 	toShard:   int32(cid),
-	// 	callDepth: int32(0),
-	// 	fromPool:  false,
-	// }
-	// _, err := client.GetBlockByHeight(
-	// 	context.Background(),
-	// 	int32(cid),
-	// 	specific,
-	// 	from,
-	// 	to,
-	// 	heights,
-	// 	callDepth,
-	// )
-	// assert.Nil(t, err)
-	// assert.True(t, calledWithTimeout)
-	// assert.Equal(t, 223, int(toHeight))
-	// assert.Equal(t, 50<<20, maxRecvMsgSize)
-}
-
 func TestGetClientNode(t *testing.T) {
 	hwPID := peer.ID("123")
 	peerStore := &mocks.PeerStore{}

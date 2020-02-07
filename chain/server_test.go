@@ -10,7 +10,22 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestSetBlock(t *testing.T) {
+func TestGetBlockByHeight(t *testing.T) {
+	cacher := &Cacher{}
+	cacher.On("Get", mock.Anything).Return(nil, false)
+	cache := chain.NewMemCache(cacher)
+
+	req := chain.RequestByHeight{}
+	heights := []uint64{1, 2, 3, 4}
+	blocks, err := cache.GetBlockByHeight(context.Background(), req, heights)
+
+	expectedBlocks := [][]byte{nil, nil, nil, nil}
+	if assert.Nil(t, err) {
+		assert.Equal(t, expectedBlocks, blocks)
+	}
+}
+
+func TestSetBlockByHeight(t *testing.T) {
 	cacher := &Cacher{}
 	sets := [][]byte{}
 	cacher.On("Set", mock.Anything, mock.Anything, mock.Anything).Return(true).Run(func(args mock.Arguments) {
