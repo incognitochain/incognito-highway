@@ -54,7 +54,7 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 
 	// Get memcache info
 	cacheInfo := map[string]interface{}{}
-	if cache, ok := r.manager.server.providers[0].(*MemCache); ok {
+	if cache, ok := r.manager.server.Providers[0].(*MemCache); ok {
 		cacheInfo["ratio"] = cache.cacher.Metrics.Ratio()
 		cacheInfo["cost_added"] = cache.cacher.Metrics.CostAdded()
 		cacheInfo["cost_evicted"] = cache.cacher.Metrics.CostEvicted()

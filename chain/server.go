@@ -82,7 +82,7 @@ func (s *Server) Register(
 	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
-func (s *Server) GetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64) [][]byte {
+func (s *Server) GetBlockByHeight(ctx context.Context, req RequestByHeight, heights []uint64) [][]byte {
 	logger := Logger(ctx)
 	idxs := make([]int, len(heights))
 	for i := 0; i < len(idxs); i++ {
@@ -90,7 +90,7 @@ func (s *Server) GetBlockByHeight(ctx context.Context, req requestByHeight, heig
 	}
 
 	blocks := make([][]byte, len(heights))
-	for k, p := range s.providers {
+	for k, p := range s.Providers {
 		if len(heights) == 0 {
 			break
 		}
@@ -101,8 +101,8 @@ func (s *Server) GetBlockByHeight(ctx context.Context, req requestByHeight, heig
 			continue
 		}
 
-		// Cache blocks for all previous providers
-		for _, q := range s.providers[:k] {
+		// Cache blocks for all previous.Providers
+		for _, q := range s.Providers[:k] {
 			err := q.SetBlockByHeight(ctx, req, heights, data)
 			if err != nil {
 				logger.Warnf("Fail caching block for provider: %+v", err)
@@ -140,7 +140,7 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 		return nil, err
 	}
 
-	heights := convertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
+	heights := ConvertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
 	reqByHeight := ParseGetBlockShardByHeight(req)
 	data := s.GetBlockByHeight(ctx, reqByHeight, heights)
 
@@ -162,7 +162,7 @@ func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlock
 	}
 
 	// Call node to get blocks
-	heights := convertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
+	heights := ConvertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
 	reqByHeight := ParseGetBlockBeaconByHeight(req)
 	data := s.GetBlockByHeight(ctx, reqByHeight, heights)
 
@@ -189,7 +189,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 		return nil, err
 	}
 
-	heights := convertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
+	heights := ConvertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
 	reqByHeight := ParseGetBlockShardToBeaconByHeight(req)
 	data := s.GetBlockByHeight(ctx, reqByHeight, heights)
 
@@ -210,7 +210,7 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 		return nil, err
 	}
 
-	heights := convertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
+	heights := ConvertToSpecificHeights(req.Specific, req.FromHeight, req.ToHeight, req.Heights)
 	reqByHeight := ParseGetBlockCrossShardByHeight(req)
 	data := s.GetBlockByHeight(ctx, reqByHeight, heights)
 
@@ -218,7 +218,7 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 	return &proto.GetBlockCrossShardByHeightResponse{Data: data}, nil
 }
 
-func convertToSpecificHeights(
+func ConvertToSpecificHeights(
 	specific bool,
 	from uint64,
 	to uint64,
@@ -234,14 +234,14 @@ func convertToSpecificHeights(
 	return heights
 }
 
-func (s *Server) GetBlockByHash(ctx context.Context, req requestByHash, hashes [][]byte) [][]byte {
+func (s *Server) GetBlockByHash(ctx context.Context, req RequestByHash, hashes [][]byte) [][]byte {
 	idxs := make([]int, len(hashes))
 	for i := 0; i < len(idxs); i++ {
 		idxs[i] = i
 	}
 
 	blocks := make([][]byte, len(hashes))
-	for _, p := range s.providers {
+	for _, p := range s.Providers {
 		if len(hashes) == 0 {
 			break
 		}
@@ -319,16 +319,16 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 
 type Server struct {
 	m         *Manager
-	providers []Provider
+	Providers []Provider
 	chainData *chaindata.ChainData
 
 	reporter *Reporter
 }
 
 type Provider interface {
-	GetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64) ([][]byte, error)
-	SetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64, blocks [][]byte) error
-	GetBlockByHash(ctx context.Context, req requestByHash, hashes [][]byte) ([][]byte, error) // NOTE: no need to cache block by hash
+	GetBlockByHeight(ctx context.Context, req RequestByHeight, heights []uint64) ([][]byte, error)
+	SetBlockByHeight(ctx context.Context, req RequestByHeight, heights []uint64, blocks [][]byte) error
+	GetBlockByHash(ctx context.Context, req RequestByHash, hashes [][]byte) ([][]byte, error) // NOTE: no need to cache block by hash
 }
 
 func RegisterServer(
@@ -344,7 +344,7 @@ func RegisterServer(
 	}
 
 	s := &Server{
-		providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
+		Providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
 		m:         m,
 		reporter:  reporter,
 		chainData: chainData,

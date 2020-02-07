@@ -17,7 +17,7 @@ import (
 
 func (hc *Client) GetBlockByHeight(
 	ctx context.Context,
-	req requestByHeight,
+	req RequestByHeight,
 	heights []uint64,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
@@ -43,7 +43,7 @@ func (hc *Client) GetBlockByHeight(
 	return data, nil
 }
 
-func getBlockByHeight(serviceClient proto.HighwayServiceClient, req requestByHeight, heights []uint64) ([][]byte, error) {
+func getBlockByHeight(serviceClient proto.HighwayServiceClient, req RequestByHeight, heights []uint64) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 
@@ -74,7 +74,7 @@ func getBlockByHeight(serviceClient proto.HighwayServiceClient, req requestByHei
 func getBlockShardByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req requestByHeight,
+	req RequestByHeight,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardByHeight(
@@ -97,7 +97,7 @@ func getBlockShardByHeight(
 func getBlockBeaconByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req requestByHeight,
+	req RequestByHeight,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockBeaconByHeight(
@@ -119,7 +119,7 @@ func getBlockBeaconByHeight(
 func getBlockCrossShardByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req requestByHeight,
+	req RequestByHeight,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockCrossShardByHeight(
@@ -143,7 +143,7 @@ func getBlockCrossShardByHeight(
 func getBlockShardToBeaconByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req requestByHeight,
+	req RequestByHeight,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardToBeaconByHeight(
@@ -165,7 +165,7 @@ func getBlockShardToBeaconByHeight(
 
 func (hc *Client) GetBlockByHash(
 	ctx context.Context,
-	req requestByHash,
+	req RequestByHash,
 	hashes [][]byte,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
@@ -191,7 +191,7 @@ func (hc *Client) GetBlockByHash(
 	return data, nil
 }
 
-func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash, hashes [][]byte) ([][]byte, error) {
+func getBlockByHash(serviceClient proto.HighwayServiceClient, req RequestByHash, hashes [][]byte) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 
@@ -213,7 +213,7 @@ func getBlockByHash(serviceClient proto.HighwayServiceClient, req requestByHash,
 func getBlockShardByHash(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req requestByHash,
+	req RequestByHash,
 	hashes [][]byte,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardByHash(
@@ -234,7 +234,7 @@ func getBlockShardByHash(
 func getBlockBeaconByHash(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req requestByHash,
+	req RequestByHash,
 	hashes [][]byte,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockBeaconByHash(
@@ -251,7 +251,7 @@ func getBlockBeaconByHash(
 	return reply.Data, nil
 }
 
-func (hc *Client) SetBlockByHeight(_ context.Context, _ requestByHeight, _ []uint64, _ [][]byte) error {
+func (hc *Client) SetBlockByHeight(_ context.Context, _ RequestByHeight, _ []uint64, _ [][]byte) error {
 	// Client no needs to cache block
 	return nil
 }
@@ -526,7 +526,7 @@ type Router interface {
 	GetID() peer.ID
 }
 
-type requestByHeight struct {
+type RequestByHeight struct {
 	fromShard int32
 	toShard   int32
 	callDepth int32
@@ -538,28 +538,28 @@ type getBlockByHeightRequest interface {
 	GetFromPool() bool
 }
 
-func ParseGetBlockByHeight(inp getBlockByHeightRequest) requestByHeight {
-	req := requestByHeight{}
+func ParseGetBlockByHeight(inp getBlockByHeightRequest) RequestByHeight {
+	req := RequestByHeight{}
 	req.callDepth = inp.GetCallDepth()
 	req.fromPool = inp.GetFromPool()
 	return req
 }
 
-func ParseGetBlockShardByHeight(inp *proto.GetBlockShardByHeightRequest) requestByHeight {
+func ParseGetBlockShardByHeight(inp *proto.GetBlockShardByHeightRequest) RequestByHeight {
 	req := ParseGetBlockByHeight(inp)
 	req.fromShard = inp.Shard
 	req.toShard = inp.Shard
 	return req
 }
 
-func ParseGetBlockBeaconByHeight(inp *proto.GetBlockBeaconByHeightRequest) requestByHeight {
+func ParseGetBlockBeaconByHeight(inp *proto.GetBlockBeaconByHeightRequest) RequestByHeight {
 	req := ParseGetBlockByHeight(inp)
 	req.fromShard = int32(common.BEACONID)
 	req.toShard = int32(common.BEACONID)
 	return req
 }
 
-func ParseGetBlockCrossShardByHeight(inp *proto.GetBlockCrossShardByHeightRequest) requestByHeight {
+func ParseGetBlockCrossShardByHeight(inp *proto.GetBlockCrossShardByHeightRequest) RequestByHeight {
 	// NOTE: requesting crossshard block transfering PRV from `fromShard` to `toShard`
 	// => request from peer of shard `fromShard`
 	req := ParseGetBlockByHeight(inp)
@@ -568,27 +568,27 @@ func ParseGetBlockCrossShardByHeight(inp *proto.GetBlockCrossShardByHeightReques
 	return req
 }
 
-func ParseGetBlockShardToBeaconByHeight(inp *proto.GetBlockShardToBeaconByHeightRequest) requestByHeight {
+func ParseGetBlockShardToBeaconByHeight(inp *proto.GetBlockShardToBeaconByHeightRequest) RequestByHeight {
 	req := ParseGetBlockByHeight(inp)
 	req.fromShard = inp.FromShard
 	req.toShard = int32(common.BEACONID)
 	return req
 }
 
-type requestByHash struct {
+type RequestByHash struct {
 	shard     int32
 	callDepth int32
 }
 
-func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) requestByHash {
-	req := requestByHash{}
+func ParseGetBlockShardByHash(inp *proto.GetBlockShardByHashRequest) RequestByHash {
+	req := RequestByHash{}
 	req.shard = inp.Shard
 	req.callDepth = inp.CallDepth
 	return req
 }
 
-func ParseGetBlockBeaconByHash(inp *proto.GetBlockBeaconByHashRequest) requestByHash {
-	req := requestByHash{}
+func ParseGetBlockBeaconByHash(inp *proto.GetBlockBeaconByHashRequest) RequestByHash {
+	req := RequestByHash{}
 	req.shard = int32(common.BEACONID)
 	req.callDepth = inp.CallDepth
 	return req
