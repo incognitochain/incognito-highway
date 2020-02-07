@@ -25,8 +25,9 @@ type Reporter struct {
 }
 
 func (r *Reporter) Start(_ time.Duration) {
-	clearRequestTimestep := 5 * time.Minute
-	for ; true; <-time.Tick(clearRequestTimestep) {
+	clearRequestTimestep := time.NewTicker(5 * time.Minute)
+	defer clearRequestTimestep.Stop()
+	for ; true; <-clearRequestTimestep.C {
 		r.clearRequestCounts()
 		r.clearRequestsPerPeer()
 	}

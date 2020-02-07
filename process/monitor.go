@@ -20,8 +20,9 @@ type Reporter struct {
 }
 
 func (r *Reporter) Start(_ time.Duration) {
-	stateTimestep := 5 * time.Second
-	for ; true; <-time.Tick(stateTimestep) {
+	stateTimestep := time.NewTicker(5 * time.Second)
+	defer stateTimestep.Stop()
+	for ; true; <-stateTimestep.C {
 		r.updateNetworkState()
 	}
 }
