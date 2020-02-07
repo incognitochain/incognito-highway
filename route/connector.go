@@ -82,11 +82,12 @@ func (hc *Connector) GetHWClient(pid peer.ID) (proto.HighwayConnectorServiceClie
 }
 
 func (hc *Connector) Start() {
-	enlistTimestep := time.Tick(common.BroadcastMsgEnlistTimestep)
+	enlistTimestep := time.NewTicker(common.BroadcastMsgEnlistTimestep)
+	defer enlistTimestep.Stop()
 	for {
 		var err error
 		select {
-		case <-enlistTimestep:
+		case <-enlistTimestep.C:
 			err = hc.enlist()
 
 		case p := <-hc.outPeers:
