@@ -4,6 +4,7 @@ import (
 	context "context"
 	"highway/chain"
 	"highway/common"
+	"highway/proto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ func TestGetBlockByHeight(t *testing.T) {
 	cacher.On("Get", mock.Anything).Return(nil, false)
 	cache := chain.NewMemCache(cacher)
 
-	req := chain.RequestByHeight{}
+	req := &proto.GetBlockShardByHeightRequest{}
 	heights := []uint64{1, 2, 3, 4}
 	blocks, err := cache.GetBlockByHeight(context.Background(), req, heights)
 
@@ -33,7 +34,7 @@ func TestSetBlockByHeight(t *testing.T) {
 	})
 	cache := chain.NewMemCache(cacher)
 
-	req := chain.RequestByHeight{}
+	req := &proto.GetBlockShardByHeightRequest{}
 	heights := []uint64{1, 2, 3, 4}
 	blocks := [][]byte{[]byte{1}, nil, nil, []byte{4}}
 	err := cache.SetBlockByHeight(context.Background(), req, heights, blocks)
@@ -67,9 +68,9 @@ func TestGetBlockByHeightCached(t *testing.T) {
 
 	providers := []chain.Provider{p1, p2, p3}
 	s := chain.Server{Providers: providers}
-	req := chain.RequestByHeight{}
 	heights := []uint64{1, 2, 3, 4, 5, 6}
-	s.GetBlockByHeight(context.Background(), req, heights)
+	req := &proto.GetBlockShardByHeightRequest{Heights: heights, Specific: true}
+	s.GetBlockByHeight(context.Background(), req)
 
 	expectedP1Set := [][][]byte{[][]byte{[]byte{1}, []byte{3}, nil}, [][]byte{nil}}
 	expectedP2Set := [][][]byte{[][]byte{nil}}
@@ -94,11 +95,13 @@ func TestGetBlockByHeightFiltered(t *testing.T) {
 
 	providers := []chain.Provider{p1, p2, p3}
 	s := chain.Server{Providers: providers}
-	req := chain.RequestByHeight{}
 	heights := []uint64{1, 2, 3, 4, 5, 6}
-	data := s.GetBlockByHeight(context.Background(), req, heights)
+	req := &proto.GetBlockShardByHeightRequest{Heights: heights, Specific: true}
+	data, err := s.GetBlockByHeight(context.Background(), req)
 	expectedData := [][]byte{[]byte{1}, []byte{2}, []byte{3}, []byte{4}, []byte{5}, nil}
-	assert.Equal(t, expectedData, data)
+	if assert.Nil(t, err) {
+		assert.Equal(t, expectedData, data)
+	}
 }
 
 func TestConvertToSpecific(t *testing.T) {

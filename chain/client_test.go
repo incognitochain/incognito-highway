@@ -303,7 +303,7 @@ func TestCapBlocks(t *testing.T) {
 			specific:   false,
 			from:       15,
 			to:         155,
-			expectedTo: 115,
+			expectedTo: 114,
 		},
 		{
 			desc:            "Specific, not exceeded cap",
