@@ -84,8 +84,7 @@ func (s *Server) Register(
 
 // req requestByHeight, heights []uint64
 func (s *Server) GetBlockByHeight(ctx context.Context, req getBlockByHeightRequest) ([][]byte, error) {
-	reqData := ParseGetBlockByHeight(req)
-	if reqData.callDepth > common.MaxCallDepth {
+	if req.GetCallDepth() > common.MaxCallDepth {
 		err := errors.Errorf("reached max call depth: %+v", req)
 		return nil, err
 	}
@@ -101,7 +100,7 @@ func (s *Server) GetBlockByHeight(ctx context.Context, req getBlockByHeightReque
 			break
 		}
 
-		data, err := p.GetBlockByHeight(ctx, reqData, heights)
+		data, err := p.GetBlockByHeight(ctx, req, heights)
 		if err != nil {
 			logger.Warnf("Failed GetBlockByHeight: %+v", err)
 			continue
@@ -218,8 +217,7 @@ func convertToSpecificHeights(
 }
 
 func (s *Server) GetBlockByHash(ctx context.Context, req getBlockByHashRequest) ([][]byte, error) {
-	reqData := ParseGetBlockByHash(req)
-	if reqData.callDepth > common.MaxCallDepth {
+	if req.GetCallDepth() > common.MaxCallDepth {
 		err := errors.Errorf("reached max call depth: %+v", req)
 		return nil, err
 	}
@@ -235,7 +233,7 @@ func (s *Server) GetBlockByHash(ctx context.Context, req getBlockByHashRequest) 
 			break
 		}
 
-		data, err := p.GetBlockByHash(ctx, reqData, hashes)
+		data, err := p.GetBlockByHash(ctx, req, hashes)
 		if err != nil {
 			logger.Warnf("Failed GetBlockByHash: %+v", err)
 			continue
@@ -309,8 +307,8 @@ type Server struct {
 }
 
 type Provider interface {
-	GetBlockByHeight(ctx context.Context, req requestByHeight, heights []uint64) ([][]byte, error)
-	GetBlockByHash(ctx context.Context, req requestByHash, hashes [][]byte) ([][]byte, error)
+	GetBlockByHeight(ctx context.Context, req getBlockByHeightRequest, heights []uint64) ([][]byte, error)
+	GetBlockByHash(ctx context.Context, req getBlockByHashRequest, hashes [][]byte) ([][]byte, error)
 }
 
 func RegisterServer(
