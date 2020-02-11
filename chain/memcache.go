@@ -35,11 +35,11 @@ func NewRistrettoMemCache() (*MemCache, error) {
 	return NewMemCache(cache), nil
 }
 
-func getKeyByHeight(req RequestByHeight, h uint64) string {
-	return fmt.Sprintf("byheight-%d-%d-%d", req.fromShard, req.toShard, h)
+func getKeyByHeight(req getBlockByHeightRequest, h uint64) string {
+	return fmt.Sprintf("byheight-%d-%d-%d", req.GetFrom(), req.GetTo(), h)
 }
 
-func (cache *MemCache) GetBlockByHeight(_ context.Context, req RequestByHeight, heights []uint64) ([][]byte, error) {
+func (cache *MemCache) GetBlockByHeight(_ context.Context, req getBlockByHeightRequest, heights []uint64) ([][]byte, error) {
 	// TODO(@0xbunyip): add epsilon-greedy here
 	blocks := make([][]byte, len(heights))
 	for i, h := range heights {
@@ -55,7 +55,7 @@ func (cache *MemCache) GetBlockByHeight(_ context.Context, req RequestByHeight, 
 
 func (cache *MemCache) SetBlockByHeight(
 	_ context.Context,
-	req RequestByHeight,
+	req getBlockByHeightRequest,
 	heights []uint64,
 	blocks [][]byte,
 ) error {
@@ -76,7 +76,7 @@ func (cache *MemCache) SetBlockByHeight(
 	return nil
 }
 
-func (cache *MemCache) GetBlockByHash(_ context.Context, req RequestByHash, hashes [][]byte) ([][]byte, error) {
+func (cache *MemCache) GetBlockByHash(_ context.Context, req getBlockByHashRequest, hashes [][]byte) ([][]byte, error) {
 	blocks := make([][]byte, len(hashes)) // Not supported
 	return blocks, nil
 }
