@@ -82,6 +82,48 @@ func (s *Server) Register(
 	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
+// req requestByHeight, heights []uint64
+func (s *Server) GetBlockByHeight(ctx context.Context, req getBlockByHeightRequest) ([][]byte, error) {
+	if req.GetCallDepth() > common.MaxCallDepth {
+		err := errors.Errorf("reached max call depth: %+v", req)
+		return nil, err
+	}
+	heights := convertToSpecificHeights(req.GetSpecific(), req.GetFromHeight(), req.GetToHeight(), req.GetHeights())
+	idxs := make([]int, len(heights))
+	for i := 0; i < len(idxs); i++ {
+		idxs[i] = i
+	}
+
+	blocks := make([][]byte, len(heights))
+	for _, p := range s.providers {
+		if len(heights) == 0 {
+			break
+		}
+
+		data, err := p.GetBlockByHeight(ctx, req, heights)
+		if err != nil {
+			logger.Warnf("Failed GetBlockByHeight: %+v", err)
+			continue
+		}
+
+		newHeights := []uint64{}
+		newIdxs := []int{}
+		for i, d := range data {
+			if d == nil {
+				// Nil result, must ask next provider
+				newHeights = append(newHeights, heights[i])
+				newIdxs = append(newIdxs, idxs[i])
+				continue
+			}
+
+			blocks[idxs[i]] = d
+		}
+		heights = newHeights
+		idxs = newIdxs
+	}
+	return blocks, nil
+}
+
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
 	ctx = WithRequestID(ctx)
 	logger := Logger(ctx)
@@ -89,63 +131,15 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard")
 
-	// TODO(@0xbunyip): check if block in cache
-
-	if req.CallDepth > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
-		logger.Warnf("Failed GetBlockShardByHeight: %+v", err)
-		return nil, err
-	}
-
 	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockShardByHeight(
-		ctx,
-		req.Shard,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.CallDepth,
-	)
+	data, err := s.GetBlockByHeight(ctx, req)
 	if err != nil {
-		logger.Warnf("Failed GetBlockShardByHeight: %+v", err)
+		logger.Warnf("GetBlockShardByHeight return error: %+v", err)
 		return nil, err
 	}
+
 	// TODO(@0xbunyip): cache blocks
 	return &proto.GetBlockShardByHeightResponse{Data: data}, nil
-}
-
-func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	ctx = WithRequestID(ctx)
-	logger := Logger(ctx)
-
-	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
-	defer s.reporter.watchRequestCounts("get_block_shard")
-
-	// TODO(@0xbunyip): check if block in cache
-
-	if req.CallDepth > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
-		logger.Warnf("Failed GetBlockShardByHash: %+v", err)
-		return nil, err
-	}
-
-	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockShardByHash(
-		ctx,
-		req.Shard,
-		req.Hashes,
-		req.CallDepth,
-	)
-	if err != nil {
-		logger.Warnf("Failed GetBlockShardByHeight: %+v", err)
-		return nil, err
-	}
-	// TODO(@0xbunyip): cache blocks
-	logger.Infof("[blkbyhash] Receive GetBlockShardByHash response data: %v ", data)
-	return &proto.GetBlockShardByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
@@ -155,26 +149,10 @@ func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlock
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_beacon")
 
-	// TODO(@0xbunyip): check if block in cache
-
-	if req.CallDepth > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
-		logger.Warnf("Failed GetBlockBeaconByHeight: %+v", err)
-		return nil, err
-	}
-
 	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockBeaconByHeight(
-		ctx,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.CallDepth,
-	)
+	data, err := s.GetBlockByHeight(ctx, req)
 	if err != nil {
-		logger.Warnf("Failed GetBlockBeaconByHeight: %+v", err)
+		logger.Warnf("GetBlockBeaconByHeight return error: %+v", err)
 		return nil, err
 	}
 
@@ -195,57 +173,14 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
 
-	if req.CallDepth > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
-		logger.Warnf("Failed GetBlockShardToBeaconByHeight: %+v", err)
-		return nil, err
-	}
-
-	data, err := s.hc.GetBlockShardToBeaconByHeight(
-		ctx,
-		req.GetFromShard(),
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.CallDepth,
-	)
+	data, err := s.GetBlockByHeight(ctx, req)
 	if err != nil {
-		logger.Warnf("Failed GetBlockShardToBeaconByHeight: %+v", err)
+		logger.Warnf("GetBlockShardToBeaconByHeight return error: %+v", err)
 		return nil, err
 	}
 
 	// TODO(@0xbunyip): cache blocks
 	return &proto.GetBlockShardToBeaconByHeightResponse{Data: data}, nil
-}
-
-func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	ctx = WithRequestID(ctx)
-	logger := Logger(ctx)
-	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
-	defer s.reporter.watchRequestCounts("get_block_beacon")
-
-	// TODO(@0xbunyip): check if block in cache
-
-	if req.CallDepth > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
-		logger.Warnf("Failed GetBlockBeaconByHash: %+v", err)
-		return nil, err
-	}
-
-	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockBeaconByHash(
-		ctx,
-		req.Hashes,
-		req.CallDepth,
-	)
-	if err != nil {
-		logger.Warnf("Failed GetBlockBeaconByHash: %+v", err)
-		return nil, err
-	}
-	// TODO(@0xbunyip): cache blocks
-	return &proto.GetBlockBeaconByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
@@ -255,30 +190,105 @@ func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetB
 	// Monitor status
 	defer s.reporter.watchRequestCounts("get_block_cross_shard")
 
-	if req.CallDepth > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
-		logger.Warnf("Failed GetBlockCrossShardByHeight: %+v", err)
-		return nil, err
-	}
-
-	data, err := s.hc.GetBlockCrossShardByHeight(
-		ctx,
-		req.FromShard,
-		req.ToShard,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.FromPool,
-		req.CallDepth,
-	)
+	data, err := s.GetBlockByHeight(ctx, req)
 	if err != nil {
-		logger.Warnf("Failed GetBlockCrossShardByHeight: %+v", err)
+		logger.Warnf("GetBlockCrossShardByHeight return error: %+v", err)
 		return nil, err
 	}
 
 	// TODO(@0xbunyip): cache blocks
 	return &proto.GetBlockCrossShardByHeightResponse{Data: data}, nil
+}
+
+func convertToSpecificHeights(
+	specific bool,
+	from uint64,
+	to uint64,
+	heights []uint64,
+) []uint64 {
+	to, heights = capBlocksPerRequest(specific, from, to, heights)
+	if !specific {
+		heights = make([]uint64, to-from+1)
+		for i := from; i <= to; i++ {
+			heights[i-from] = i
+		}
+	}
+	return heights
+}
+
+func (s *Server) GetBlockByHash(ctx context.Context, req getBlockByHashRequest) ([][]byte, error) {
+	if req.GetCallDepth() > common.MaxCallDepth {
+		err := errors.Errorf("reached max call depth: %+v", req)
+		return nil, err
+	}
+	hashes := req.GetHashes()
+	idxs := make([]int, len(hashes))
+	for i := 0; i < len(idxs); i++ {
+		idxs[i] = i
+	}
+
+	blocks := make([][]byte, len(hashes))
+	for _, p := range s.providers {
+		if len(hashes) == 0 {
+			break
+		}
+
+		data, err := p.GetBlockByHash(ctx, req, hashes)
+		if err != nil {
+			logger.Warnf("Failed GetBlockByHash: %+v", err)
+			continue
+		}
+
+		newHashes := [][]byte{}
+		newIdxs := []int{}
+		for i, d := range data {
+			if d == nil {
+				// Nil result, must ask next provider
+				newHashes = append(newHashes, hashes[i])
+				newIdxs = append(newIdxs, idxs[i])
+				continue
+			}
+
+			blocks[idxs[i]] = d
+		}
+		hashes = newHashes
+		idxs = newIdxs
+	}
+	return blocks, nil
+}
+
+func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
+	ctx = WithRequestID(ctx)
+	logger := Logger(ctx)
+
+	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
+	defer s.reporter.watchRequestCounts("get_block_shard")
+
+	data, err := s.GetBlockByHash(ctx, req)
+	if err != nil {
+		logger.Warnf("GetBlockShardByHash return error: %+v", err)
+		return nil, err
+	}
+
+	// TODO(@0xbunyip): cache blocks
+	logger.Infof("[blkbyhash] Receive GetBlockShardByHash response data: %v ", data)
+	return &proto.GetBlockShardByHashResponse{Data: data}, nil
+}
+
+func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
+	ctx = WithRequestID(ctx)
+	logger := Logger(ctx)
+	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
+	defer s.reporter.watchRequestCounts("get_block_beacon")
+
+	data, err := s.GetBlockByHash(ctx, req)
+	if err != nil {
+		logger.Warnf("GetBlockBeaconByHash return error: %+v", err)
+		return nil, err
+	}
+
+	// TODO(@0xbunyip): cache blocks
+	return &proto.GetBlockBeaconByHashResponse{Data: data}, nil
 }
 
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
@@ -290,10 +300,15 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 
 type Server struct {
 	m         *Manager
-	hc        *Client
+	providers []Provider
 	chainData *chaindata.ChainData
 
 	reporter *Reporter
+}
+
+type Provider interface {
+	GetBlockByHeight(ctx context.Context, req getBlockByHeightRequest, heights []uint64) ([][]byte, error)
+	GetBlockByHash(ctx context.Context, req getBlockByHashRequest, hashes [][]byte) ([][]byte, error)
 }
 
 func RegisterServer(
@@ -304,7 +319,7 @@ func RegisterServer(
 	reporter *Reporter,
 ) {
 	s := &Server{
-		hc:        hc,
+		providers: []Provider{hc},
 		m:         m,
 		reporter:  reporter,
 		chainData: chainData,
@@ -328,4 +343,22 @@ func (s *Server) processListWantedMessageOfPeer(
 	// TODO handle error here
 	pairs = topic.Handler.GetListTopicPairForNode(role, msgAndCID)
 	return pairs, nil
+}
+
+// capBlocksPerRequest returns the maximum height allowed for a single request
+// If the request is for a range, this function returns the maximum block height allowed
+// If the request is for some blocks, this caps the number blocks requested
+func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
+	if specific {
+		if len(heights) > common.MaxBlocksPerRequest {
+			heights = heights[:common.MaxBlocksPerRequest]
+		}
+		return heights[len(heights)-1], heights
+	}
+
+	maxHeight := from + common.MaxBlocksPerRequest
+	if to > maxHeight {
+		return maxHeight, heights
+	}
+	return to, heights
 }
