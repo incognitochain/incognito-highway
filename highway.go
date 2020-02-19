@@ -7,6 +7,7 @@ import (
 	"highway/chaindata"
 	"highway/common"
 	"highway/config"
+	"highway/grafana"
 	"highway/health"
 	"highway/monitor"
 	"highway/p2p"
@@ -36,6 +37,13 @@ func main() {
 	initLogger(conf.Loglevel)
 
 	conf.PrintConfig()
+
+	gl := grafana.NewLog(
+		fmt.Sprintf("%v:%v", conf.PublicIP, conf.ProxyPort),
+		conf.Version,
+		conf.GrafanaDBURL,
+	)
+	gl.Start()
 
 	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
@@ -82,6 +90,7 @@ func main() {
 		multiAddr,
 		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 		floodPubSub,
+		gl,
 	)
 	go rman.Start()
 
@@ -99,7 +108,14 @@ func main() {
 	go rpcServer.Start()
 
 	// Chain-facing connections
-	chainReporter := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+	chainReporter := chain.ManageChainConnections(
+		proxyHost.Host,
+		rman,
+		proxyHost.GRPC,
+		chainData,
+		conf.SupportShards,
+		gl, //GrafanaLog
+	)
 
 	// // Subscribe to receive new committee
 	// process.GlobalPubsub.SubHandlers <- process.SubHandler{

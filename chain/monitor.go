@@ -3,6 +3,7 @@ package chain
 import (
 	"encoding/json"
 	"highway/common"
+	"highway/grafana"
 	"sync"
 	"time"
 
@@ -16,15 +17,19 @@ type Reporter struct {
 	requestCounts struct {
 		m map[string]int
 		sync.RWMutex
+		lm map[string]int
 	}
 
 	requestsPerPeer struct {
 		m PeerRequestMap
 		sync.RWMutex
+		lm PeerRequestMap
 	}
+	gralog *grafana.GrafanaLog
 }
 
 func (r *Reporter) Start(_ time.Duration) {
+	go r.pushDataToGrafana()
 	clearRequestTimestep := 5 * time.Minute
 	for ; true; <-time.Tick(clearRequestTimestep) {
 		r.clearRequestCounts()
@@ -68,9 +73,12 @@ func NewReporter(manager *Manager) *Reporter {
 		name:    "chain",
 	}
 	r.requestCounts.m = map[string]int{}
+	r.requestCounts.lm = map[string]int{}
 	r.requestCounts.RWMutex = sync.RWMutex{}
 	r.requestsPerPeer.m = PeerRequestMap{}
+	r.requestsPerPeer.lm = PeerRequestMap{}
 	r.requestsPerPeer.RWMutex = sync.RWMutex{}
+	r.gralog = manager.gralog
 	return r
 }
 
@@ -85,6 +93,7 @@ func (r *Reporter) clearRequestCounts() {
 	defer r.requestCounts.Unlock()
 	for key := range r.requestCounts.m {
 		r.requestCounts.m[key] = 0
+		r.requestCounts.lm[key] = 0
 	}
 }
 
@@ -105,7 +114,25 @@ func (r *Reporter) clearRequestsPerPeer() {
 	defer r.requestsPerPeer.Unlock()
 	for key := range r.requestsPerPeer.m {
 		delete(r.requestsPerPeer.m, key)
+		delete(r.requestsPerPeer.lm, key)
 	}
+}
+
+func (r *Reporter) pushDataToGrafana() {
+	timestep := 5 * time.Second
+	for ; true; <-time.Tick(timestep) {
+		if r.gralog == nil {
+			continue
+		}
+		r.requestCounts.Lock()
+		for k, v := range r.requestCounts.m {
+			c := v - r.requestCounts.lm[k]
+			r.requestCounts.lm[k] = v
+			r.gralog.Add(k, c)
+		}
+		r.requestCounts.Unlock()
+	}
+
 }
 
 type PeerRequestKey struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"highway/common"
+	"highway/grafana"
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
@@ -30,6 +31,7 @@ type Manager struct {
 	host       host.Host
 	lastSeen   map[peer.ID]time.Time
 	discoverer HighwayDiscoverer
+	gralog     *grafana.GrafanaLog
 }
 
 func NewManager(
@@ -41,6 +43,7 @@ func NewManager(
 	addr multiaddr.Multiaddr,
 	rpcUrl string,
 	pubsubManager *process.PubSubManager,
+	gl *grafana.GrafanaLog,
 ) *Manager {
 	p := peer.AddrInfo{
 		ID:    h.ID(),
@@ -65,7 +68,8 @@ func NewManager(
 			p,
 			supportShards,
 		),
-		host: h,
+		host:   h,
+		gralog: gl,
 	}
 
 	go hw.keepHighwayConnection(bootstrap)

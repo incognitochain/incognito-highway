@@ -23,6 +23,7 @@ type ProxyConfig struct {
 	Masternode    string
 	Loglevel      string
 	BootnodePort  int
+	GrafanaDBURL  string
 }
 
 func GetProxyConfig() (*ProxyConfig, error) {
@@ -39,6 +40,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	publicIP := flag.String("host", "127.0.0.1", "public ip address")
 	masternode := flag.String("masternode", "QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV", "libp2p PeerID of master node")
 	loglevel := flag.String("loglevel", "info", "loglevel for highway, info or debug")
+	gDBURL := flag.String("gdburl", "", "Grafana DB URL")
 	flag.Parse()
 
 	ss, err := parseSupportShards(*supportShards)
@@ -59,6 +61,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		Masternode:    *masternode,
 		Loglevel:      *loglevel,
 		BootnodePort:  *bootnodePort,
+		GrafanaDBURL:  *gDBURL,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()
