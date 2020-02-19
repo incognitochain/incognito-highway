@@ -129,6 +129,27 @@ service HighwayService {
     rpc GetBlockCrossShardByHeight(GetBlockCrossShardByHeightRequest) returns (GetBlockCrossShardByHeightResponse) {};
     rpc GetBlockShardToBeaconByHeight(GetBlockShardToBeaconByHeightRequest) returns (GetBlockShardToBeaconByHeightResponse) {};
     rpc GetBlockCrossShardByHash(GetBlockCrossShardByHashRequest) returns (GetBlockCrossShardByHashResponse) {};
+
+    rpc StreamBlockBeaconByHeight(GetBlockBeaconByHeightRequest) returns (stream BlockData) {};
+    rpc StreamBlockBeaconByHash(BlockBeaconByHashRequest) returns (stream BlockData) {};
+}
+
+message BlockBeaconByHeightRequest {
+    bool Specific = 1;
+    uint64 FromHeight = 2;
+    uint64 ToHeight = 3;
+    repeated uint64 Heights = 4;
+    bool FromPool = 5;
+    int32 CallDepth = 6;
+}
+
+message BlockBeaconByHashRequest {
+    repeated bytes Hashes = 1;
+    int32 CallDepth = 2;
+}
+
+message BlockData {
+    bytes Data = 1;
 }
 
 message GetChainCommitteeRequest {

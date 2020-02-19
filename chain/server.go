@@ -299,11 +299,13 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 }
 
 type Server struct {
+	proto.UnimplementedHighwayServiceServer
 	m         *Manager
 	providers []Provider
 	chainData *chaindata.ChainData
 
 	reporter *Reporter
+	// blkgetter BlockGetter
 }
 
 type Provider interface {
