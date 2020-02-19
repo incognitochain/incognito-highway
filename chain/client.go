@@ -355,6 +355,7 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 // and its corresponding highway's peerID
 func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
 	logger := Logger(ctx)
+	_ = logger
 
 	peersHasBlk, err := hc.peerStore.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
 	// logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
