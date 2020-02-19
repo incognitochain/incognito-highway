@@ -16,6 +16,7 @@ import (
 	"highway/route"
 	"highway/rpcserver"
 	"math/rand"
+	"runtime"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -26,6 +27,9 @@ var _ monitor.Monitor = (*config.Reporter)(nil)
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
+
+	runtime.SetBlockProfileRate(1)
+	runtime.SetMutexProfileFraction(1)
 
 	conf, err := config.GetProxyConfig()
 	if err != nil {
