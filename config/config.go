@@ -109,5 +109,7 @@ func (s ProxyConfig) PrintConfig() {
 	fmt.Println("IsProfiling: ", s.IsProfiling)
 	fmt.Println("Support shards: ", s.SupportShards)
 	fmt.Println("Private Key: ", s.PrivateKey)
+	fmt.Println("Version: ", s.Version)
+	fmt.Println("GrafanaDBURL: ", s.GrafanaDBURL)
 	fmt.Println("============== End Config =============")
 }
