@@ -45,69 +45,39 @@ func (h *Map) isConnectedToShard(s byte) bool {
 }
 
 func (h *Map) IsConnectedToShard(s byte) bool {
-	logger.Debugf("[map] IsConnectedToShard RLock START")
-	defer func() {
-		logger.Debugf("[map] IsConnectedToShard RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] IsConnectedToShard RLock END")
 	defer h.RUnlock()
 	return h.isConnectedToShard(s)
 }
 
 func (h *Map) IsConnectedToPeer(p peer.ID) bool {
-	logger.Debugf("[map] IsConnectedToPeer RLock START")
-	defer func() {
-		logger.Debugf("[map] IsConnectedToPeer RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] IsConnectedToPeer RLock END")
 	defer h.RUnlock()
 	return h.peerConnected[p]
 }
 
 func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
-	logger.Debugf("[map] ConnectToShardOfPeer Lock START")
-	defer func() {
-		logger.Debugf("[map] ConnectToShardOfPeer Unlock")
-	}()
 	h.Lock()
-	logger.Debugf("[map] ConnectToShardOfPeer Lock END")
 	defer h.Unlock()
 	h.peerConnected[p.ID] = true
 }
 
 func (h *Map) DisconnectToShardOfPeer(p peer.AddrInfo) {
-	logger.Debugf("[map] DisconnectToShardOfPeer Lock START")
-	defer func() {
-		logger.Debugf("[map] DisconnectToShardOfPeer Unlock")
-	}()
 	h.Lock()
-	logger.Debugf("[map] DisconnectToShardOfPeer Lock END")
 	defer h.Unlock()
 	h.peerConnected[p.ID] = false
 }
 
 // IsEnlisted checks if a peer has already registered as a valid highway
 func (h *Map) IsEnlisted(p peer.AddrInfo) bool {
-	logger.Debugf("[map] IsEnlisted RLock START")
-	defer func() {
-		logger.Debugf("[map] IsEnlisted RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] IsEnlisted RLock END")
 	defer h.RUnlock()
 	_, ok := h.Supports[p.ID]
 	return ok
 }
 
 func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
-	logger.Debugf("[map] AddPeer Lock START")
-	defer func() {
-		logger.Debugf("[map] AddPeer Unlock")
-	}()
 	h.Lock()
-	logger.Debugf("[map] AddPeer Lock END")
 	defer h.Unlock()
 	mcopy := func(b []byte) []byte { // Create new slice and copy
 		c := make([]byte, len(b))
@@ -137,12 +107,7 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
 }
 
 func (h *Map) RemovePeer(p peer.AddrInfo) {
-	logger.Debugf("[map] RemovePeer Lock START")
-	defer func() {
-		logger.Debugf("[map] RemovePeer Unlock")
-	}()
 	h.Lock()
-	logger.Debugf("[map] RemovePeer Lock END")
 	defer h.Unlock()
 	delete(h.Supports, p.ID)
 	delete(h.RPCs, p.ID)
@@ -163,12 +128,7 @@ func (h *Map) RemovePeer(p peer.AddrInfo) {
 }
 
 func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
-	logger.Debugf("[map] CopyPeersMap RLock START")
-	defer func() {
-		logger.Debugf("[map] CopyPeersMap RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] CopyPeersMap RLock END")
 	defer h.RUnlock()
 	m := map[byte][]peer.AddrInfo{}
 	for s, addrs := range h.Peers {
@@ -180,12 +140,7 @@ func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
 }
 
 func (h *Map) CopySupports() map[peer.ID][]byte {
-	logger.Debugf("[map] CopySupports RLock START")
-	defer func() {
-		logger.Debugf("[map] CopySupports RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] CopySupports RLock END")
 	defer h.RUnlock()
 	m := map[peer.ID][]byte{}
 	for pid, cids := range h.Supports {
@@ -197,12 +152,7 @@ func (h *Map) CopySupports() map[peer.ID][]byte {
 }
 
 func (h *Map) CopyRPCUrls() map[peer.ID]string {
-	logger.Debugf("[map] CopyRPCUrls RLock START")
-	defer func() {
-		logger.Debugf("[map] CopyRPCUrls RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] CopyRPCUrls RLock END")
 	defer h.RUnlock()
 	m := map[peer.ID]string{}
 	for pid, rpc := range h.RPCs {
@@ -212,12 +162,7 @@ func (h *Map) CopyRPCUrls() map[peer.ID]string {
 }
 
 func (h *Map) CopyConnected() []byte {
-	logger.Debugf("[map] CopyConnected RLock START")
-	defer func() {
-		logger.Debugf("[map] CopyConnected RUnlock")
-	}()
 	h.RLock()
-	logger.Debugf("[map] CopyConnected RLock END")
 	defer h.RUnlock()
 	c := []byte{}
 	for i := byte(0); i < common.NumberOfShard; i++ {
