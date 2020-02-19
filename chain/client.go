@@ -357,7 +357,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 	logger := Logger(ctx)
 
 	peersHasBlk, err := hc.peerStore.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
-	logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
+	// logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
 	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
 		return peer.ID(""), peer.ID(""), err
@@ -369,7 +369,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
 	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers)
-	logger.Debugf("Peers by groups: %+v", groups)
+	// logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
 	p, err := choosePeerFromGroup(groups)
