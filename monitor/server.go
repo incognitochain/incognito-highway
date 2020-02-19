@@ -40,7 +40,9 @@ func (p *poller) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *poller) start(timestep time.Duration) {
-	for ; true; <-time.Tick(timestep) {
+	t := time.NewTicker(timestep)
+	defer t.Stop()
+	for ; true; <-t.C {
 		reports := map[string]interface{}{}
 		for _, m := range p.Monitors {
 			name, value, err := m.ReportJSON()

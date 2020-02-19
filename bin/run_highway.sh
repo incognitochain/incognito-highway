@@ -2,12 +2,13 @@
 mkdir -p /data
 
 echo "/data/*.txt {
-  rotate 3
-  compress
-  missingok
-  delaycompress
-  copytruncate
-  size 1000M
+    rotate 3
+    secondly
+    compress
+    missingok
+    delaycompress
+    copytruncate
+    size 200m
 }" > /tmp/logrotate
 logrotate -fv /tmp/logrotate
 
