@@ -41,7 +41,7 @@ var (
 	RouteKeepConnectionTimestep = 40 * time.Second
 	RouteHighwayKeepaliveTime   = 40 * time.Second
 
-	BroadcastMsgEnlistTimestep = 5 * time.Minute
+	BroadcastMsgEnlistTimestep = 1 * time.Minute
 )
 
 const (

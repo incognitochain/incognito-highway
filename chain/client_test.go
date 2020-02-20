@@ -21,7 +21,7 @@ import (
 
 func TestRegisterTopics(t *testing.T) {
 	s := Server{
-		reporter: NewReporter(nil),
+		reporter: NewReporter(&Manager{}),
 		m: &Manager{
 			newPeers: make(chan PeerInfo, 10),
 		},
@@ -54,7 +54,7 @@ func TestValidatorRegister(t *testing.T) {
 	chainData := &chaindata.ChainData{}
 	chainData.Init(8)
 	s := Server{
-		reporter:  NewReporter(nil),
+		reporter:  NewReporter(&Manager{}),
 		chainData: chainData,
 		m: &Manager{
 			newPeers: make(chan PeerInfo, 10),

@@ -8,6 +8,7 @@ import (
 	"highway/chaindata"
 	"highway/common"
 	"highway/config"
+	"highway/grafana"
 	"highway/health"
 	"highway/monitor"
 	"highway/p2p"
@@ -37,6 +38,14 @@ func main() {
 	initLogger(conf.Loglevel)
 
 	conf.PrintConfig()
+
+	//Init grafana log
+	gl := grafana.NewLog(
+		fmt.Sprintf("%v:%v", conf.PublicIP, conf.ProxyPort),
+		conf.Version,
+		conf.GrafanaDBURL,
+	)
+	gl.Start()
 
 	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
@@ -83,6 +92,7 @@ func main() {
 		multiAddr,
 		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 		floodPubSub,
+		gl,
 	)
 	go rman.Start()
 
@@ -100,7 +110,14 @@ func main() {
 	go rpcServer.Start()
 
 	// Chain-facing connections
-	chainReporter, err := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+	chainReporter, err := chain.ManageChainConnections(
+		proxyHost.Host,
+		rman,
+		proxyHost.GRPC,
+		chainData,
+		conf.SupportShards,
+		gl, //GrafanaLog
+	)
 	if err != nil {
 		logger.Fatal(err)
 		return
