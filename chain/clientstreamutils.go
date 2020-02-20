@@ -21,7 +21,7 @@ func getStreamData(
 			logger.Infof("[stream] Received err %v %v", stream, err)
 			break
 		}
-		blkRecv <- blkData.GetData
+		blkRecv <- blkData.GetData()
 	}
 }
 
