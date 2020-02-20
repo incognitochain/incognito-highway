@@ -267,18 +267,19 @@ func (hc *Client) getClientWithBlock(
 	return hc.router.GetClientSupportShard(cid)
 }
 
-// TODO(@0xakk0r0kamui) replace this function, it just for fix special case in "1 HW for all"-mode.
 func (hc *Client) getClientWithHashes(
 	cid int,
 	hashes [][]byte,
 ) (proto.HighwayServiceClient, peer.ID, error) {
 	connectedPeers := hc.m.GetPeers(cid)
-	if len(connectedPeers) == 0 {
-		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
+	if len(connectedPeers) > 0 {
+		peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
+		client, err := hc.cc.GetServiceClient(peerPicked.ID)
+		if err == nil {
+			return client, peerPicked.ID, nil
+		}
 	}
-	peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
-	client, err := hc.cc.GetServiceClient(peerPicked.ID)
-	return client, peerPicked.ID, err
+	return hc.router.GetClientSupportShard(cid)
 }
 
 // getClientOfSupportedShard returns a client (node or another highway)
