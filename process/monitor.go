@@ -6,6 +6,8 @@ import (
 	"highway/common"
 	"sync"
 	"time"
+
+	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 type Reporter struct {
@@ -20,8 +22,9 @@ type Reporter struct {
 }
 
 func (r *Reporter) Start(_ time.Duration) {
-	stateTimestep := 5 * time.Second
-	for ; true; <-time.Tick(stateTimestep) {
+	stateTimestep := time.NewTicker(5 * time.Second)
+	defer stateTimestep.Stop()
+	for ; true; <-stateTimestep.C {
 		r.updateNetworkState()
 	}
 }
@@ -53,4 +56,9 @@ func NewReporter(chainData *chaindata.ChainData) *Reporter {
 	r.networkState.hwofpeers = map[string]string{}
 	r.networkState.RWMutex = sync.RWMutex{}
 	return r
+}
+
+type PubsubInfo struct {
+	Info   map[string][]peer.ID
+	Locker sync.RWMutex
 }

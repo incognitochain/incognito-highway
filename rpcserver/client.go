@@ -1,7 +1,9 @@
 package rpcserver
 
 import (
+	"net"
 	"net/rpc"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -18,16 +20,16 @@ func (rpcClient *RPCClient) DiscoverHighway(
 	if discoverPeerAddress == "" {
 		return nil, errors.Errorf("empty address")
 	}
-	client := new(rpc.Client)
-	var err error
-	client, err = rpc.Dial("tcp", discoverPeerAddress)
 	logger.Info("Dialing...")
+	conn, err := net.DialTimeout("tcp", discoverPeerAddress, 10*time.Second)
 	if err != nil {
-		return nil, errors.Errorf("Connect to discover peer %v return error %v:", discoverPeerAddress, err)
+		return nil, errors.WithMessagef(err, "fail to connect to discover peer %v", discoverPeerAddress)
 	}
-	defer client.Close()
 
 	logger.Infof("Connected to %v", discoverPeerAddress)
+	client := rpc.NewClient(conn)
+	defer client.Close()
+
 	req := Request{Shard: shardsStr}
 	var res Response
 	logger.Infof("Start dialing RPC server with param %v", req)

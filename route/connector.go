@@ -82,11 +82,12 @@ func (hc *Connector) GetHWClient(pid peer.ID) (proto.HighwayConnectorServiceClie
 }
 
 func (hc *Connector) Start() {
-	enlistTimestep := time.Tick(common.BroadcastMsgEnlistTimestep)
+	enlistTimestep := time.NewTicker(common.BroadcastMsgEnlistTimestep)
+	defer enlistTimestep.Stop()
 	for {
 		var err error
 		select {
-		case <-enlistTimestep:
+		case <-enlistTimestep.C:
 			err = hc.enlist()
 
 		case p := <-hc.outPeers:
@@ -185,14 +186,11 @@ func (hc *Connector) enlist() error {
 }
 
 func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
-	if hc.host.Network().Connectedness(p.ID) == network.Connected {
-		return nil
-	}
-
-	logger.Infof("Dialing to peer %+v", p)
-	err := hc.Dial(p)
-	if err != nil {
-		return err
+	if hc.host.Network().Connectedness(p.ID) != network.Connected {
+		logger.Infof("Dialing to peer %+v", p)
+		if err := hc.Dial(p); err != nil {
+			return err
+		}
 	}
 
 	// Update list of connected shards
