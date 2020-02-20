@@ -4,7 +4,6 @@ import (
 	context "context"
 	"highway/proto"
 	"io"
-	"time"
 )
 
 func getStreamData(
@@ -27,6 +26,7 @@ func getStreamData(
 }
 
 func GetBlocks(
+	ctx context.Context,
 	c proto.HighwayServiceClient,
 	req *proto.GetBlockBeaconByHeightRequest,
 ) (
@@ -34,8 +34,6 @@ func GetBlocks(
 	error,
 ) {
 	logger.Infof("[stream] Server call Client: Start stream request %v %v %v %v", req.GetSpecific(), req.GetFromHeight(), req.GetToHeight(), len(req.GetHeights()))
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	stream, err := c.StreamBlockBeaconByHeight(ctx, req)
 	if err != nil {
 		logger.Infof("[stream] Server call Client return error %v", err)

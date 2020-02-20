@@ -27,7 +27,7 @@ func (s *Server) StreamBlockBeaconByHeight(
 		logger.Infof("[stream] No serviceClient with block, shardID = %v, heights = %v, err = %+v", req.GetFromHeight(), req.GetToHeight(), err)
 		return err
 	}
-	blkRecv, err := GetBlocks(serviceClient, req)
+	blkRecv, err := GetBlocks(ctx, serviceClient, req)
 	if err != nil {
 		logger.Infof("[stream] Calling client but received error %v, return", err)
 		return err
