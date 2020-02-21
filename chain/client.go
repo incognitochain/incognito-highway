@@ -85,6 +85,7 @@ func getBlockShardByHeight(
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -107,6 +108,7 @@ func getBlockBeaconByHeight(
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -130,6 +132,7 @@ func getBlockCrossShardByHeight(
 			Heights:   heights,
 			FromPool:  req.GetFromPool(),
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -152,6 +155,7 @@ func getBlockShardToBeaconByHeight(
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -220,6 +224,7 @@ func getBlockShardByHash(
 			Shard:     req.GetCID(),
 			Hashes:    hashes,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -240,6 +245,7 @@ func getBlockBeaconByHash(
 		&proto.GetBlockBeaconByHashRequest{
 			Hashes:    hashes,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -529,10 +535,12 @@ type getBlockByHeightRequest interface {
 	GetFromHeight() uint64
 	GetToHeight() uint64
 	GetHeights() []uint64
+	GetUUID() string
 }
 
 type getBlockByHashRequest interface {
 	GetCallDepth() int32
 	GetCID() int32
 	GetHashes() [][]byte
+	GetUUID() string
 }

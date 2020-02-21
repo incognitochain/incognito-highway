@@ -20,7 +20,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
 
@@ -125,7 +125,7 @@ func (s *Server) GetBlockByHeight(ctx context.Context, req getBlockByHeightReque
 }
 
 func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 
 	// Monitor status
@@ -143,7 +143,7 @@ func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockS
 }
 
 func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 
 	// Monitor status
@@ -167,7 +167,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 	*proto.GetBlockShardToBeaconByHeightResponse,
 	error,
 ) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 
 	// Monitor status
@@ -184,7 +184,7 @@ func (s *Server) GetBlockShardToBeaconByHeight(
 }
 
 func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 
 	// Monitor status
@@ -258,7 +258,7 @@ func (s *Server) GetBlockByHash(ctx context.Context, req getBlockByHashRequest) 
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 
 	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
@@ -276,7 +276,7 @@ func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockSha
 }
 
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
 	defer s.reporter.watchRequestCounts("get_block_beacon")
@@ -292,7 +292,7 @@ func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBe
 }
 
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	logger.Errorf("Receive GetBlockCrossShardByHash request: %d %d %x", req.FromShard, req.ToShard, req.Hashes)
 	return nil, errors.New("not supported")
