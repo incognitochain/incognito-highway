@@ -132,6 +132,26 @@ service HighwayService {
 
     rpc StreamBlockBeaconByHeight(GetBlockBeaconByHeightRequest) returns (stream BlockData) {};
     rpc StreamBlockBeaconByHash(BlockBeaconByHashRequest) returns (stream BlockData) {};
+    
+    rpc StreamBlockByHeight(BlockByHeightRequest) returns (stream BlockData) {};
+}
+
+enum BlkType {
+    BlkShard = 0;
+    BlkXShard = 1;
+    BlkS2B = 2;
+    BlkBc = 3;
+}
+
+
+message BlockByHeightRequest {
+    BlkType Type = 1;
+    bool Specific = 2;
+    repeated uint64 Heights = 3;
+    int32 From = 4;
+    int32 To = 5; 
+    int32 CallDepth = 6;
+    string UUID = 7;
 }
 
 message BlockBeaconByHeightRequest {
