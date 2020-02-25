@@ -85,6 +85,7 @@ func getBlockShardByHeight(
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -107,6 +108,7 @@ func getBlockBeaconByHeight(
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -130,6 +132,7 @@ func getBlockCrossShardByHeight(
 			Heights:   heights,
 			FromPool:  req.GetFromPool(),
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -152,6 +155,7 @@ func getBlockShardToBeaconByHeight(
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -220,6 +224,7 @@ func getBlockShardByHash(
 			Shard:     req.GetCID(),
 			Hashes:    hashes,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -240,6 +245,7 @@ func getBlockBeaconByHash(
 		&proto.GetBlockBeaconByHashRequest{
 			Hashes:    hashes,
 			CallDepth: req.GetCallDepth() + 1,
+			UUID:      req.GetUUID(),
 		},
 		grpc.MaxCallRecvMsgSize(common.ChainMaxCallRecvMsgSize),
 	)
@@ -303,9 +309,10 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 // and its corresponding highway's peerID
 func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
 	logger := Logger(ctx)
+	_ = logger
 
 	peersHasBlk, err := hc.peerStore.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
-	logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
+	// logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
 	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
 		return peer.ID(""), peer.ID(""), err
@@ -317,7 +324,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
 	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers)
-	logger.Debugf("Peers by groups: %+v", groups)
+	// logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
 	p, err := choosePeerFromGroup(groups)
@@ -557,10 +564,12 @@ type getBlockByHeightRequest interface {
 	GetFromHeight() uint64
 	GetToHeight() uint64
 	GetHeights() []uint64
+	GetUUID() string
 }
 
 type getBlockByHashRequest interface {
 	GetCallDepth() int32
 	GetCID() int32
 	GetHashes() [][]byte
+	GetUUID() string
 }

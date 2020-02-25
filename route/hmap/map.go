@@ -29,9 +29,7 @@ func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 	return m
 }
 
-func (h *Map) IsConnectedToShard(s byte) bool {
-	h.RLock()
-	defer h.RUnlock()
+func (h *Map) isConnectedToShard(s byte) bool {
 	for pid, conn := range h.peerConnected {
 		if conn == false {
 			continue
@@ -44,6 +42,12 @@ func (h *Map) IsConnectedToShard(s byte) bool {
 		}
 	}
 	return false
+}
+
+func (h *Map) IsConnectedToShard(s byte) bool {
+	h.RLock()
+	defer h.RUnlock()
+	return h.isConnectedToShard(s)
 }
 
 func (h *Map) IsConnectedToPeer(p peer.ID) bool {
@@ -162,11 +166,11 @@ func (h *Map) CopyConnected() []byte {
 	defer h.RUnlock()
 	c := []byte{}
 	for i := byte(0); i < common.NumberOfShard; i++ {
-		if h.IsConnectedToShard(i) {
+		if h.isConnectedToShard(i) {
 			c = append(c, i)
 		}
 	}
-	if h.IsConnectedToShard(common.BEACONID) {
+	if h.isConnectedToShard(common.BEACONID) {
 		c = append(c, common.BEACONID)
 	}
 	return c

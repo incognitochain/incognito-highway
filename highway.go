@@ -38,6 +38,7 @@ func main() {
 
 	conf.PrintConfig()
 
+	//Init grafana log
 	gl := grafana.NewLog(
 		fmt.Sprintf("%v:%v", conf.PublicIP, conf.ProxyPort),
 		conf.Version,

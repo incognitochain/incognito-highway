@@ -22,6 +22,7 @@ func (s *Handler) GetPeers(
 ) (
 	err error,
 ) {
+	logger.Debugf("Received new GetPeers request: %+v", req)
 	peers := s.rpcServer.pmap.CopyPeersMap()
 	rpcs := s.rpcServer.pmap.CopyRPCUrls()
 	addrs := []HighwayAddr{}
@@ -48,6 +49,7 @@ func (s *Handler) GetPeers(
 	res.PeerPerShard = map[string][]HighwayAddr{
 		"all": addrs,
 	}
+	logger.Debugf("GetPeers return: %+v", res.PeerPerShard)
 	return
 }
 

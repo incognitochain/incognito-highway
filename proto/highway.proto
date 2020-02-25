@@ -8,6 +8,7 @@ message RegisterRequest {
     bytes CommitteeID = 3;
     string PeerID = 4;
     string Role = 5;
+    string UUID = 6;
 }
 
 message UserRole {
@@ -40,6 +41,7 @@ message GetBlockShardByHeightRequest {
     repeated uint64 Heights = 5;
     bool FromPool = 6;
     int32 CallDepth = 7;
+    string UUID = 8;
 }
 
 message GetBlockShardByHeightResponse {
@@ -50,6 +52,7 @@ message GetBlockShardByHashRequest {
     int32 Shard = 1;
     repeated bytes Hashes = 2;
     int32 CallDepth = 3;
+    string UUID = 4;
 }
 
 message GetBlockShardByHashResponse {
@@ -63,6 +66,7 @@ message GetBlockBeaconByHeightRequest {
     repeated uint64 Heights = 4;
     bool FromPool = 5;
     int32 CallDepth = 6;
+    string UUID = 7;
 }
 
 message GetBlockBeaconByHeightResponse {
@@ -72,6 +76,7 @@ message GetBlockBeaconByHeightResponse {
 message GetBlockBeaconByHashRequest {
     repeated bytes Hashes = 1;
     int32 CallDepth = 2;
+    string UUID = 3;
 }
 
 message GetBlockBeaconByHashResponse {
@@ -87,6 +92,7 @@ message GetBlockCrossShardByHeightRequest {
     repeated uint64 Heights = 6;
     bool FromPool = 7;
     int32 CallDepth = 8;
+    string UUID = 9;
 }
 
 message GetBlockCrossShardByHeightResponse {
@@ -101,6 +107,7 @@ message GetBlockShardToBeaconByHeightRequest {
     repeated uint64 Heights = 5;
     bool FromPool = 6;
     int32 CallDepth = 7;
+    string UUID = 8;
 }
 
 message GetBlockShardToBeaconByHeightResponse {
@@ -112,6 +119,7 @@ message GetBlockCrossShardByHashRequest {
     int32 ToShard = 2;
     repeated bytes Hashes = 3;
     int32 CallDepth = 4;
+    string UUID = 5;
 }
 
 message GetBlockCrossShardByHashResponse {

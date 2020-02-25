@@ -89,9 +89,11 @@ func NewManager(
 // Note that other highways won't return a disconnected highway when queried.
 // Therefore after awhile, the offline highway will be removed from all maps.
 func (h *Manager) keepHighwayConnection(bootstrap []string) {
+	bootstrapTimestep := time.NewTicker(30 * time.Second)
+	defer bootstrapTimestep.Stop()
+
 	if len(bootstrap) > 0 && len(bootstrap[0]) > 0 {
-		bootstrapTimestep := time.Duration(30 * time.Second)
-		for ; true; <-time.Tick(bootstrapTimestep) {
+		for ; true; <-bootstrapTimestep.C {
 			hInfos, err := h.getListHighwaysFromPeer(bootstrap[0])
 			if err != nil {
 				logger.Warnf("Failed getting list of highways from peer %+v, err = %+v", bootstrap[0], err)
@@ -106,8 +108,9 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 	// when the same highway is rerun with different supported shards.
 	// Therefore, if we rerun a highway (in a short period of time) with different
 	// supported shards, we need to use a new peerID.
-	watchTimestep := time.Duration(common.RouteKeepConnectionTimestep)
-	for ; true; <-time.Tick(watchTimestep) {
+	watchTimestep := time.NewTicker(common.RouteKeepConnectionTimestep)
+	defer watchTimestep.Stop()
+	for ; true; <-watchTimestep.C {
 		// Map from peerID to RPCUrl
 		urls := h.Hmap.CopyRPCUrls()
 
@@ -273,7 +276,9 @@ func (h *Manager) GetChainCommittee(pid peer.ID) (*incognitokey.ChainCommittee, 
 
 func (h *Manager) Start() {
 	// Update connection when new highway comes online
-	for range time.Tick(10 * time.Second) { // TODO(@xbunyip): move params to config
+	updateTimestep := time.NewTicker(10 * time.Second)
+	defer updateTimestep.Stop()
+	for range updateTimestep.C { // TODO(@xbunyip): move params to config
 		// New highways online: update map and reconnect to load-balance
 		newManager := true
 		_ = newManager

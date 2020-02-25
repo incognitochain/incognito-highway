@@ -35,7 +35,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	supportShards := flag.String("support_shards", "all", "shard list that this proxy will work for (optional, default \"all\")")
 	privateKey := flag.String("privatekey", "", "private key of this proxy, use  for authentication with other node")
 	bootstrap := flag.String("bootstrap", "", "address of another highway to get list of highways from (ip:port)")
-	version := flag.String("version", "0.1", "proxy version")
+	version := flag.String("version", "0.1-local", "proxy version")
 	listenAddr := flag.String("listenAddr", "0.0.0.0", "listenning address")
 	publicIP := flag.String("host", "127.0.0.1", "public ip address")
 	masternode := flag.String("masternode", "QmVsCnV9kRZ182MX11CpcHMyFAReyXV49a599AbqmwtNrV", "libp2p PeerID of master node")
@@ -109,5 +109,7 @@ func (s ProxyConfig) PrintConfig() {
 	fmt.Println("IsProfiling: ", s.IsProfiling)
 	fmt.Println("Support shards: ", s.SupportShards)
 	fmt.Println("Private Key: ", s.PrivateKey)
+	fmt.Println("Version: ", s.Version)
+	fmt.Println("GrafanaDBURL: ", s.GrafanaDBURL)
 	fmt.Println("============== End Config =============")
 }
