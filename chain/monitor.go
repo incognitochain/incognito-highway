@@ -112,23 +112,6 @@ func (r *Reporter) pushDataToGrafana() {
 
 }
 
-func (r *Reporter) pushDataToGrafana() {
-	timestep := 5 * time.Second
-	for ; true; <-time.Tick(timestep) {
-		if r.gralog == nil {
-			continue
-		}
-		r.requestCounts.Lock()
-		for k, v := range r.requestCounts.m {
-			c := v - r.requestCounts.lm[k]
-			r.requestCounts.lm[k] = v
-			r.gralog.Add(k, c)
-		}
-		r.requestCounts.Unlock()
-	}
-
-}
-
 type PeerRequestKey struct {
 	Msg    string
 	PeerID string
