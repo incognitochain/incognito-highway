@@ -48,7 +48,7 @@ func (s *Server) StreamBlockByHeight(
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
-	serviceClient, _, err := s.m.client.getClientWithBlock(ctx, int(req.GetTo()), req.Heights[len(req.Heights)-1])
+	serviceClient, _, err := s.m.client.getClientWithBlock(ctx, int(req.GetFrom()), req.Heights[len(req.Heights)-1])
 	logger.Infof("[stream] Serve received request, start requesting blocktype %v from cID %v to cID %v another client: specific %v block by height %v -> %v",
 		req.Type,
 		req.From,
