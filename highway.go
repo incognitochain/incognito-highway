@@ -1,4 +1,5 @@
 //+build !test
+
 package main
 
 import (
@@ -109,7 +110,7 @@ func main() {
 	go rpcServer.Start()
 
 	// Chain-facing connections
-	chainReporter := chain.ManageChainConnections(
+	chainReporter, err := chain.ManageChainConnections(
 		proxyHost.Host,
 		rman,
 		proxyHost.GRPC,
@@ -117,6 +118,10 @@ func main() {
 		conf.SupportShards,
 		gl, //GrafanaLog
 	)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
 
 	// // Subscribe to receive new committee
 	// process.GlobalPubsub.SubHandlers <- process.SubHandler{

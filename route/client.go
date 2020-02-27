@@ -54,7 +54,7 @@ func (c *Client) CloseConnection(peerID peer.ID) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		c.conns.connMap[peerID] = nil
+		delete(c.conns.connMap, peerID)
 	}
 	return nil
 }

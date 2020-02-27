@@ -17,7 +17,7 @@ import (
 
 func (hc *Client) GetBlockByHeight(
 	ctx context.Context,
-	req getBlockByHeightRequest,
+	req GetBlockByHeightRequest,
 	heights []uint64,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
@@ -43,7 +43,7 @@ func (hc *Client) GetBlockByHeight(
 	return data, nil
 }
 
-func getBlockByHeight(serviceClient proto.HighwayServiceClient, req getBlockByHeightRequest, heights []uint64) ([][]byte, error) {
+func getBlockByHeight(serviceClient proto.HighwayServiceClient, req GetBlockByHeightRequest, heights []uint64) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 
@@ -74,7 +74,7 @@ func getBlockByHeight(serviceClient proto.HighwayServiceClient, req getBlockByHe
 func getBlockShardByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req getBlockByHeightRequest,
+	req GetBlockByHeightRequest,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardByHeight(
@@ -98,7 +98,7 @@ func getBlockShardByHeight(
 func getBlockBeaconByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req getBlockByHeightRequest,
+	req GetBlockByHeightRequest,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockBeaconByHeight(
@@ -121,7 +121,7 @@ func getBlockBeaconByHeight(
 func getBlockCrossShardByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req getBlockByHeightRequest,
+	req GetBlockByHeightRequest,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockCrossShardByHeight(
@@ -129,6 +129,7 @@ func getBlockCrossShardByHeight(
 		&proto.GetBlockCrossShardByHeightRequest{
 			FromShard: req.GetFrom(),
 			ToShard:   req.GetTo(),
+			Specific:  true,
 			Heights:   heights,
 			FromPool:  req.GetFromPool(),
 			CallDepth: req.GetCallDepth() + 1,
@@ -145,13 +146,14 @@ func getBlockCrossShardByHeight(
 func getBlockShardToBeaconByHeight(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req getBlockByHeightRequest,
+	req GetBlockByHeightRequest,
 	heights []uint64,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardToBeaconByHeight(
 		ctx,
 		&proto.GetBlockShardToBeaconByHeightRequest{
 			FromShard: req.GetFrom(),
+			Specific:  true,
 			Heights:   heights,
 			FromPool:  false,
 			CallDepth: req.GetCallDepth() + 1,
@@ -167,7 +169,7 @@ func getBlockShardToBeaconByHeight(
 
 func (hc *Client) GetBlockByHash(
 	ctx context.Context,
-	req getBlockByHashRequest,
+	req GetBlockByHashRequest,
 	hashes [][]byte,
 ) (resp [][]byte, errOut error) {
 	logger := Logger(ctx)
@@ -193,7 +195,7 @@ func (hc *Client) GetBlockByHash(
 	return data, nil
 }
 
-func getBlockByHash(serviceClient proto.HighwayServiceClient, req getBlockByHashRequest, hashes [][]byte) ([][]byte, error) {
+func getBlockByHash(serviceClient proto.HighwayServiceClient, req GetBlockByHashRequest, hashes [][]byte) ([][]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 
@@ -215,7 +217,7 @@ func getBlockByHash(serviceClient proto.HighwayServiceClient, req getBlockByHash
 func getBlockShardByHash(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req getBlockByHashRequest,
+	req GetBlockByHashRequest,
 	hashes [][]byte,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockShardByHash(
@@ -237,7 +239,7 @@ func getBlockShardByHash(
 func getBlockBeaconByHash(
 	ctx context.Context,
 	serviceClient proto.HighwayServiceClient,
-	req getBlockByHashRequest,
+	req GetBlockByHashRequest,
 	hashes [][]byte,
 ) ([][]byte, error) {
 	reply, err := serviceClient.GetBlockBeaconByHash(
@@ -255,6 +257,11 @@ func getBlockBeaconByHash(
 	return reply.Data, nil
 }
 
+func (hc *Client) SetBlockByHeight(_ context.Context, _ GetBlockByHeightRequest, _ []uint64, _ [][]byte) error {
+	// Client no needs to cache block
+	return nil
+}
+
 func (hc *Client) getClientWithBlock(
 	ctx context.Context,
 	cid int,
@@ -266,18 +273,19 @@ func (hc *Client) getClientWithBlock(
 	return hc.router.GetClientSupportShard(cid)
 }
 
-// TODO(@0xakk0r0kamui) replace this function, it just for fix special case in "1 HW for all"-mode.
 func (hc *Client) getClientWithHashes(
 	cid int,
 	hashes [][]byte,
 ) (proto.HighwayServiceClient, peer.ID, error) {
 	connectedPeers := hc.m.GetPeers(cid)
-	if len(connectedPeers) == 0 {
-		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
+	if len(connectedPeers) > 0 {
+		peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
+		client, err := hc.cc.GetServiceClient(peerPicked.ID)
+		if err == nil {
+			return client, peerPicked.ID, nil
+		}
 	}
-	peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
-	client, err := hc.cc.GetServiceClient(peerPicked.ID)
-	return client, peerPicked.ID, err
+	return hc.router.GetClientSupportShard(cid)
 }
 
 // getClientOfSupportedShard returns a client (node or another highway)
@@ -526,7 +534,7 @@ type Router interface {
 	GetID() peer.ID
 }
 
-type getBlockByHeightRequest interface {
+type GetBlockByHeightRequest interface {
 	GetCallDepth() int32
 	GetFromPool() bool
 	GetFrom() int32
@@ -538,7 +546,7 @@ type getBlockByHeightRequest interface {
 	GetUUID() string
 }
 
-type getBlockByHashRequest interface {
+type GetBlockByHashRequest interface {
 	GetCallDepth() int32
 	GetCID() int32
 	GetHashes() [][]byte

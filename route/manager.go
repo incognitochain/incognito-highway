@@ -389,18 +389,19 @@ func (h *Manager) GetHighwayServiceClient(pid peer.ID) (proto.HighwayServiceClie
 	return proto.NewHighwayServiceClient(conn), pid, nil
 }
 
-// GetClientWithBlock returns the grpc client with connection to a highway
+// GetClientSupportShard returns the grpc client with connection to a highway
 // supporting a specific shard
 func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error) {
-	// TODO(@0xbunyip): make sure peer is still connected
-	peers := h.Hmap.Peers[byte(cid)]
-	if len(peers) == 0 {
+	peersMap := h.Hmap.CopyPeersMap()
+	peersMapOfCID := map[byte][]peer.AddrInfo{}
+	peersMapOfCID[byte(cid)] = peersMap[byte(cid)]
+
+	chosen, ok := getRandomPeer(peersMapOfCID, []peer.ID{h.ID})
+	if !ok {
 		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
 	}
-
-	// TODO(@0xbunyip): get peer randomly here?
-	pid := peers[0].ID
-	return h.GetHighwayServiceClient(pid)
+	// TODO(@0xbunyip): make sure peer is still connected
+	return h.GetHighwayServiceClient(chosen.ID)
 }
 
 func (h *Manager) GetShardsConnected() []byte {

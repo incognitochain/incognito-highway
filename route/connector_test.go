@@ -15,7 +15,25 @@ import (
 	"google.golang.org/grpc"
 )
 
+func configTime() func() {
+	broadcastMsgEnlistTimestep := common.BroadcastMsgEnlistTimestep
+	routeKeepConnectionTimestep := common.RouteKeepConnectionTimestep
+	routeHighwayKeepaliveTime := common.RouteHighwayKeepaliveTime
+	common.BroadcastMsgEnlistTimestep = 100 * time.Millisecond
+	common.RouteKeepConnectionTimestep = 20 * time.Millisecond
+	common.RouteHighwayKeepaliveTime = 100 * time.Millisecond
+
+	return func() {
+		// Revert time configuration after a test is done
+		common.BroadcastMsgEnlistTimestep = broadcastMsgEnlistTimestep
+		common.RouteKeepConnectionTimestep = routeKeepConnectionTimestep
+		common.RouteHighwayKeepaliveTime = routeHighwayKeepaliveTime
+	}
+}
+
 func TestEnlistLoop(t *testing.T) {
+	defer configTime()()
+
 	h, _ := setupHost()
 	publisher := &mocks.Publisher{}
 	publisher.On("Publish", mock.Anything, mock.Anything).Return(nil)
@@ -25,7 +43,7 @@ func TestEnlistLoop(t *testing.T) {
 		stop:      make(chan int),
 	}
 	go connector.Start()
-	time.Sleep(2 * common.BroadcastMsgEnlistTimestep)
+	time.Sleep(2*common.BroadcastMsgEnlistTimestep + 200*time.Microsecond)
 	connector.stop <- 1
 	publisher.AssertNumberOfCalls(t, "Publish", 2)
 }
