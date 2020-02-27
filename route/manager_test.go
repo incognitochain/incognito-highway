@@ -23,12 +23,14 @@ func TestKeepConnectionAtStart(t *testing.T) {
 	manager := setupKeepConnectionTest(discoverer, nil)
 	bootstrap := []string{"123123"}
 	go manager.keepHighwayConnection(bootstrap)
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 	assert.Len(t, manager.Hmap.Peers[0], 2)
 	assert.Len(t, manager.Hmap.Peers[4], 1)
 }
 
 func TestQueryRandomPeer(t *testing.T) {
+	defer configTime()()
+
 	discoverer, rpcUsed := setupDiscoverer(2)
 	manager := setupKeepConnectionTest(discoverer, nil)
 	bootstrap := []string{"123123"}
@@ -51,6 +53,7 @@ func TestConnectInboundPeers(t *testing.T) {
 }
 
 func TestRemoveDeadPeers(t *testing.T) {
+	defer configTime()()
 	discoverer, _ := setupDiscoverer(1)
 	connectedness := []network.Connectedness{network.Connected, network.Connected, network.Connected, network.NotConnected}
 	manager := setupKeepConnectionTest(discoverer, connectedness)
