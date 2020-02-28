@@ -137,9 +137,6 @@ service HighwayService {
     rpc GetBlockCrossShardByHeight(GetBlockCrossShardByHeightRequest) returns (GetBlockCrossShardByHeightResponse) {};
     rpc GetBlockShardToBeaconByHeight(GetBlockShardToBeaconByHeightRequest) returns (GetBlockShardToBeaconByHeightResponse) {};
     rpc GetBlockCrossShardByHash(GetBlockCrossShardByHashRequest) returns (GetBlockCrossShardByHashResponse) {};
-
-    rpc StreamBlockBeaconByHeight(GetBlockBeaconByHeightRequest) returns (stream BlockData) {};
-    rpc StreamBlockBeaconByHash(BlockBeaconByHashRequest) returns (stream BlockData) {};
     
     rpc StreamBlockByHeight(BlockByHeightRequest) returns (stream BlockData) {};
 }
@@ -160,20 +157,6 @@ message BlockByHeightRequest {
     int32 To = 5; 
     int32 CallDepth = 6;
     string UUID = 7;
-}
-
-message BlockBeaconByHeightRequest {
-    bool Specific = 1;
-    uint64 FromHeight = 2;
-    uint64 ToHeight = 3;
-    repeated uint64 Heights = 4;
-    bool FromPool = 5;
-    int32 CallDepth = 6;
-}
-
-message BlockBeaconByHashRequest {
-    repeated bytes Hashes = 1;
-    int32 CallDepth = 2;
 }
 
 message BlockData {
