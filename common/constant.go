@@ -27,8 +27,8 @@ var (
 	CacheBufferItems            = int64(64)
 
 	MaxCallDepth         = int32(2)
-	ChoosePeerBlockDelta = uint64(100)
-	MaxBlocksPerRequest  = uint64(100)
+	ChoosePeerBlockDelta = uint64(300)
+	MaxBlocksPerRequest  = uint64(300)
 	MaxTimePerRequest    = 30 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second
@@ -49,3 +49,8 @@ const (
 	PENDING
 	NORMAL
 )
+
+type ExpectedBlk struct {
+	Height uint64
+	Data   []byte
+}

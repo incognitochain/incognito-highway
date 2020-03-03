@@ -315,6 +315,7 @@ type Provider interface {
 	SetBlockByHeight(ctx context.Context, req GetBlockByHeightRequest, heights []uint64, blocks [][]byte) error
 	GetBlockByHeight(ctx context.Context, req GetBlockByHeightRequest, heights []uint64) ([][]byte, error)
 	GetBlockByHash(ctx context.Context, req GetBlockByHashRequest, hashes [][]byte) ([][]byte, error)
+	StreamBlkByHeight(ctx context.Context, req RequestBlockByHeight, blkChan chan common.ExpectedBlk) error
 }
 
 func RegisterServer(

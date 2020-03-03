@@ -2,13 +2,14 @@ package chain
 
 import (
 	context "context"
+	"highway/common"
 	"highway/proto"
 	"io"
 )
 
 func streamData(
 	stream proto.HighwayService_StreamBlockByHeightClient,
-	blkRecv chan interface{},
+	blkRecv chan []byte,
 ) {
 	defer close(blkRecv)
 	for {
@@ -30,7 +31,7 @@ func getBlocks(
 	c proto.HighwayServiceClient,
 	req *proto.BlockByHeightRequest,
 ) (
-	chan interface{},
+	chan []byte,
 	error,
 ) {
 	logger.Infof("[stream] Server call Client: Start stream request %v", req)
@@ -40,7 +41,53 @@ func getBlocks(
 		return nil, err
 	}
 	logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
-	blkRecv := make(chan interface{})
+	blkRecv := make(chan []byte)
 	go streamData(stream, blkRecv)
 	return blkRecv, nil
+}
+
+func (c *Client) StreamBlkByHeight(
+	ctx context.Context,
+	req RequestBlockByHeight,
+	blkChan chan common.ExpectedBlk,
+) error {
+	logger := Logger(ctx)
+	sc, _, err := c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
+	logger.Infof("[stream] Server call Client: Start stream request %v", req)
+	stream, err := sc.StreamBlockByHeight(ctx, req.(*proto.BlockByHeightRequest))
+	if err != nil {
+		logger.Infof("[stream] Server call Client return error %v", err)
+		return err
+	}
+	logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
+	heights := req.GetHeights()
+	blkHeight := heights[0] - 1
+	idx := 0
+	blkData := new(proto.BlockData)
+	for blkHeight < heights[len(heights)-1] {
+		if req.GetSpecific() {
+			blkHeight = heights[idx]
+			idx++
+		} else {
+			blkHeight++
+		}
+		if err == nil {
+			blkData, err = stream.Recv()
+			if err == nil {
+				logger.Infof("[stream] %v Received block %v", ctx.Value("ID"), blkHeight)
+				blkChan <- common.ExpectedBlk{
+					Height: blkHeight,
+					Data:   blkData.GetData(),
+				}
+				continue
+			} else {
+				logger.Infof("[stream] Received err %v %v", stream, err)
+			}
+		}
+		blkChan <- common.ExpectedBlk{
+			Height: blkHeight,
+			Data:   []byte{},
+		}
+	}
+	return nil
 }

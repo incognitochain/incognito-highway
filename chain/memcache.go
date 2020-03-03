@@ -95,3 +95,41 @@ func (cache *MemCache) Metrics() map[string]interface{} {
 	}
 	return metric
 }
+
+func keyByHeight(req RequestBlockByHeight, h uint64) string {
+	return fmt.Sprintf("byheight-%d-%d-%d", req.GetFrom(), req.GetTo(), h)
+}
+
+func (cache *MemCache) StreamBlkByHeight(
+	_ context.Context,
+	req RequestBlockByHeight,
+	blkChan chan common.ExpectedBlk,
+) error {
+	heights := req.GetHeights()
+	blkHeight := heights[0] - 1
+	idx := 0
+	for blkHeight < heights[len(heights)-1] {
+		if req.GetSpecific() {
+			blkHeight = heights[idx]
+			idx++
+		} else {
+			blkHeight++
+		}
+		key := keyByHeight(req, blkHeight)
+		if b, ok := cache.cacher.Get(key); ok {
+			if block, ok := b.([]byte); ok {
+				blkChan <- common.ExpectedBlk{
+					Height: blkHeight,
+					Data:   block,
+				}
+				continue
+			}
+		}
+		blkChan <- common.ExpectedBlk{
+			Height: blkHeight,
+			Data:   []byte{},
+		}
+	}
+	close(blkChan)
+	return nil
+}

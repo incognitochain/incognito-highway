@@ -581,3 +581,13 @@ type GetBlockByHashRequest interface {
 	GetHashes() [][]byte
 	GetUUID() string
 }
+
+type RequestBlockByHeight interface {
+	GetType() proto.BlkType
+	GetCallDepth() int32
+	GetFrom() int32
+	GetTo() int32
+	GetSpecific() bool
+	GetHeights() []uint64
+	GetUUID() string
+}
