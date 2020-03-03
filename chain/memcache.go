@@ -76,6 +76,20 @@ func (cache *MemCache) SetBlockByHeight(
 	return nil
 }
 
+func (cache *MemCache) SetSingleBlockByHeight(
+	_ context.Context,
+	req RequestBlockByHeight,
+	blk common.ExpectedBlk,
+) error {
+	if len(blk.Data) == 0 {
+		return errors.Errorf("Block height %v has empty data", blk.Height)
+	}
+	key := keyByHeight(req, blk.Height)
+	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
+	cache.cacher.Set(key, blk.Data, cost)
+	return nil
+}
+
 func (cache *MemCache) GetBlockByHash(_ context.Context, req GetBlockByHashRequest, hashes [][]byte) ([][]byte, error) {
 	blocks := make([][]byte, len(hashes)) // Not supported
 	return blocks, nil

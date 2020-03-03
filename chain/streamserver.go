@@ -16,40 +16,23 @@ func (s *Server) StreamBlockByHeight(
 	defer cancel()
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
-	defer g.Cancel()
 	for blk := range blkRecv {
-		if len(blk) == 0 {
+		if len(blk.Data) == 0 {
 			return errors.New("close")
 		}
 		logger.Infof("[stream] Received block from channel %v, send to client", ctx.Value("ID"))
-		if err := ss.Send(&proto.BlockData{Data: blk}); err != nil {
+		if err := ss.Send(&proto.BlockData{Data: blk.Data}); err != nil {
 			logger.Infof("[stream] Trying send to client but received error %v, return and cancel context", err)
 			return err
 		}
+		go func(s *Server, blk common.ExpectedBlk) {
+			for _, p := range s.Providers {
+				err := p.SetSingleBlockByHeight(ctx, req, blk)
+				if err != nil {
+					logger.Errorf("[stream] Caching return error %v", err)
+				}
+			}
+		}(s, blk)
 	}
 	return nil
 }
-
-// logger.Infof("[stream] Serve received request, start requesting blocktype %v from cID %v to cID %v another client: specific %v block by height %v -> %v",
-// 	req.Type,
-// 	req.From,
-// 	req.To,
-// 	req.Specific,
-// 	req.Heights[0],
-// 	req.Heights[len(req.Heights)-1],
-// )
-// if err != nil {
-// 	logger.Errorf("[stream] No serviceClient with  blocktype %v from cID %v to cID %v another client: specific %v block by height %v -> %v",
-// 		req.Type,
-// 		req.From,
-// 		req.To,
-// 		req.Specific,
-// 		req.Heights[0],
-// 		req.Heights[len(req.Heights)-1],
-// 	)
-// 	return err
-// }
-// if err != nil {
-// 	logger.Infof("[stream] Calling client but received error %v, return", err)
-// 	return err
-// }

@@ -52,8 +52,17 @@ func (c *Client) StreamBlkByHeight(
 	blkChan chan common.ExpectedBlk,
 ) error {
 	logger := Logger(ctx)
+	defer close(blkChan)
+	logger.Infof("[stream] Server call Client: Start stream request %v %v", req, ctx.Value("ID"))
 	sc, _, err := c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
-	logger.Infof("[stream] Server call Client: Start stream request %v", req)
+	if sc == nil {
+		logger.Warnf("[stream] Client is nil!")
+		blkChan <- common.ExpectedBlk{
+			Height: req.GetHeights()[0],
+			Data:   []byte{},
+		}
+		return nil
+	}
 	stream, err := sc.StreamBlockByHeight(ctx, req.(*proto.BlockByHeightRequest))
 	if err != nil {
 		logger.Infof("[stream] Server call Client return error %v", err)

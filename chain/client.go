@@ -262,6 +262,15 @@ func (hc *Client) SetBlockByHeight(_ context.Context, _ GetBlockByHeightRequest,
 	return nil
 }
 
+func (hc *Client) SetSingleBlockByHeight(
+	_ context.Context,
+	_ RequestBlockByHeight,
+	_ common.ExpectedBlk,
+) error {
+	// Client no needs to cache block
+	return nil
+}
+
 func (hc *Client) getClientWithBlock(
 	ctx context.Context,
 	cid int,
