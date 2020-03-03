@@ -16,7 +16,7 @@ type BlkGetter struct {
 }
 
 func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
-	g := new(BlkGetter)
+	g := &BlkGetter{}
 	g.listenNextBlk = []chan uint64{}
 	g.newBlk = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 	g.idx = 0
@@ -27,15 +27,16 @@ func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
 	return g
 }
 
-func (g *BlkGetter) publishNewHeights() {
+func (g *BlkGetter) publishNewHeights(height uint64) {
 	for _, lisner := range g.listenNextBlk {
-		lisner <- g.newHeight
+		lisner <- height
 	}
 }
 
-func (g *BlkGetter) CancelListenNewBlock() {
-	for _, lisner := range g.listenNextBlk {
-		close(lisner)
+func (g *BlkGetter) Cancel() {
+	g.newBlk <- common.ExpectedBlk{
+		Height: 0,
+		Data:   []byte{},
 	}
 }
 
@@ -49,13 +50,17 @@ func (g *BlkGetter) listenCommingBlk() {
 	for blk := range g.newBlk {
 		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
 		if blk.Height < g.newHeight {
+			if blk.Height == 0 {
+				g.publishNewHeights(0)
+				return
+			}
 			continue
 		}
 		if blk.Height == g.newHeight {
 			g.blkRecv <- blk.Data
 			g.updateNewHeight()
 		}
-		g.publishNewHeights()
+		g.publishNewHeights(g.newHeight)
 	}
 }
 
@@ -92,6 +97,10 @@ func (g *BlkGetter) handleBlkRecv(ctx context.Context, ch chan common.ExpectedBl
 
 func (g *BlkGetter) listenForReturn(listener chan uint64, data map[uint64][]byte) {
 	for h := range listener {
+		if h == 0 {
+			close(listener)
+			return
+		}
 		logger.Infof("[stream] Listener Received height %v", h)
 		if blkData, ok := data[h]; ok {
 			g.newBlk <- common.ExpectedBlk{
@@ -106,7 +115,7 @@ func (g *BlkGetter) listenForReturn(listener chan uint64, data map[uint64][]byte
 	}
 }
 
-func NewReq(
+func newReq(
 	oldReq *proto.BlockByHeightRequest,
 	missing []uint64,
 ) *proto.BlockByHeightRequest {
@@ -133,7 +142,7 @@ func (g *BlkGetter) CallForBlocks(
 		blkCh := make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
 		missing := g.handleBlkRecv(ctx, blkCh)
-		nreq = NewReq(nreq, missing)
+		nreq = newReq(nreq, missing)
 	}
 	return nil
 }

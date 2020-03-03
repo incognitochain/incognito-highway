@@ -16,7 +16,7 @@ func (s *Server) StreamBlockByHeight(
 	defer cancel()
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
-	// defer g.CancelListenNewBlock()
+	defer g.Cancel()
 	for blk := range blkRecv {
 		if len(blk) == 0 {
 			return errors.New("close")
