@@ -53,6 +53,7 @@ func (g *BlkGetter) checkWaitingBlk() bool {
 
 func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 	logger := Logger(ctx)
+	logger.Infof("[goroutine] listenCommingBlk START")
 	defer close(g.blkRecv)
 	for blk := range g.newBlk {
 		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
@@ -69,10 +70,12 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 	}
 	for {
 		if (g.newHeight == 0) || len(g.waiting) == 0 {
+			logger.Infof("[goroutine] listenCommingBlk END")
 			return
 		}
 		ok := g.checkWaitingBlk()
 		if !ok {
+			logger.Infof("[goroutine] listenCommingBlk END")
 			return
 		}
 	}
