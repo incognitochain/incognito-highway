@@ -1,11 +1,14 @@
 //+build !test
+
 package main
 
 import (
 	"fmt"
 	"highway/chain"
+	"highway/chaindata"
 	"highway/common"
 	"highway/config"
+	"highway/grafana"
 	"highway/health"
 	"highway/monitor"
 	"highway/p2p"
@@ -17,6 +20,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 var _ monitor.Monitor = (*config.Reporter)(nil)
@@ -34,51 +38,90 @@ func main() {
 	initLogger(conf.Loglevel)
 
 	conf.PrintConfig()
-	topic.Handler.UpdateSupportShards(conf.SupportShards)
+
+	//Init grafana log
+	gl := grafana.NewLog(
+		fmt.Sprintf("%v:%v", conf.PublicIP, conf.ProxyPort),
+		conf.Version,
+		conf.GrafanaDBURL,
+	)
+	gl.Start()
+
 	masterPeerID, err := peer.IDB58Decode(conf.Masternode)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 
-	chainData := new(process.ChainData)
+	chainData := new(chaindata.ChainData)
 	chainData.Init(common.NumberOfShard)
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, conf.PrivateKey)
 
-	selfIPFSAddr := fmt.Sprintf("/ip4/%v/tcp/%v/p2p/%v", conf.PublicIP, conf.ProxyPort, proxyHost.Host.ID().String())
-	logger.Infof("Self IPFS Address: %v.", selfIPFSAddr)
-	rpcServer, err := rpcserver.NewRPCServer(&rpcserver.RpcServerConfig{
-		Port:     conf.BootnodePort,
-		IPFSAddr: selfIPFSAddr,
-	})
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	go rpcServer.Start()
+	// Setup topic
+	topic.Handler = topic.TopicManager{}
+	topic.Handler.Init(proxyHost.Host.ID().String())
+	topic.Handler.UpdateSupportShards(conf.SupportShards)
 
 	// Pubsub
-	if err := process.InitPubSub(proxyHost.Host, conf.SupportShards, chainData); err != nil {
-		logger.Error(err)
+	floodPubSub, err := process.NewPubSub(
+		proxyHost.Host,
+		conf.SupportShards,
+		chainData)
+	if err != nil {
+		logger.Fatal(err)
 		return
 	}
 	logger.Info("Init pubsub ok")
-	go process.GlobalPubsub.WatchingChain()
+	go floodPubSub.WatchingChain()
 
 	// Highway manager: connect cross highways
+	multiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", conf.PublicIP, conf.ProxyPort))
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+
 	rman := route.NewManager(
 		conf.SupportShards,
 		conf.Bootstrap,
 		masterPeerID,
 		proxyHost.Host,
 		proxyHost.GRPC,
+		multiAddr,
+		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
+		floodPubSub,
+		gl,
 	)
 	go rman.Start()
 
+	// RPCServer
+	rpcServer, err := rpcserver.NewRPCServer(
+		&rpcserver.RpcServerConfig{
+			Port: conf.BootnodePort,
+		},
+		rman.Hmap,
+	)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
+	go rpcServer.Start()
+
 	// Chain-facing connections
-	chainReporter := chain.ManageChainConnections(proxyHost.Host, rman, proxyHost.GRPC, chainData, conf.SupportShards)
+	chainReporter, err := chain.ManageChainConnections(
+		proxyHost.Host,
+		rman,
+		proxyHost.GRPC,
+		chainData,
+		conf.SupportShards,
+		gl, //GrafanaLog
+	)
+	if err != nil {
+		logger.Fatal(err)
+		return
+	}
 
 	// // Subscribe to receive new committee
 	// process.GlobalPubsub.SubHandlers <- process.SubHandler{

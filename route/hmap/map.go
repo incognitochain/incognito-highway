@@ -1,6 +1,7 @@
-package route
+package hmap
 
 import (
+	"highway/common"
 	"sync"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -9,43 +10,62 @@ import (
 type Map struct {
 	Peers    map[byte][]peer.AddrInfo // shard => peers
 	Supports map[peer.ID][]byte       // peerID => shards supported
+	RPCs     map[peer.ID]string       // peerID => RPC endpoint (to call GetPeers)
 
-	connected []byte // keep track of connected shards
+	peerConnected map[peer.ID]bool // keep track of connected peers
 	*sync.RWMutex
 }
 
-func NewMap(p peer.AddrInfo, supportShards []byte) *Map {
+func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 	m := &Map{
-		Peers:     map[byte][]peer.AddrInfo{},
-		Supports:  map[peer.ID][]byte{},
-		connected: supportShards,
-		RWMutex:   &sync.RWMutex{},
+		Peers:         map[byte][]peer.AddrInfo{},
+		Supports:      map[peer.ID][]byte{},
+		RPCs:          map[peer.ID]string{},
+		peerConnected: map[peer.ID]bool{},
+		RWMutex:       &sync.RWMutex{},
 	}
-	m.AddPeer(p, supportShards)
+	m.AddPeer(p, supportShards, rpcUrl)
+	m.ConnectToShardOfPeer(p)
 	return m
 }
 
-func (h *Map) IsConnectedToShard(s byte) bool {
-	h.RLock()
-	defer h.RUnlock()
-	for _, c := range h.connected {
-		if c == s {
-			return true
+func (h *Map) isConnectedToShard(s byte) bool {
+	for pid, conn := range h.peerConnected {
+		if conn == false {
+			continue
+		}
+
+		for _, sup := range h.Supports[pid] {
+			if sup == s {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func (h *Map) connectToShard(s byte) {
-	h.connected = append(h.connected, s)
+func (h *Map) IsConnectedToShard(s byte) bool {
+	h.RLock()
+	defer h.RUnlock()
+	return h.isConnectedToShard(s)
+}
+
+func (h *Map) IsConnectedToPeer(p peer.ID) bool {
+	h.RLock()
+	defer h.RUnlock()
+	return h.peerConnected[p]
 }
 
 func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
 	h.Lock()
 	defer h.Unlock()
-	for _, s := range h.Supports[p.ID] {
-		h.connectToShard(s)
-	}
+	h.peerConnected[p.ID] = true
+}
+
+func (h *Map) DisconnectToShardOfPeer(p peer.AddrInfo) {
+	h.Lock()
+	defer h.Unlock()
+	h.peerConnected[p.ID] = false
 }
 
 // IsEnlisted checks if a peer has already registered as a valid highway
@@ -56,7 +76,7 @@ func (h *Map) IsEnlisted(p peer.AddrInfo) bool {
 	return ok
 }
 
-func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
+func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
 	h.Lock()
 	defer h.Unlock()
 	mcopy := func(b []byte) []byte { // Create new slice and copy
@@ -65,9 +85,45 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte) {
 		return c
 	}
 
+	added := false
 	h.Supports[p.ID] = mcopy(supportShards)
 	for _, s := range supportShards {
-		h.Peers[s] = append(h.Peers[s], p)
+		found := false
+		for _, q := range h.Peers[s] {
+			if q.ID == p.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			added = true
+			h.Peers[s] = append(h.Peers[s], p)
+		}
+	}
+	if added {
+		logger.Infof("Adding peer %+v, rpcUrl %s, support %v", p, rpcUrl, supportShards)
+	}
+	h.RPCs[p.ID] = rpcUrl
+}
+
+func (h *Map) RemovePeer(p peer.AddrInfo) {
+	h.Lock()
+	defer h.Unlock()
+	delete(h.Supports, p.ID)
+	delete(h.RPCs, p.ID)
+	for i, addrs := range h.Peers {
+		k := 0
+		for _, addr := range addrs {
+			if addr.ID == p.ID {
+				continue
+			}
+			h.Peers[i][k] = addr
+			k++
+		}
+		if k < len(h.Peers[i]) {
+			logger.Infof("Removed peer from map of shard %d: %+v", i, p)
+		}
+		h.Peers[i] = h.Peers[i][:k]
 	}
 }
 
@@ -95,10 +151,27 @@ func (h *Map) CopySupports() map[peer.ID][]byte {
 	return m
 }
 
+func (h *Map) CopyRPCUrls() map[peer.ID]string {
+	h.RLock()
+	defer h.RUnlock()
+	m := map[peer.ID]string{}
+	for pid, rpc := range h.RPCs {
+		m[pid] = rpc
+	}
+	return m
+}
+
 func (h *Map) CopyConnected() []byte {
 	h.RLock()
 	defer h.RUnlock()
-	c := make([]byte, len(h.connected))
-	copy(c, h.connected)
+	c := []byte{}
+	for i := byte(0); i < common.NumberOfShard; i++ {
+		if h.isConnectedToShard(i) {
+			c = append(c, i)
+		}
+	}
+	if h.isConnectedToShard(common.BEACONID) {
+		c = append(c, common.BEACONID)
+	}
 	return c
 }

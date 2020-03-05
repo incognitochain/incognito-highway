@@ -2,8 +2,8 @@ package chain
 
 import (
 	"context"
+	"highway/chaindata"
 	"highway/common"
-	"highway/process"
 	"highway/process/topic"
 	"highway/proto"
 
@@ -20,7 +20,7 @@ func (s *Server) Register(
 	*proto.RegisterResponse,
 	error,
 ) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
 
@@ -52,11 +52,11 @@ func (s *Server) Register(
 	if len(cIDs) > 0 {
 		cID = cIDs[0] // For validators, cIDs must contain exactly 1 value that is the shard that the they are validating on
 	}
-	r := process.GetUserRole(reqRole, cID)
+	r := chaindata.GetUserRole(reqRole, cID)
 	pid, err := peer.IDB58Decode(req.PeerID)
 	if err != nil {
 		logger.Warnf("Invalid peerID: %v", req.PeerID)
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
@@ -67,11 +67,7 @@ func (s *Server) Register(
 	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
 		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
-		err := s.hc.chainData.UpdateCommittee(key, pid, byte(cID))
-		if err != nil {
-			return nil, err
-		}
-
+		s.chainData.UpdateCommittee(key, pid, byte(cID))
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
 	} else {
@@ -86,171 +82,124 @@ func (s *Server) Register(
 	return &proto.RegisterResponse{Pair: pairs, Role: r}, nil
 }
 
-func (s *Server) GetBlockShardByHeight(ctx context.Context, req *proto.GetBlockShardByHeightRequest) (*proto.GetBlockShardByHeightResponse, error) {
-	ctx = WithRequestID(ctx)
-
-	// Monitor status
-	defer s.reporter.watchRequestCounts("get_block_shard")
-
-	// TODO(@0xbunyip): check if block in cache
-
-	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockShardByHeight(
-		ctx,
-		req.Shard,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-	)
-	if err != nil {
+func (s *Server) GetBlockByHash(ctx context.Context, req GetBlockByHashRequest) ([][]byte, error) {
+	if req.GetCallDepth() > common.MaxCallDepth {
+		err := errors.Errorf("reached max call depth: %+v", req)
 		return nil, err
 	}
-	// TODO(@0xbunyip): cache blocks
-	return &proto.GetBlockShardByHeightResponse{Data: data}, nil
+	hashes := req.GetHashes()
+	idxs := make([]int, len(hashes))
+	for i := 0; i < len(idxs); i++ {
+		idxs[i] = i
+	}
+
+	blocks := make([][]byte, len(hashes))
+	for _, p := range s.Providers {
+		if len(hashes) == 0 {
+			break
+		}
+
+		data, err := p.GetBlockByHash(ctx, req, hashes)
+		if err != nil {
+			logger.Warnf("Failed GetBlockByHash: %+v", err)
+			continue
+		}
+
+		newHashes := [][]byte{}
+		newIdxs := []int{}
+		for i, d := range data {
+			if d == nil {
+				// Nil result, must ask next provider
+				newHashes = append(newHashes, hashes[i])
+				newIdxs = append(newIdxs, idxs[i])
+				continue
+			}
+
+			blocks[idxs[i]] = d
+		}
+		hashes = newHashes
+		idxs = newIdxs
+	}
+	return blocks, nil
 }
 
 func (s *Server) GetBlockShardByHash(ctx context.Context, req *proto.GetBlockShardByHashRequest) (*proto.GetBlockShardByHashResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 
 	logger.Infof("[blkbyhash] Receive GetBlockShardByHash request: %v %x", req.Shard, req.Hashes)
 	defer s.reporter.watchRequestCounts("get_block_shard")
 
-	// TODO(@0xbunyip): check if block in cache
-
-	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockShardByHash(
-		ctx,
-		req.Shard,
-		req.Hashes,
-	)
+	data, err := s.GetBlockByHash(ctx, req)
 	if err != nil {
-		logger.Infof("[blkbyhash] Receive GetBlockShardByHash response error: %v ", err)
+		logger.Warnf("GetBlockShardByHash return error: %+v", err)
 		return nil, err
 	}
-	// TODO(@0xbunyip): cache blocks
+
 	logger.Infof("[blkbyhash] Receive GetBlockShardByHash response data: %v ", data)
 	return &proto.GetBlockShardByHashResponse{Data: data}, nil
 }
 
-func (s *Server) GetBlockBeaconByHeight(ctx context.Context, req *proto.GetBlockBeaconByHeightRequest) (*proto.GetBlockBeaconByHeightResponse, error) {
-	ctx = WithRequestID(ctx)
-
-	// Monitor status
-	defer s.reporter.watchRequestCounts("get_block_beacon")
-
-	// TODO(@0xbunyip): check if block in cache
-
-	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockBeaconByHeight(
-		ctx,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(@0xbunyip): cache blocks
-	return &proto.GetBlockBeaconByHeightResponse{Data: data}, nil
-}
-
-func (s *Server) GetBlockShardToBeaconByHeight(
-	ctx context.Context,
-	req *proto.GetBlockShardToBeaconByHeightRequest,
-) (
-	*proto.GetBlockShardToBeaconByHeightResponse,
-	error,
-) {
-	ctx = WithRequestID(ctx)
-
-	// Monitor status
-	defer s.reporter.watchRequestCounts("get_block_shard_to_beacon")
-
-	data, err := s.hc.GetBlockShardToBeaconByHeight(
-		ctx,
-		req.GetFromShard(),
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(@0xbunyip): cache blocks
-	return &proto.GetBlockShardToBeaconByHeightResponse{Data: data}, nil
-}
-
 func (s *Server) GetBlockBeaconByHash(ctx context.Context, req *proto.GetBlockBeaconByHashRequest) (*proto.GetBlockBeaconByHashResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	logger.Infof("Receive GetBlockBeaconByHash request: %x", req.Hashes)
 	defer s.reporter.watchRequestCounts("get_block_beacon")
 
-	// TODO(@0xbunyip): check if block in cache
-
-	// Call node to get blocks
-	// TODO(@0xbunyip): use fromPool
-	data, err := s.hc.GetBlockBeaconByHash(
-		ctx,
-		req.Hashes,
-	)
+	data, err := s.GetBlockByHash(ctx, req)
 	if err != nil {
+		logger.Warnf("GetBlockBeaconByHash return error: %+v", err)
 		return nil, err
 	}
-	// TODO(@0xbunyip): cache blocks
+
 	return &proto.GetBlockBeaconByHashResponse{Data: data}, nil
 }
 
-func (s *Server) GetBlockCrossShardByHeight(ctx context.Context, req *proto.GetBlockCrossShardByHeightRequest) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	ctx = WithRequestID(ctx)
-
-	// Monitor status
-	defer s.reporter.watchRequestCounts("get_block_cross_shard")
-
-	data, err := s.hc.GetBlockCrossShardByHeight(
-		ctx,
-		req.FromShard,
-		req.ToShard,
-		req.Specific,
-		req.FromHeight,
-		req.ToHeight,
-		req.Heights,
-		req.FromPool,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(@0xbunyip): cache blocks
-	return &proto.GetBlockCrossShardByHeightResponse{Data: data}, nil
-}
-
 func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlockCrossShardByHashRequest) (*proto.GetBlockCrossShardByHashResponse, error) {
-	ctx = WithRequestID(ctx)
+	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	logger.Errorf("Receive GetBlockCrossShardByHash request: %d %d %x", req.FromShard, req.ToShard, req.Hashes)
 	return nil, errors.New("not supported")
 }
 
 type Server struct {
-	m  *Manager
-	hc *Client
+	proto.UnimplementedHighwayServiceServer
+	m         *Manager
+	Providers []Provider
+	chainData *chaindata.ChainData
 
 	reporter *Reporter
+	// blkgetter BlockGetter
 }
 
-func RegisterServer(m *Manager, gs *grpc.Server, hc *Client, reporter *Reporter) {
-	s := &Server{hc: hc, m: m, reporter: reporter}
+type Provider interface {
+	SetBlockByHeight(ctx context.Context, req GetBlockByHeightRequest, heights []uint64, blocks [][]byte) error
+	// GetBlockByHeight(ctx context.Context, req GetBlockByHeightRequest, heights []uint64) ([][]byte, error)
+	GetBlockByHash(ctx context.Context, req GetBlockByHashRequest, hashes [][]byte) ([][]byte, error)
+	StreamBlkByHeight(ctx context.Context, req RequestBlockByHeight, blkChan chan common.ExpectedBlk) error
+	SetSingleBlockByHeight(ctx context.Context, req RequestBlockByHeight, data common.ExpectedBlk) error
+}
+
+func RegisterServer(
+	m *Manager,
+	gs *grpc.Server,
+	hc *Client,
+	chainData *chaindata.ChainData,
+	reporter *Reporter,
+) (*Server, error) {
+	memcache, err := NewRistrettoMemCache()
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Server{
+		Providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
+		m:         m,
+		reporter:  reporter,
+		chainData: chainData,
+	}
 	proto.RegisterHighwayServiceServer(gs, s)
+	return s, nil
 }
 
 func (s *Server) processListWantedMessageOfPeer(
@@ -269,4 +218,22 @@ func (s *Server) processListWantedMessageOfPeer(
 	// TODO handle error here
 	pairs = topic.Handler.GetListTopicPairForNode(role, msgAndCID)
 	return pairs, nil
+}
+
+// capBlocksPerRequest returns the maximum height allowed for a single request
+// If the request is for a range, this function returns the maximum block height allowed
+// If the request is for some blocks, this caps the number blocks requested
+func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint64, []uint64) {
+	if specific {
+		if uint64(len(heights)) > common.MaxBlocksPerRequest {
+			heights = heights[:common.MaxBlocksPerRequest]
+		}
+		return heights[len(heights)-1], heights
+	}
+
+	maxHeight := from + common.MaxBlocksPerRequest - 1
+	if to > maxHeight {
+		return maxHeight, heights
+	}
+	return to, heights
 }

@@ -8,7 +8,7 @@ import (
 
 func TestTopicManager_Init(t *testing.T) {
 	tm := new(TopicManager)
-	tm.Init()
+	tm.Init("aa")
 	for msg, listPairSub := range tm.allTopicPairForNodeSub {
 		listPairPub := tm.allTopicPairForNodePub[msg]
 		flag := false
@@ -38,7 +38,7 @@ func TestTopicManager_Init(t *testing.T) {
 
 func TestTopicManager_GetListTopicPairForNode(t *testing.T) {
 	tm := new(TopicManager)
-	tm.Init()
+	tm.Init("aa")
 	tm.UpdateSupportShards(tm.allCommitteeID)
 	res := tm.GetListTopicPairForNode(common.NORMAL, map[string][]int{
 		CmdBFT:                []int{2},
@@ -56,7 +56,7 @@ func TestTopicManager_GetListTopicPairForNode(t *testing.T) {
 
 func TestTopicManager_GetListSubTopicForHW(t *testing.T) {
 	tm := new(TopicManager)
-	tm.Init()
+	tm.Init("aa")
 	tm.UpdateSupportShards([]byte{255})
 	res := tm.GetListSubTopicForHW()
 	fmt.Println("HW SUB----------------------")
@@ -67,7 +67,7 @@ func TestTopicManager_GetListSubTopicForHW(t *testing.T) {
 
 func TestTopicManager_GetHWPubTopicsFromMsg(t *testing.T) {
 	tm := new(TopicManager)
-	tm.Init()
+	tm.Init("aa")
 	for _, msg := range Message4Process {
 		fmt.Printf("List Topic of Msg %v for HW Pub:\n", msg)
 		for _, cID := range tm.allCommitteeID {
@@ -79,14 +79,21 @@ func TestTopicManager_GetHWPubTopicsFromMsg(t *testing.T) {
 	}
 }
 
-func TestTopicManager_GetHWPubTopicsFromHWSub(t *testing.T) {
-	tm := new(TopicManager)
-	tm.Init()
-	tm.UpdateSupportShards([]byte{0})
-	fmt.Printf("Highway supports cIDs: %v\n", tm.supportShards)
-	listHWSub := tm.GetListSubTopicForHW()
-	for _, subTopic := range listHWSub {
-		pubFromSubTopics := tm.GetHWPubTopicsFromHWSub(subTopic)
-		fmt.Printf("HW pub %v if receive %v\n", pubFromSubTopics, subTopic)
+func Test_getTopicPairOutsideForHW(t *testing.T) {
+	supportShards := []byte{0, 255, 3}
+	for _, msgType := range Message4Process {
+		fmt.Println("Message: ", msgType)
+		for _, cID := range supportShards {
+			fmt.Printf("\tCommittee ID: %v\n", cID)
+			topicPair := getTopicPairOutsideForHW(msgType, cID)
+			fmt.Printf("\tHW pubsub topic %v\n", topicPair.Topic)
+		}
 	}
+}
+
+func TestTopicManager_GetAllTopicOutsideForHW(t *testing.T) {
+	tm := new(TopicManager)
+	tm.Init("aa")
+	tm.UpdateSupportShards([]byte{255, 0, 1, 2, 3, 4, 5, 6, 7})
+	fmt.Println(tm.GetAllTopicOutsideForHW())
 }

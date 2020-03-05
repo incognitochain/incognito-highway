@@ -21,9 +21,16 @@ const (
 )
 
 // WithRequestID adds a random requestID to a context
-func WithRequestID(ctx context.Context) context.Context {
-	id, _ := uuid.NewRandom()
-	return context.WithValue(ctx, requestIDKey, id.String())
+// If the given identifer already has a UUID, we use it as the requestID
+// If not, we generate one, use it and also set the value back to the identifier
+func WithRequestID(ctx context.Context, iden Identifier) context.Context {
+	id := iden.GetUUID()
+	if len(id) == 0 {
+		randUUID, _ := uuid.NewRandom()
+		id = randUUID.String()
+		iden.SetUUID(id)
+	}
+	return context.WithValue(ctx, requestIDKey, id)
 }
 
 // Logger returns a logger attached with a requestID if it's
@@ -34,4 +41,9 @@ func Logger(ctx context.Context) *zap.SugaredLogger {
 		l = l.With("requestID", requestID)
 	}
 	return l
+}
+
+type Identifier interface {
+	GetUUID() string
+	SetUUID(uuid string)
 }

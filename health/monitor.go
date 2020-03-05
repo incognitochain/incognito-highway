@@ -28,8 +28,9 @@ type Reporter struct {
 }
 
 func (r *Reporter) Start(_ time.Duration) {
-	healthTimestep := 60 * time.Second
-	for ; true; <-time.Tick(healthTimestep) {
+	healthTimestep := time.NewTicker(60 * time.Second)
+	defer healthTimestep.Stop()
+	for ; true; <-healthTimestep.C {
 		r.updateSample()
 		r.memProfile()
 	}

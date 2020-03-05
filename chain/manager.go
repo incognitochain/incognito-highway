@@ -1,7 +1,9 @@
 package chain
 
 import (
-	"highway/process"
+	"fmt"
+	"highway/chaindata"
+	"highway/grafana"
 	"highway/route"
 	"sync"
 
@@ -13,6 +15,7 @@ import (
 )
 
 type Manager struct {
+	server   *Server
 	client   *Client
 	newPeers chan PeerInfo
 
@@ -25,15 +28,17 @@ type Manager struct {
 		num int
 		sync.RWMutex
 	}
+	gralog *grafana.GrafanaLog
 }
 
 func ManageChainConnections(
 	h host.Host,
 	rman *route.Manager,
 	prtc *p2pgrpc.GRPCProtocol,
-	chainData *process.ChainData,
+	chainData *chaindata.ChainData,
 	supportShards []byte,
-) *Reporter {
+	gl *grafana.GrafanaLog,
+) (*Reporter, error) {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
@@ -41,18 +46,24 @@ func ManageChainConnections(
 	m.peers.ids = map[int][]PeerInfo{}
 	m.peers.RWMutex = sync.RWMutex{}
 	m.conns.RWMutex = sync.RWMutex{}
+	m.gralog = gl
 
 	// Monitor
 	reporter := NewReporter(m)
 
 	// Server and client instance to communicate to Incognito nodes
 	client := NewClient(m, reporter, rman, prtc, chainData, supportShards)
-	RegisterServer(m, prtc.GetGRPCServer(), client, reporter)
+	server, err := RegisterServer(m, prtc.GetGRPCServer(), client, chainData, reporter)
+	if err != nil {
+		return nil, err
+	}
+
+	m.server = server
 	m.client = client
 
 	h.Network().Notify(m)
 	go m.start()
-	return reporter
+	return reporter, nil
 }
 
 func (m *Manager) GetPeers(cid int) []PeerInfo {
@@ -103,14 +114,17 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	cid := pinfo.CID
 
 	// Remove from previous lists
-	m.peers.ids = remove(m.peers.ids, pid)
+	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
 
 	// Append to list
 	m.peers.ids[cid] = append(m.peers.ids[cid], pinfo)
 	logger.Infof("Appended new peer to shard %d, pid = %v, cnt = %d peers", cid, pid, len(m.peers.ids[cid]))
+	if m.gralog != nil {
+		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
+	}
 }
 
-func remove(ids map[int][]PeerInfo, rid peer.ID) map[int][]PeerInfo {
+func remove(ids map[int][]PeerInfo, rid peer.ID, gl *grafana.GrafanaLog) map[int][]PeerInfo {
 	for cid, peers := range ids {
 		k := 0
 		for _, p := range peers {
@@ -123,6 +137,9 @@ func remove(ids map[int][]PeerInfo, rid peer.ID) map[int][]PeerInfo {
 
 		if k < len(peers) {
 			logger.Infof("Removed peer %s from shard %d, remaining %d peers", rid.String(), cid, k)
+			if gl != nil {
+				gl.Add(fmt.Sprintf("total_cid_%v", cid), k)
+			}
 		}
 
 		ids[cid] = peers[:k]
@@ -159,7 +176,7 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	logger.Infof("Peer disconnected: %s", pid.String())
 
 	// Remove from m.peers to prevent Client from requesting later
-	m.peers.ids = remove(m.peers.ids, pid)
+	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
 	m.client.DisconnectedIDs <- pid
 }
 

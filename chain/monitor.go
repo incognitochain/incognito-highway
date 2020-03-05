@@ -3,6 +3,7 @@ package chain
 import (
 	"encoding/json"
 	"highway/common"
+	"highway/grafana"
 	"sync"
 	"time"
 
@@ -14,49 +15,58 @@ type Reporter struct {
 	manager *Manager
 
 	requestCounts struct {
-		m map[string]int
+		m map[string]uint64
 		sync.RWMutex
+		lm map[string]uint64
 	}
 
 	requestsPerPeer struct {
 		m PeerRequestMap
 		sync.RWMutex
+		lm PeerRequestMap
 	}
+	gralog *grafana.GrafanaLog
 }
 
 func (r *Reporter) Start(_ time.Duration) {
-	clearRequestTimestep := 5 * time.Minute
-	for ; true; <-time.Tick(clearRequestTimestep) {
-		r.clearRequestCounts()
-		r.clearRequestsPerPeer()
-	}
+	go r.pushDataToGrafana()
 }
 
 func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	validators := r.manager.GetAllPeers()
 	totalConns := r.manager.GetTotalConnections()
 
-	// Make a copy of request stats
-	requests := map[string]int{}
-	r.requestCounts.RLock()
-	for key, val := range r.requestCounts.m {
-		requests[key] = val
-	}
-	r.requestCounts.RUnlock()
+	// // Make a copy of request stats
+	// requests := map[string]uint64{}
+	// r.requestCounts.RLock()
+	// for key, val := range r.requestCounts.m {
+	// 	requests[key] = val
+	// }
+	// r.requestCounts.RUnlock()
 
-	// Make a copy of request per peer stats
-	requestsPerPeer := PeerRequestMap{}
-	r.requestsPerPeer.RLock()
-	for key, val := range r.requestsPerPeer.m {
-		requestsPerPeer[key] = val
-	}
-	r.requestsPerPeer.RUnlock()
+	// // Make a copy of request per peer stats
+	// requestsPerPeer := PeerRequestMap{}
+	// r.requestsPerPeer.RLock()
+	// for key, val := range r.requestsPerPeer.m {
+	// 	requestsPerPeer[key] = val
+	// }
+	// r.requestsPerPeer.RUnlock()
+
+	// // Get memcache info
+	// cacheInfo := map[string]interface{}{}
+	// providers := r.manager.server.Providers
+	// if len(providers) > 0 {
+	// 	if cache, ok := providers[0].(*MemCache); ok {
+	// 		cacheInfo = cache.Metrics()
+	// 	}
+	// }
 
 	data := map[string]interface{}{
 		"peers":               validators,
 		"inbound_connections": totalConns,
-		"requests":            requests,
-		"request_per_peer":    requestsPerPeer,
+		// "requests":            requests,
+		// "request_per_peer":    requestsPerPeer,
+		// "cache":               cacheInfo,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil
@@ -67,10 +77,13 @@ func NewReporter(manager *Manager) *Reporter {
 		manager: manager,
 		name:    "chain",
 	}
-	r.requestCounts.m = map[string]int{}
+	r.requestCounts.m = map[string]uint64{}
+	r.requestCounts.lm = map[string]uint64{}
 	r.requestCounts.RWMutex = sync.RWMutex{}
 	r.requestsPerPeer.m = PeerRequestMap{}
+	r.requestsPerPeer.lm = PeerRequestMap{}
 	r.requestsPerPeer.RWMutex = sync.RWMutex{}
+	r.gralog = manager.gralog
 	return r
 }
 
@@ -78,14 +91,6 @@ func (r *Reporter) watchRequestCounts(msg string) {
 	r.requestCounts.Lock()
 	defer r.requestCounts.Unlock()
 	r.requestCounts.m[msg] += 1
-}
-
-func (r *Reporter) clearRequestCounts() {
-	r.requestCounts.Lock()
-	defer r.requestCounts.Unlock()
-	for key := range r.requestCounts.m {
-		r.requestCounts.m[key] = 0
-	}
 }
 
 func (r *Reporter) watchRequestsPerPeer(msg string, pid peer.ID, err error) {
@@ -100,12 +105,34 @@ func (r *Reporter) watchRequestsPerPeer(msg string, pid peer.ID, err error) {
 	r.requestsPerPeer.m[key] += 1
 }
 
-func (r *Reporter) clearRequestsPerPeer() {
-	r.requestsPerPeer.Lock()
-	defer r.requestsPerPeer.Unlock()
-	for key := range r.requestsPerPeer.m {
-		delete(r.requestsPerPeer.m, key)
+func (r *Reporter) pushDataToGrafana() {
+	ticker := time.NewTicker(5 * time.Second)
+	for range ticker.C {
+		if r.gralog == nil {
+			continue
+		}
+		r.requestCounts.Lock()
+		for k, v := range r.requestCounts.m {
+			c := v - r.requestCounts.lm[k]
+			r.requestCounts.lm[k] = v
+			r.gralog.Add(k, c)
+		}
+
+		// Get memcache info
+		cacheInfo := map[string]interface{}{}
+		providers := r.manager.server.Providers
+		if len(providers) > 0 {
+			if cache, ok := providers[0].(*MemCache); ok {
+				cacheInfo = cache.Metrics()
+			}
+		}
+		r.requestCounts.Unlock()
+
+		for k, v := range cacheInfo {
+			r.gralog.Add(k, v)
+		}
 	}
+
 }
 
 type PeerRequestKey struct {

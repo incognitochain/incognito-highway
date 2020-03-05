@@ -3,7 +3,6 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -24,8 +23,7 @@ func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor) {
 	http.Handle("/monitor", m)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
-			// TODO(@0xbunyip): change to logger and prevent os.Exit()
-			log.Fatalf("Error in ListenAndServe: %s", err)
+			logger.Errorf("Error in ListenAndServe: %s", err)
 		}
 	}()
 }
@@ -42,7 +40,9 @@ func (p *poller) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *poller) start(timestep time.Duration) {
-	for ; true; <-time.Tick(timestep) {
+	t := time.NewTicker(timestep)
+	defer t.Stop()
+	for ; true; <-t.C {
 		reports := map[string]interface{}{}
 		for _, m := range p.Monitors {
 			name, value, err := m.ReportJSON()

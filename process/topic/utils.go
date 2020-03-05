@@ -2,13 +2,10 @@ package topic
 
 import (
 	"fmt"
-	"highway/common"
 	"sort"
 	"strconv"
 	"strings"
 )
-
-var TypeOfTopicProcessor map[string]byte
 
 func isBroadcastMessage(message string) bool {
 	if message == CmdBFT {
@@ -28,20 +25,6 @@ func isValidMessage(message string) bool {
 	return true
 }
 
-func InitTypeOfProcessor() {
-	TypeOfTopicProcessor = map[string]byte{}
-	for _, mess := range Message4Process {
-		switch mess {
-		case CmdPeerState:
-			TypeOfTopicProcessor[mess] = ProcessAndPublishAfter
-		case CmdBlockBeacon, CmdBlkShardToBeacon, CmdCrossShard, CmdBlockShard, CmdTx, CmdCustomToken, CmdPrivacyCustomToken:
-			TypeOfTopicProcessor[mess] = ProcessAndPublish
-		default:
-			TypeOfTopicProcessor[mess] = DoNothing
-		}
-	}
-}
-
 func IsJustPubOrSubMsg(msg string) bool {
 	switch msg {
 	case CmdPeerState, CmdBlkShardToBeacon, CmdBlockBeacon, CmdCrossShard, CmdBlockShard:
@@ -49,14 +32,6 @@ func IsJustPubOrSubMsg(msg string) bool {
 	default:
 		return false
 	}
-}
-
-func GetTypeOfProcess(topic string) byte {
-	topicElements := strings.Split(topic, "-")
-	if len(topicElements) == 0 {
-		return WTFisThis
-	}
-	return TypeOfTopicProcessor[topicElements[0]]
 }
 
 // GetMsgTypeOfTopic handle error later
@@ -68,7 +43,6 @@ func GetMsgTypeOfTopic(topic string) string {
 	return topicElements[0]
 }
 
-// GetCommitteeIDOfTopic handle error later TODO handle error pls
 func GetCommitteeIDOfTopic(topic string) int {
 	topicElements := strings.Split(topic, "-")
 	if len(topicElements) == 0 {
@@ -81,18 +55,18 @@ func GetCommitteeIDOfTopic(topic string) int {
 	return cID
 }
 
-func getTopicForPubSub(msgType string, cID int) string {
+func getTopicForPubSub(msgType string, cID int, selfID string) string {
 	if isBroadcastMessage(msgType) {
 		return fmt.Sprintf("%s-%d-", msgType, cID)
 	}
 	if cID == NoCIDInTopic {
-		return fmt.Sprintf("%s--%s", msgType, common.SelfID)
+		return fmt.Sprintf("%s--%s", msgType, selfID)
 	}
-	return fmt.Sprintf("%s-%d-%s", msgType, cID, common.SelfID)
+	return fmt.Sprintf("%s-%d-%s", msgType, cID, selfID)
 }
 
-func getTopicForPub(side, msgType string, cID int) string {
-	commonTopic := getTopicForPubSub(msgType, cID)
+func getTopicForPub(side, msgType string, cID int, selfID string) string {
+	commonTopic := getTopicForPubSub(msgType, cID, selfID)
 	if side == HIGHWAYSIDE {
 		return commonTopic + NODESUB
 	} else {
@@ -100,8 +74,8 @@ func getTopicForPub(side, msgType string, cID int) string {
 	}
 }
 
-func getTopicForSub(side, msgType string, cID int) string {
-	commonTopic := getTopicForPubSub(msgType, cID)
+func getTopicForSub(side, msgType string, cID int, selfID string) string {
+	commonTopic := getTopicForPubSub(msgType, cID, selfID)
 	if side == NODESIDE {
 		return commonTopic + NODESUB
 	} else {

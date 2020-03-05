@@ -2,53 +2,70 @@ package process
 
 import (
 	"context"
-	"highway/database"
+	"fmt"
+	"highway/chaindata"
+	"highway/common"
+	"highway/grafana"
+	"highway/process/datahandler"
 	"highway/process/topic"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/host"
+	peer "github.com/libp2p/go-libp2p-peer"
 	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/pkg/errors"
+	"github.com/patrickmn/go-cache"
 )
-
-var GlobalPubsub PubSubManager
 
 type SubHandler struct {
 	Topic   string
 	Handler func(*p2pPubSub.Subscription)
+	Sub     *p2pPubSub.Subscription
+	Locker  *sync.Mutex
 }
 
 type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
-	GossipMachine        *p2pPubSub.PubSub
 	SubHandlers          chan SubHandler
-	OutSideMessage       chan string
 	followedTopic        []string
-	ForwardNow           chan p2pPubSub.Message
 	SpecialPublishTicker *time.Ticker
-	BlockChainData       *ChainData
+	BlockChainData       *chaindata.ChainData
+	Info                 *PubsubInfo
+	GraLog               *grafana.GrafanaLog
 }
 
-func InitPubSub(
+func NewPubSub(
 	s host.Host,
 	supportShards []byte,
-	chainData *ChainData,
-) error {
+	chainData *chaindata.ChainData,
+) (
+	*PubSubManager,
+	error,
+) {
+	pubsub := new(PubSubManager)
 	ctx := context.Background()
 	var err error
-	GlobalPubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s)
+	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	GlobalPubsub.SubHandlers = make(chan SubHandler, 100)
-	GlobalPubsub.ForwardNow = make(chan p2pPubSub.Message)
-	GlobalPubsub.SpecialPublishTicker = time.NewTicker(5 * time.Second)
-	GlobalPubsub.SupportShards = supportShards
-	GlobalPubsub.BlockChainData = chainData
-	topic.InitTypeOfProcessor()
-	GlobalPubsub.SubKnownTopics()
-	return nil
+	pubsub.SubHandlers = make(chan SubHandler, 100)
+	pubsub.SpecialPublishTicker = time.NewTicker(common.TimeIntervalPublishStates)
+	pubsub.SupportShards = supportShards
+	pubsub.BlockChainData = chainData
+	logger.Infof("Supported shard %v", supportShards)
+	err = pubsub.SubKnownTopics(true)
+	if err != nil {
+		logger.Errorf("Subscribe topic from node return error %v", err)
+		return nil, err
+	}
+	err = pubsub.SubKnownTopics(false)
+	if err != nil {
+		logger.Errorf("Subscribe topic from other HWs return error %v", err)
+		return nil, err
+	}
+	return pubsub, nil
 }
 
 func (pubsub *PubSubManager) WatchingChain() {
@@ -67,64 +84,6 @@ func (pubsub *PubSubManager) WatchingChain() {
 			go pubsub.PublishPeerStateToNode()
 		}
 
-	}
-}
-
-func (pubsub *PubSubManager) handleNewMsg(
-	sub *p2pPubSub.Subscription,
-	typeOfProcessor byte,
-) {
-	for {
-		isDuplicate := false
-		data, err := sub.Next(context.Background())
-		// TODO implement GossipSub with special topic
-		// TODO Add lock for each of msg type
-		cID := topic.GetCommitteeIDOfTopic(sub.Topic())
-		//Just temp fix, updated in 1 HW 1 Shard version
-		cIDByte := byte(cID)
-		data4cache := append(data.GetData(), cIDByte)
-		if (err == nil) && (data != nil) {
-			if database.IsMarkedData(data4cache) {
-				isDuplicate = true
-			} else {
-				database.MarkData(data4cache)
-			}
-			switch typeOfProcessor {
-			case topic.DoNothing:
-				continue
-			case topic.ProcessAndPublishAfter:
-				//#region Just logging information
-				// if topic.GetMsgTypeOfTopic(sub.Topic()) == topic.CmdPeerState {
-				// 	x, err := ParsePeerStateData(string(data.GetData()))
-				// 	if err != nil {
-				// 		logger.Error(err)
-				// 	} else {
-				// 		logger.Infof("PeerState data:\n Beacon: %v\n Shard: %v\n", x.Beacon, x.Shards)
-				// 	}
-				// }
-				//#endregion Just logging information
-				go func() {
-					err := pubsub.BlockChainData.UpdatePeerState(pubsub.BlockChainData.GetMiningPubkeyFromPeerID(data.GetFrom()), data.GetData())
-					if err != nil {
-						err = errors.WithMessagef(err, "from: %v", data.GetFrom())
-						logger.Warnf("Cannot update peerstate: %+v", err)
-					}
-				}()
-
-			case topic.ProcessAndPublish:
-				logger.Debugf("[pubsub] Received data of topic %v, data [%v..%v]", sub.Topic(), data.Data[:5], data.Data[len(data.Data)-6:])
-				if isDuplicate {
-					continue
-				}
-				logger.Debugf("[pubsub] Broadcast topic %v, data [%v..%v]", sub.Topic(), data.Data[:5], data.Data[len(data.Data)-6:])
-				pubTopics := topic.Handler.GetHWPubTopicsFromHWSub(sub.Topic())
-				for _, pubTopic := range pubTopics {
-					go pubsub.FloodMachine.Publish(pubTopic, data.GetData())
-				}
-			default:
-				return
-			}
-		}
 	}
 }
 
@@ -153,18 +112,73 @@ func (pubsub *PubSubManager) PublishPeerStateToNode() {
 	}
 }
 
-func (pubsub *PubSubManager) SubKnownTopics() error {
-	topicSubs := topic.Handler.GetListSubTopicForHW()
+func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
+	cacher := cache.New(common.MaxTimeKeepPubSubData, common.MaxTimeKeepPubSubData)
+	var topicSubs []string
+	if fromInside {
+		topicSubs = topic.Handler.GetListSubTopicForHW()
+	} else {
+		topicSubs = topic.Handler.GetAllTopicOutsideForHW()
+	}
 	for _, topicSub := range topicSubs {
-		logger.Infof("Success subscribe topic %v", topicSub)
-		subch, err := pubsub.FloodMachine.Subscribe(topicSub)
-		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
+		subs, err := pubsub.FloodMachine.Subscribe(topicSub)
 		if err != nil {
 			logger.Info(err)
 			continue
 		}
-		typeOfProcessor := topic.GetTypeOfProcess(topicSub)
-		go pubsub.handleNewMsg(subch, typeOfProcessor)
+		logger.Infof("Success subscribe topic %v", topicSub)
+		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
+		handler := datahandler.SubsHandler{
+			PubSub:         pubsub.FloodMachine,
+			FromInside:     fromInside,
+			BlockchainData: pubsub.BlockChainData,
+			Cacher:         cacher,
+		}
+		go func() {
+			err := handler.HandlerNewSubs(subs)
+			if err != nil {
+				logger.Errorf("Handle Subsciption topic %v return error %v", subs.Topic(), err)
+			}
+		}()
 	}
 	return nil
+}
+
+func deletePeerIDinSlice(target peer.ID, slice []peer.ID) []peer.ID {
+	i := 0
+	for _, peerID := range slice {
+		if peerID.String() != target.String() {
+			slice[i] = peerID
+			i++
+		}
+	}
+	return slice[:i]
+}
+
+// For Grafana, will complete in next pull request
+func (pubsub *PubSubManager) WatchingSubs(subs *p2pPubSub.Subscription) {
+	for {
+		event, err := subs.NextPeerEvent(context.Background())
+		if err != nil {
+			logger.Error(err)
+		}
+		tp := subs.Topic()
+		msgType := topic.GetMsgTypeOfTopic(tp)
+		if event.Type == p2pPubSub.PeerJoin {
+			pubsub.Info.Locker.Lock()
+			pubsub.Info.Info[tp] = append(pubsub.Info.Info[tp], event.Peer)
+			if pubsub.GraLog != nil {
+				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
+			}
+			pubsub.Info.Locker.Unlock()
+		}
+		if event.Type == p2pPubSub.PeerLeave {
+			pubsub.Info.Locker.Lock()
+			pubsub.Info.Info[subs.Topic()] = deletePeerIDinSlice(event.Peer, pubsub.Info.Info[subs.Topic()])
+			if pubsub.GraLog != nil {
+				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
+			}
+			pubsub.Info.Locker.Unlock()
+		}
+	}
 }
