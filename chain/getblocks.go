@@ -134,6 +134,7 @@ func newReq(
 		From:      oldReq.From,
 		To:        oldReq.To,
 		CallDepth: oldReq.CallDepth,
+		UUID:      oldReq.UUID,
 	}
 }
 
