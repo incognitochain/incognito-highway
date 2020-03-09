@@ -56,9 +56,5 @@ func (c *Client) StreamBlkByHeight(
 			Data:   []byte{},
 		}
 	}
-	err = stream.CloseSend()
-	if err != nil {
-		logger.Errorf("[stream] Close send return error %v", err)
-	}
 	return nil
 }
