@@ -19,7 +19,8 @@ func (c *Client) StreamBlkByHeight(
 	defer close(blkChan)
 	logger.Infof("[stream] Server call Client: Start stream request %v", req)
 	sc, _, err := c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
-	if err != nil {
+	if (err != nil) || (sc == nil) {
+		err = errors.Errorf("[stream] getClientWithBlock return error %v, sc return %v", err, sc)
 		logger.Errorf("[stream] getClientWithBlock return error %v", err)
 	} else {
 		nreq, ok := req.(*proto.BlockByHeightRequest)
