@@ -34,7 +34,7 @@ func (g *BlkGetter) Cancel() {
 
 func (g *BlkGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlk {
 	go g.CallForBlocks(ctx, s.Providers)
-	go g.listenCommingBlk()
+	go g.listenCommingBlk(ctx)
 	return g.blkRecv
 }
 
@@ -51,7 +51,8 @@ func (g *BlkGetter) checkWaitingBlk() bool {
 	return false
 }
 
-func (g *BlkGetter) listenCommingBlk() {
+func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
+	logger := Logger(ctx)
 	defer close(g.blkRecv)
 	for blk := range g.newBlk {
 		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
@@ -92,9 +93,10 @@ func (g *BlkGetter) updateNewHeight() {
 }
 
 func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightRequest, ch chan common.ExpectedBlk) []uint64 {
+	logger := Logger(ctx)
 	missing := []uint64{}
 	for blk := range ch {
-		logger.Infof("[stream] handleBlkRecv %v received block %v", ctx.Value("ID"), blk.Height)
+		logger.Infof("[stream] handleBlkRecv received block %v", blk.Height)
 		if len(blk.Data) == 0 {
 			missing = append(missing, blk.Height)
 		} else {
@@ -118,6 +120,7 @@ func newReq(
 		From:      oldReq.From,
 		To:        oldReq.To,
 		CallDepth: oldReq.CallDepth,
+		UUID:      oldReq.UUID,
 	}
 }
 
@@ -125,13 +128,14 @@ func (g *BlkGetter) CallForBlocks(
 	ctx context.Context,
 	providers []Provider,
 ) error {
+	logger := Logger(ctx)
 	nreq := g.req
 	for _, p := range providers {
 		if nreq == nil {
 			break
 		}
 		blkCh := make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
-		logger.Infof("[stream] calling provider for req %v", ctx.Value("ID"))
+		logger.Infof("[stream] calling provider for req")
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
 		missing := g.handleBlkRecv(ctx, nreq, blkCh)
 		nreq = newReq(nreq, missing)

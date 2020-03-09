@@ -25,3 +25,7 @@ func (req *GetBlockBeaconByHashRequest) SetUUID(uuid string) {
 func (req *GetBlockCrossShardByHashRequest) SetUUID(uuid string) {
 	req.UUID = uuid
 }
+
+func (req *BlockByHeightRequest) SetUUID(uuid string) {
+	req.UUID = uuid
+}

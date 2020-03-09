@@ -40,7 +40,7 @@ func getKeyByHeight(req GetBlockByHeightRequest, h uint64) string {
 }
 
 func (cache *MemCache) SetBlockByHeight(
-	_ context.Context,
+	ctx context.Context,
 	req GetBlockByHeightRequest,
 	heights []uint64,
 	blocks [][]byte,
@@ -63,13 +63,16 @@ func (cache *MemCache) SetBlockByHeight(
 }
 
 func (cache *MemCache) SetSingleBlockByHeight(
-	_ context.Context,
+	ctx context.Context,
 	req RequestBlockByHeight,
 	blk common.ExpectedBlk,
 ) error {
+	logger := Logger(ctx)
 	if len(blk.Data) == 0 {
 		return errors.Errorf("Block height %v has empty data", blk.Height)
 	}
+	logger.Debugf("Caching block %s, height %d, len = %d", req.GetType().String(), blk.Height, len(blk.Data))
+
 	key := keyByHeight(req, blk.Height)
 	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
 	cache.cacher.Set(key, blk.Data, cost)

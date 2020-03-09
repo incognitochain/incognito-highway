@@ -14,7 +14,7 @@ func (c *Client) StreamBlkByHeight(
 	logger := Logger(ctx)
 	var stream proto.HighwayService_StreamBlockByHeightClient
 	defer close(blkChan)
-	logger.Infof("[stream] Server call Client: Start stream request %v %v", req, ctx.Value("ID"))
+	logger.Infof("[stream] Server call Client: Start stream request %v", req)
 	sc, _, err := c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
 	if err != nil {
 		logger.Errorf("[stream] getClientWithBlock return error %v", err)
@@ -41,7 +41,7 @@ func (c *Client) StreamBlkByHeight(
 		if err == nil {
 			blkData, err = stream.Recv()
 			if err == nil {
-				logger.Infof("[stream] %v Received block %v", ctx.Value("ID"), blkHeight)
+				logger.Infof("[stream] Received block %v", blkHeight)
 				blkChan <- common.ExpectedBlk{
 					Height: blkHeight,
 					Data:   blkData.GetData(),
