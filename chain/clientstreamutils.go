@@ -4,6 +4,7 @@ import (
 	context "context"
 	"highway/common"
 	"highway/proto"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -15,6 +16,8 @@ func (c *Client) StreamBlkByHeight(
 ) error {
 	logger := Logger(ctx)
 	defer close(blkChan)
+	st := time.Now()
+	logger.Infof("[dbgleakmem] StreamBlkByHeight Start")
 	logger.Infof("[stream] Server call Client: Start stream request %v", req)
 	sc, _, err := c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
 	if sc == nil {
@@ -23,6 +26,7 @@ func (c *Client) StreamBlkByHeight(
 			Height: req.GetHeights()[0],
 			Data:   []byte{},
 		}
+		logger.Infof("[dbgleakmem] StreamBlkByHeight End %v", time.Since(st))
 		return nil
 	}
 	nreq, ok := req.(*proto.BlockByHeightRequest)
@@ -31,6 +35,7 @@ func (c *Client) StreamBlkByHeight(
 			Height: req.GetHeights()[0],
 			Data:   []byte{},
 		}
+		logger.Infof("[dbgleakmem] StreamBlkByHeight End %v", time.Since(st))
 		return errors.Errorf("Invalid Request %v", req)
 	} else {
 		nreq.CallDepth++
@@ -42,6 +47,7 @@ func (c *Client) StreamBlkByHeight(
 			Height: req.GetHeights()[0],
 			Data:   []byte{},
 		}
+		logger.Infof("[dbgleakmem] StreamBlkByHeight End %v", time.Since(st))
 		return err
 	}
 	defer stream.CloseSend()
@@ -75,5 +81,13 @@ func (c *Client) StreamBlkByHeight(
 			Data:   []byte{},
 		}
 	}
+	for {
+		_, errStream := stream.Recv()
+		if errStream != nil {
+			logger.Infof("[stream] Stream received err %v", err)
+			break
+		}
+	}
+	logger.Infof("[dbgleakmem] StreamBlkByHeight End %v", time.Since(st))
 	return nil
 }
