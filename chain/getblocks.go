@@ -53,6 +53,7 @@ func (g *BlkGetter) checkWaitingBlk() bool {
 
 func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 	logger := Logger(ctx)
+	logger.Infof("[goroutine] listenCommingBlk START")
 	defer close(g.blkRecv)
 	for blk := range g.newBlk {
 		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
@@ -64,15 +65,18 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 			g.updateNewHeight()
 		} else {
 			g.waiting[blk.Height] = blk.Data
-			g.checkWaitingBlk()
+		}
+		for hasNewBlk := g.checkWaitingBlk(); hasNewBlk == true; {
 		}
 	}
 	for {
 		if (g.newHeight == 0) || len(g.waiting) == 0 {
+			logger.Infof("[goroutine] listenCommingBlk END")
 			return
 		}
 		ok := g.checkWaitingBlk()
 		if !ok {
+			logger.Infof("[goroutine] listenCommingBlk END")
 			return
 		}
 	}
@@ -100,21 +104,6 @@ func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightR
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
-		}
-	}
-	if len(missing) != 0 {
-		last := missing[len(missing)-1]
-		if req.Specific {
-			for i, height := range req.Heights {
-				if height > last {
-					missing = append(missing, req.Heights[i:]...)
-					break
-				}
-			}
-		} else {
-			for height := last + 1; height <= req.Heights[len(req.Heights)-1]; height++ {
-				missing = append(missing, height)
-			}
 		}
 	}
 	return missing
