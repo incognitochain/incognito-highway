@@ -18,7 +18,6 @@ func (s *Server) StreamBlockByHeight(
 	logger.Infof("Receive StreamBlockByHeight request, type = %s, heights = %v %v", req.GetType().String(), req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1])
 
 	g := NewBlkGetter(req)
-	defer g.Cancel()
 	blkRecv := g.Get(ctx, s)
 	for blk := range blkRecv {
 		if len(blk.Data) == 0 {
