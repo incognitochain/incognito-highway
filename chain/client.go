@@ -347,35 +347,6 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	return client, nil
 }
 
-func (cc *ClientConnector) GetGRPCConn(peerID peer.ID) (*grpc.ClientConn, error) {
-	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
-	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
-	cc.conns.Lock()
-	defer cc.conns.Unlock()
-	_, ok := cc.conns.connMap[peerID]
-
-	if !ok {
-		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
-		defer cancel()
-		conn, err := cc.dialer.Dial(
-			ctx,
-			peerID,
-			grpc.WithInsecure(),
-			grpc.WithBlock(),
-			grpc.WithKeepaliveParams(keepalive.ClientParameters{
-				Time:    common.ChainClientKeepaliveTime,
-				Timeout: common.ChainClientKeepaliveTimeout,
-			}),
-		)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		cc.conns.connMap[peerID] = conn
-	}
-	return cc.conns.connMap[peerID], nil
-}
-
 func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 	cc.conns.Lock()
 	defer cc.conns.Unlock()

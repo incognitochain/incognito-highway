@@ -63,7 +63,8 @@ func (g *BlkGetter) listenCommingBlk() {
 			g.updateNewHeight()
 		} else {
 			g.waiting[blk.Height] = blk.Data
-			g.checkWaitingBlk()
+		}
+		for hasNewBlk := g.checkWaitingBlk(); hasNewBlk == true; {
 		}
 	}
 	for {
@@ -98,21 +99,6 @@ func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightR
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
-		}
-	}
-	if len(missing) != 0 {
-		last := missing[len(missing)-1]
-		if req.Specific {
-			for i, height := range req.Heights {
-				if height > last {
-					missing = append(missing, req.Heights[i:]...)
-					break
-				}
-			}
-		} else {
-			for height := last + 1; height <= req.Heights[len(req.Heights)-1]; height++ {
-				missing = append(missing, height)
-			}
 		}
 	}
 	return missing
