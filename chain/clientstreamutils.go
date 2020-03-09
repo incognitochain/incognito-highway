@@ -28,6 +28,7 @@ func (c *Client) StreamBlkByHeight(
 		logger.Infof("[stream] Server call Client return error %v", err)
 		return err
 	}
+	defer stream.CloseSend()
 	logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
 	heights := req.GetHeights()
 	blkHeight := heights[0] - 1
