@@ -14,6 +14,7 @@ func (c *Client) StreamBlkByHeight(
 	blkChan chan common.ExpectedBlk,
 ) error {
 	logger := Logger(ctx)
+	logger.Infof("[stream] StreamBlkByHeight Start")
 	var stream proto.HighwayService_StreamBlockByHeightClient
 	defer close(blkChan)
 	logger.Infof("[stream] Server call Client: Start stream request %v", req)
@@ -32,6 +33,14 @@ func (c *Client) StreamBlkByHeight(
 			} else {
 				logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
 				defer stream.CloseSend()
+				defer func(stream proto.HighwayService_StreamBlockByHeightClient) {
+					for {
+						_, errStream := stream.Recv()
+						if errStream != nil {
+							break
+						}
+					}
+				}(stream)
 			}
 		}
 	}
@@ -64,5 +73,6 @@ func (c *Client) StreamBlkByHeight(
 			Data:   []byte{},
 		}
 	}
+	logger.Infof("[stream] StreamBlkByHeight End")
 	return nil
 }

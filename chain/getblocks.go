@@ -18,7 +18,7 @@ type BlkGetter struct {
 func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
 	g := &BlkGetter{}
 	g.waiting = map[uint64][]byte{}
-	g.newBlk = make(chan common.ExpectedBlk)
+	g.newBlk = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 	g.idx = 0
 	g.req = req
 	g.newHeight = g.req.Heights[0] - 1
@@ -50,6 +50,7 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 	logger := Logger(ctx)
 	logger.Infof("[goroutine] listenCommingBlk START")
 	defer close(g.blkRecv)
+	logger.Infof("[stream] listen gnewBlk Start")
 	for blk := range g.newBlk {
 		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
 		if blk.Height < g.newHeight {
@@ -64,6 +65,7 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 		for hasNewBlk := g.checkWaitingBlk(); hasNewBlk == true; {
 		}
 	}
+	logger.Infof("[stream] listen gnewBlk End")
 	for {
 		if (g.newHeight == 0) || len(g.waiting) == 0 {
 			logger.Infof("[goroutine] listenCommingBlk END")
