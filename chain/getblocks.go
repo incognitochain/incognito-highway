@@ -27,11 +27,6 @@ func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
 	return g
 }
 
-func (g *BlkGetter) Cancel() {
-	for range g.blkRecv {
-	}
-}
-
 func (g *BlkGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlk {
 	go g.CallForBlocks(ctx, s.Providers)
 	go g.listenCommingBlk(ctx)
