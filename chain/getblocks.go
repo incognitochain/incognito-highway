@@ -18,7 +18,7 @@ type BlkGetter struct {
 func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
 	g := &BlkGetter{}
 	g.waiting = map[uint64][]byte{}
-	g.newBlk = make(chan common.ExpectedBlk)
+	g.newBlk = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 	g.idx = 0
 	g.req = req
 	g.newHeight = g.req.Heights[0] - 1
