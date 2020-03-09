@@ -2,15 +2,19 @@ package chain
 
 import (
 	context "context"
-	"errors"
 	"highway/common"
 	"highway/proto"
+
+	"github.com/pkg/errors"
 )
 
 func (s *Server) StreamBlockByHeight(
 	req *proto.BlockByHeightRequest,
 	ss proto.HighwayService_StreamBlockByHeightServer,
 ) error {
+	if req.GetCallDepth() > common.MaxCallDepth {
+		return errors.Errorf("reach max calldepth %v ", req)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 	ctx = WithRequestID(ctx, req)

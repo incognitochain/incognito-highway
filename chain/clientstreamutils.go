@@ -4,6 +4,8 @@ import (
 	context "context"
 	"highway/common"
 	"highway/proto"
+
+	"github.com/pkg/errors"
 )
 
 func (c *Client) StreamBlkByHeight(
@@ -23,9 +25,23 @@ func (c *Client) StreamBlkByHeight(
 		}
 		return nil
 	}
-	stream, err := sc.StreamBlockByHeight(ctx, req.(*proto.BlockByHeightRequest))
+	nreq, ok := req.(*proto.BlockByHeightRequest)
+	if !ok {
+		blkChan <- common.ExpectedBlk{
+			Height: req.GetHeights()[0],
+			Data:   []byte{},
+		}
+		return errors.Errorf("Invalid Request %v", req)
+	} else {
+		nreq.CallDepth++
+	}
+	stream, err := sc.StreamBlockByHeight(ctx, nreq)
 	if err != nil {
 		logger.Infof("[stream] Server call Client return error %v", err)
+		blkChan <- common.ExpectedBlk{
+			Height: req.GetHeights()[0],
+			Data:   []byte{},
+		}
 		return err
 	}
 	defer stream.CloseSend()
