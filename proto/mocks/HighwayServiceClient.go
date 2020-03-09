@@ -42,36 +42,6 @@ func (_m *HighwayServiceClient) GetBlockBeaconByHash(ctx context.Context, in *pr
 	return r0, r1
 }
 
-// GetBlockBeaconByHeight provides a mock function with given fields: ctx, in, opts
-func (_m *HighwayServiceClient) GetBlockBeaconByHeight(ctx context.Context, in *proto.GetBlockBeaconByHeightRequest, opts ...grpc.CallOption) (*proto.GetBlockBeaconByHeightResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *proto.GetBlockBeaconByHeightResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *proto.GetBlockBeaconByHeightRequest, ...grpc.CallOption) *proto.GetBlockBeaconByHeightResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*proto.GetBlockBeaconByHeightResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *proto.GetBlockBeaconByHeightRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetBlockCrossShardByHash provides a mock function with given fields: ctx, in, opts
 func (_m *HighwayServiceClient) GetBlockCrossShardByHash(ctx context.Context, in *proto.GetBlockCrossShardByHashRequest, opts ...grpc.CallOption) (*proto.GetBlockCrossShardByHashResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -94,36 +64,6 @@ func (_m *HighwayServiceClient) GetBlockCrossShardByHash(ctx context.Context, in
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *proto.GetBlockCrossShardByHashRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetBlockCrossShardByHeight provides a mock function with given fields: ctx, in, opts
-func (_m *HighwayServiceClient) GetBlockCrossShardByHeight(ctx context.Context, in *proto.GetBlockCrossShardByHeightRequest, opts ...grpc.CallOption) (*proto.GetBlockCrossShardByHeightResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *proto.GetBlockCrossShardByHeightResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *proto.GetBlockCrossShardByHeightRequest, ...grpc.CallOption) *proto.GetBlockCrossShardByHeightResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*proto.GetBlockCrossShardByHeightResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *proto.GetBlockCrossShardByHeightRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -162,66 +102,6 @@ func (_m *HighwayServiceClient) GetBlockShardByHash(ctx context.Context, in *pro
 	return r0, r1
 }
 
-// GetBlockShardByHeight provides a mock function with given fields: ctx, in, opts
-func (_m *HighwayServiceClient) GetBlockShardByHeight(ctx context.Context, in *proto.GetBlockShardByHeightRequest, opts ...grpc.CallOption) (*proto.GetBlockShardByHeightResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *proto.GetBlockShardByHeightResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *proto.GetBlockShardByHeightRequest, ...grpc.CallOption) *proto.GetBlockShardByHeightResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*proto.GetBlockShardByHeightResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *proto.GetBlockShardByHeightRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetBlockShardToBeaconByHeight provides a mock function with given fields: ctx, in, opts
-func (_m *HighwayServiceClient) GetBlockShardToBeaconByHeight(ctx context.Context, in *proto.GetBlockShardToBeaconByHeightRequest, opts ...grpc.CallOption) (*proto.GetBlockShardToBeaconByHeightResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *proto.GetBlockShardToBeaconByHeightResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *proto.GetBlockShardToBeaconByHeightRequest, ...grpc.CallOption) *proto.GetBlockShardToBeaconByHeightResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*proto.GetBlockShardToBeaconByHeightResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *proto.GetBlockShardToBeaconByHeightRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Register provides a mock function with given fields: ctx, in, opts
 func (_m *HighwayServiceClient) Register(ctx context.Context, in *proto.RegisterRequest, opts ...grpc.CallOption) (*proto.RegisterResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -244,6 +124,36 @@ func (_m *HighwayServiceClient) Register(ctx context.Context, in *proto.Register
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *proto.RegisterRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StreamBlockByHeight provides a mock function with given fields: ctx, in, opts
+func (_m *HighwayServiceClient) StreamBlockByHeight(ctx context.Context, in *proto.BlockByHeightRequest, opts ...grpc.CallOption) (proto.HighwayService_StreamBlockByHeightClient, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 proto.HighwayService_StreamBlockByHeightClient
+	if rf, ok := ret.Get(0).(func(context.Context, *proto.BlockByHeightRequest, ...grpc.CallOption) proto.HighwayService_StreamBlockByHeightClient); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(proto.HighwayService_StreamBlockByHeightClient)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *proto.BlockByHeightRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
