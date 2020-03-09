@@ -39,22 +39,8 @@ func getKeyByHeight(req GetBlockByHeightRequest, h uint64) string {
 	return fmt.Sprintf("byheight-%d-%d-%d", req.GetFrom(), req.GetTo(), h)
 }
 
-// func (cache *MemCache) GetBlockByHeight(_ context.Context, req GetBlockByHeightRequest, heights []uint64) ([][]byte, error) {
-// 	// TODO(@0xbunyip): add epsilon-greedy here
-// 	blocks := make([][]byte, len(heights))
-// 	for i, h := range heights {
-// 		key := getKeyByHeight(req, h)
-// 		if b, ok := cache.cacher.Get(key); ok {
-// 			if block, ok := b.([]byte); ok {
-// 				blocks[i] = block
-// 			}
-// 		}
-// 	}
-// 	return blocks, nil
-// }
-
 func (cache *MemCache) SetBlockByHeight(
-	_ context.Context,
+	ctx context.Context,
 	req GetBlockByHeightRequest,
 	heights []uint64,
 	blocks [][]byte,
@@ -77,13 +63,16 @@ func (cache *MemCache) SetBlockByHeight(
 }
 
 func (cache *MemCache) SetSingleBlockByHeight(
-	_ context.Context,
+	ctx context.Context,
 	req RequestBlockByHeight,
 	blk common.ExpectedBlk,
 ) error {
+	logger := Logger(ctx)
 	if len(blk.Data) == 0 {
 		return errors.Errorf("Block height %v has empty data", blk.Height)
 	}
+	logger.Debugf("Caching block %s, height %d, len = %d", req.GetType().String(), blk.Height, len(blk.Data))
+
 	key := keyByHeight(req, blk.Height)
 	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
 	cache.cacher.Set(key, blk.Data, cost)
