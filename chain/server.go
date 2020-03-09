@@ -237,3 +237,19 @@ func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint
 	}
 	return to, heights
 }
+
+func capBlocksRequest(req *proto.BlockByHeightRequest) {
+	if req.Specific {
+		if uint64(len(req.Heights)) > common.MaxBlocksPerRequest {
+			req.Heights = req.Heights[:common.MaxBlocksPerRequest]
+		}
+		return
+	}
+
+	maxHeight := req.Heights[0] + common.MaxBlocksPerRequest - 1
+	if req.Heights[1] > maxHeight {
+		req.Heights[1] = maxHeight
+		return
+	}
+	return
+}
