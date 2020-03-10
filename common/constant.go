@@ -28,7 +28,7 @@ var (
 
 	MaxCallDepth         = int32(2)
 	ChoosePeerBlockDelta = uint64(300)
-	MaxBlocksPerRequest  = uint64(300)
+	MaxBlocksPerRequest  = uint64(900)
 	MaxTimePerRequest    = 30 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second

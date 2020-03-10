@@ -26,7 +26,7 @@ func (s *Server) StreamBlockByHeight(
 	logger.Infof("[stream] listen gblkRecv Start")
 	for blk := range blkRecv {
 		if len(blk.Data) == 0 {
-			return errors.New("close")
+			return nil
 		}
 		logger.Infof("[stream] Received block from channel, send to client")
 		if err := ss.Send(&proto.BlockData{Data: blk.Data}); err != nil {
@@ -34,14 +34,14 @@ func (s *Server) StreamBlockByHeight(
 			logger.Infof("[stream] listen gblkRecv End")
 			return err
 		}
-		go func(s *Server, blk common.ExpectedBlk) {
-			for _, p := range s.Providers {
-				err := p.SetSingleBlockByHeight(ctx, req, blk)
-				if err != nil {
-					logger.Errorf("[stream] Caching return error %v", err)
-				}
-			}
-		}(s, blk)
+		// go func(s *Server, blk common.ExpectedBlk) {
+		// 	for _, p := range s.Providers {
+		// 		err := p.SetSingleBlockByHeight(ctx, req, blk)
+		// 		if err != nil {
+		// 			logger.Errorf("[stream] Caching return error %v", err)
+		// 		}
+		// 	}
+		// }(s, blk)
 	}
 	logger.Infof("[stream] listen gblkRecv End")
 	return nil
