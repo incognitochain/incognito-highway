@@ -33,21 +33,6 @@ message MessageTopicPair {
     repeated Action Act = 3;
 }
 
-message GetBlockShardByHeightRequest {
-    int32 Shard = 1;
-    bool Specific = 2;
-    uint64 FromHeight = 3;
-    uint64 ToHeight = 4;
-    repeated uint64 Heights = 5;
-    bool FromPool = 6;
-    int32 CallDepth = 7;
-    string UUID = 8;
-}
-
-message GetBlockShardByHeightResponse {
-    repeated bytes Data = 1;
-}
-
 message GetBlockShardByHashRequest {
     int32 Shard = 1;
     repeated bytes Hashes = 2;
@@ -59,19 +44,7 @@ message GetBlockShardByHashResponse {
     repeated bytes Data = 1;
 }
 
-message GetBlockBeaconByHeightRequest {
-    bool Specific = 1;
-    uint64 FromHeight = 2;
-    uint64 ToHeight = 3;
-    repeated uint64 Heights = 4;
-    bool FromPool = 5;
-    int32 CallDepth = 6;
-    string UUID = 7;
-}
 
-message GetBlockBeaconByHeightResponse {
-    repeated bytes Data = 1;
-}
 
 message GetBlockBeaconByHashRequest {
     repeated bytes Hashes = 1;
@@ -80,37 +53,6 @@ message GetBlockBeaconByHashRequest {
 }
 
 message GetBlockBeaconByHashResponse {
-    repeated bytes Data = 1;
-}
-
-message GetBlockCrossShardByHeightRequest {
-    int32 FromShard = 1;
-    int32 ToShard = 2;
-    bool Specific = 3;
-    uint64 FromHeight = 4;
-    uint64 ToHeight = 5;
-    repeated uint64 Heights = 6;
-    bool FromPool = 7;
-    int32 CallDepth = 8;
-    string UUID = 9;
-}
-
-message GetBlockCrossShardByHeightResponse {
-    repeated bytes Data = 1;
-}
-
-message GetBlockShardToBeaconByHeightRequest {
-    int32 FromShard = 1;
-    bool Specific = 2;
-    uint64 FromHeight = 3;
-    uint64 ToHeight = 4;
-    repeated uint64 Heights = 5;
-    bool FromPool = 6;
-    int32 CallDepth = 7;
-    string UUID = 8;
-}
-
-message GetBlockShardToBeaconByHeightResponse {
     repeated bytes Data = 1;
 }
 
@@ -129,14 +71,33 @@ message GetBlockCrossShardByHashResponse {
 service HighwayService {
     rpc Register(RegisterRequest) returns (RegisterResponse) {};
 
-    rpc GetBlockShardByHeight(GetBlockShardByHeightRequest) returns (GetBlockShardByHeightResponse) {};
     rpc GetBlockShardByHash(GetBlockShardByHashRequest) returns (GetBlockShardByHashResponse) {};
-    rpc GetBlockBeaconByHeight(GetBlockBeaconByHeightRequest) returns (GetBlockBeaconByHeightResponse) {};
     rpc GetBlockBeaconByHash(GetBlockBeaconByHashRequest) returns (GetBlockBeaconByHashResponse) {};
-
-    rpc GetBlockCrossShardByHeight(GetBlockCrossShardByHeightRequest) returns (GetBlockCrossShardByHeightResponse) {};
-    rpc GetBlockShardToBeaconByHeight(GetBlockShardToBeaconByHeightRequest) returns (GetBlockShardToBeaconByHeightResponse) {};
     rpc GetBlockCrossShardByHash(GetBlockCrossShardByHashRequest) returns (GetBlockCrossShardByHashResponse) {};
+    
+    rpc StreamBlockByHeight(BlockByHeightRequest) returns (stream BlockData) {};
+}
+
+enum BlkType {
+    BlkShard = 0;
+    BlkXShard = 1;
+    BlkS2B = 2;
+    BlkBc = 3;
+}
+
+
+message BlockByHeightRequest {
+    BlkType Type = 1;
+    bool Specific = 2;
+    repeated uint64 Heights = 3;
+    int32 From = 4;
+    int32 To = 5; 
+    int32 CallDepth = 6;
+    string UUID = 7;
+}
+
+message BlockData {
+    bytes Data = 1;
 }
 
 message GetChainCommitteeRequest {

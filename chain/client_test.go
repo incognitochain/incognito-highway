@@ -282,6 +282,8 @@ func TestChoosePeerFromGroup(t *testing.T) {
 }
 
 func TestCapBlocks(t *testing.T) {
+	defer configMaxBlock()()
+
 	testCases := []struct {
 		desc            string
 		specific        bool
@@ -340,6 +342,16 @@ func TestCapBlocks(t *testing.T) {
 				assert.Equal(t, tc.expectedTo, to)
 			}
 		})
+	}
+}
+
+func configMaxBlock() func() {
+	maxBlockPerRequest := common.MaxBlocksPerRequest
+	common.MaxBlocksPerRequest = 100
+
+	return func() {
+		// Revert configuration after a test is done
+		common.MaxBlocksPerRequest = maxBlockPerRequest
 	}
 }
 

@@ -1,6 +1,8 @@
 package common
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestPreprocessKey(t *testing.T) {
 	type args struct {
@@ -44,7 +46,7 @@ func TestPreprocessKey(t *testing.T) {
 				t.Errorf("PreprocessKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if !tt.wantErr && got != tt.want {
 				t.Errorf("PreprocessKey() = %v, want %v", got, tt.want)
 			}
 		})

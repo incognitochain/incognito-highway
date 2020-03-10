@@ -23,13 +23,13 @@ var (
 	ChainClientKeepaliveTimeout = 20 * time.Second
 	ChainClientDialTimeout      = 5 * time.Second
 	CacheNumCounters            = int64(100000)
-	CacheMaxCost                = int64(8 * 2 << 30) // 8 GiB
+	CacheMaxCost                = int64(8 * 1 << 30) // 8 GiB
 	CacheBufferItems            = int64(64)
 
 	MaxCallDepth         = int32(2)
-	ChoosePeerBlockDelta = uint64(100)
-	MaxBlocksPerRequest  = uint64(100)
-	MaxTimePerRequest    = 20 * time.Second
+	ChoosePeerBlockDelta = uint64(300)
+	MaxBlocksPerRequest  = uint64(900)
+	MaxTimePerRequest    = 30 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second
 	MaxTimeKeepPeerState      = 90 * time.Second
@@ -49,3 +49,8 @@ const (
 	PENDING
 	NORMAL
 )
+
+type ExpectedBlk struct {
+	Height uint64
+	Data   []byte
+}
