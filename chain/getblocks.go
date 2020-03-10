@@ -91,7 +91,11 @@ func (g *BlkGetter) updateNewHeight() {
 	}
 }
 
-func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightRequest, ch chan common.ExpectedBlk) []uint64 {
+func (g *BlkGetter) handleBlkRecv(
+	ctx context.Context,
+	req *proto.BlockByHeightRequest,
+	ch chan common.ExpectedBlk,
+	providers []Provider) []uint64 {
 	logger := Logger(ctx)
 	missing := []uint64{}
 	for blk := range ch {
@@ -100,6 +104,14 @@ func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightR
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
+			go func(providers []Provider, blk common.ExpectedBlk) {
+				for _, p := range providers {
+					err := p.SetSingleBlockByHeight(ctx, req, blk)
+					if err != nil {
+						logger.Errorf("[stream] Caching return error %v", err)
+					}
+				}
+			}(providers, blk)
 		}
 	}
 	return missing
@@ -129,14 +141,14 @@ func (g *BlkGetter) CallForBlocks(
 ) error {
 	logger := Logger(ctx)
 	nreq := g.req
-	for _, p := range providers {
+	for i, p := range providers {
 		if nreq == nil {
 			break
 		}
 		blkCh := make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 		logger.Infof("[stream] calling provider for req")
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
-		missing := g.handleBlkRecv(ctx, nreq, blkCh)
+		missing := g.handleBlkRecv(ctx, nreq, blkCh, providers[:i])
 		nreq = newReq(nreq, missing)
 	}
 	close(g.newBlk)
