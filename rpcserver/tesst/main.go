@@ -9,7 +9,7 @@ func main() {
 	rpcConf := &rpcserver.RpcServerConfig{
 		Port: 9330,
 	}
-	server, err := rpcserver.NewRPCServer(rpcConf)
+	server, err := rpcserver.NewRPCServer(rpcConf, nil)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}

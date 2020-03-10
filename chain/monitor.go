@@ -36,27 +36,37 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	validators := r.manager.GetAllPeers()
 	totalConns := r.manager.GetTotalConnections()
 
-	// Make a copy of request stats
-	requests := map[string]uint64{}
-	r.requestCounts.RLock()
-	for key, val := range r.requestCounts.m {
-		requests[key] = val
-	}
-	r.requestCounts.RUnlock()
+	// // Make a copy of request stats
+	// requests := map[string]uint64{}
+	// r.requestCounts.RLock()
+	// for key, val := range r.requestCounts.m {
+	// 	requests[key] = val
+	// }
+	// r.requestCounts.RUnlock()
 
-	// Make a copy of request per peer stats
-	requestsPerPeer := PeerRequestMap{}
-	r.requestsPerPeer.RLock()
-	for key, val := range r.requestsPerPeer.m {
-		requestsPerPeer[key] = val
-	}
-	r.requestsPerPeer.RUnlock()
+	// // Make a copy of request per peer stats
+	// requestsPerPeer := PeerRequestMap{}
+	// r.requestsPerPeer.RLock()
+	// for key, val := range r.requestsPerPeer.m {
+	// 	requestsPerPeer[key] = val
+	// }
+	// r.requestsPerPeer.RUnlock()
+
+	// // Get memcache info
+	// cacheInfo := map[string]interface{}{}
+	// providers := r.manager.server.Providers
+	// if len(providers) > 0 {
+	// 	if cache, ok := providers[0].(*MemCache); ok {
+	// 		cacheInfo = cache.Metrics()
+	// 	}
+	// }
 
 	data := map[string]interface{}{
 		"peers":               validators,
 		"inbound_connections": totalConns,
-		"requests":            requests,
-		"request_per_peer":    requestsPerPeer,
+		// "requests":            requests,
+		// "request_per_peer":    requestsPerPeer,
+		// "cache":               cacheInfo,
 	}
 	marshaler := common.NewDefaultMarshaler(data)
 	return r.name, marshaler, nil
@@ -107,7 +117,20 @@ func (r *Reporter) pushDataToGrafana() {
 			r.requestCounts.lm[k] = v
 			r.gralog.Add(k, c)
 		}
+
+		// Get memcache info
+		cacheInfo := map[string]interface{}{}
+		providers := r.manager.server.Providers
+		if len(providers) > 0 {
+			if cache, ok := providers[0].(*MemCache); ok {
+				cacheInfo = cache.Metrics()
+			}
+		}
 		r.requestCounts.Unlock()
+
+		for k, v := range cacheInfo {
+			r.gralog.Add(k, v)
+		}
 	}
 
 }
