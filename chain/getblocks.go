@@ -71,11 +71,7 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 		g.checkWaitingBlk()
 	}
 	logger.Infof("[stream] listen gnewBlk End")
-	ok := g.checkWaitingBlk()
-	if !ok {
-		logger.Infof("[goroutine] listenCommingBlk END")
-		return
-	}
+	g.checkWaitingBlk()
 }
 
 func (g *BlkGetter) updateNewHeight() {
@@ -95,7 +91,8 @@ func (g *BlkGetter) handleBlkRecv(
 	ctx context.Context,
 	req *proto.BlockByHeightRequest,
 	ch chan common.ExpectedBlk,
-	providers []Provider) []uint64 {
+	providers []Provider,
+) []uint64 {
 	logger := Logger(ctx)
 	missing := []uint64{}
 	for blk := range ch {
