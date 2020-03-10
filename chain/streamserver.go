@@ -23,13 +23,15 @@ func (s *Server) StreamBlockByHeight(
 
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
+	logger.Infof("[stream] listen gblkRecv Start")
 	for blk := range blkRecv {
 		if len(blk.Data) == 0 {
-			return errors.New("close")
+			return nil
 		}
 		logger.Infof("[stream] Received block from channel, send to client")
 		if err := ss.Send(&proto.BlockData{Data: blk.Data}); err != nil {
 			logger.Infof("[stream] Trying send to client but received error %v, return and cancel context", err)
+			logger.Infof("[stream] listen gblkRecv End")
 			return err
 		}
 		go func(s *Server, blk common.ExpectedBlk) {
@@ -41,5 +43,6 @@ func (s *Server) StreamBlockByHeight(
 			}
 		}(s, blk)
 	}
+	logger.Infof("[stream] listen gblkRecv End")
 	return nil
 }
