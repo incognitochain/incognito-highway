@@ -18,18 +18,13 @@ type BlkGetter struct {
 func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
 	g := &BlkGetter{}
 	g.waiting = map[uint64][]byte{}
-	g.newBlk = make(chan common.ExpectedBlk)
+	g.newBlk = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 	g.idx = 0
 	g.req = req
 	g.newHeight = g.req.Heights[0] - 1
 	g.blkRecv = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 	g.updateNewHeight()
 	return g
-}
-
-func (g *BlkGetter) Cancel() {
-	for range g.blkRecv {
-	}
 }
 
 func (g *BlkGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlk {
@@ -39,21 +34,29 @@ func (g *BlkGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlk 
 }
 
 func (g *BlkGetter) checkWaitingBlk() bool {
-	if data, ok := g.waiting[g.newHeight]; ok {
-		g.blkRecv <- common.ExpectedBlk{
-			Height: g.newHeight,
-			Data:   data,
+	for {
+		if (g.newHeight == 0) || len(g.waiting) == 0 {
+			return false
 		}
-		delete(g.waiting, g.newHeight)
-		g.updateNewHeight()
-		return true
+		if data, ok := g.waiting[g.newHeight]; ok {
+			g.blkRecv <- common.ExpectedBlk{
+				Height: g.newHeight,
+				Data:   data,
+			}
+			delete(g.waiting, g.newHeight)
+			g.updateNewHeight()
+		} else {
+			break
+		}
 	}
 	return false
 }
 
 func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 	logger := Logger(ctx)
+	logger.Infof("[goroutine] listenCommingBlk START")
 	defer close(g.blkRecv)
+	logger.Infof("[stream] listen gnewBlk Start")
 	for blk := range g.newBlk {
 		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
 		if blk.Height < g.newHeight {
@@ -65,18 +68,10 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 		} else {
 			g.waiting[blk.Height] = blk.Data
 		}
-		for hasNewBlk := g.checkWaitingBlk(); hasNewBlk == true; {
-		}
+		g.checkWaitingBlk()
 	}
-	for {
-		if (g.newHeight == 0) || len(g.waiting) == 0 {
-			return
-		}
-		ok := g.checkWaitingBlk()
-		if !ok {
-			return
-		}
-	}
+	logger.Infof("[stream] listen gnewBlk End")
+	g.checkWaitingBlk()
 }
 
 func (g *BlkGetter) updateNewHeight() {
@@ -92,7 +87,12 @@ func (g *BlkGetter) updateNewHeight() {
 	}
 }
 
-func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightRequest, ch chan common.ExpectedBlk) []uint64 {
+func (g *BlkGetter) handleBlkRecv(
+	ctx context.Context,
+	req *proto.BlockByHeightRequest,
+	ch chan common.ExpectedBlk,
+	providers []Provider,
+) []uint64 {
 	logger := Logger(ctx)
 	missing := []uint64{}
 	for blk := range ch {
@@ -101,6 +101,14 @@ func (g *BlkGetter) handleBlkRecv(ctx context.Context, req *proto.BlockByHeightR
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
+			go func(providers []Provider, blk common.ExpectedBlk) {
+				for _, p := range providers {
+					err := p.SetSingleBlockByHeight(ctx, req, blk)
+					if err != nil {
+						logger.Errorf("[stream] Caching return error %v", err)
+					}
+				}
+			}(providers, blk)
 		}
 	}
 	return missing
@@ -130,14 +138,14 @@ func (g *BlkGetter) CallForBlocks(
 ) error {
 	logger := Logger(ctx)
 	nreq := g.req
-	for _, p := range providers {
+	for i, p := range providers {
 		if nreq == nil {
 			break
 		}
 		blkCh := make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
 		logger.Infof("[stream] calling provider for req")
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
-		missing := g.handleBlkRecv(ctx, nreq, blkCh)
+		missing := g.handleBlkRecv(ctx, nreq, blkCh, providers[:i])
 		nreq = newReq(nreq, missing)
 	}
 	close(g.newBlk)

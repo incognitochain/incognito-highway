@@ -4,6 +4,8 @@ import (
 	context "context"
 	"highway/common"
 	"highway/proto"
+
+	"github.com/pkg/errors"
 )
 
 func (c *Client) StreamBlkByHeight(
@@ -12,19 +14,35 @@ func (c *Client) StreamBlkByHeight(
 	blkChan chan common.ExpectedBlk,
 ) error {
 	logger := Logger(ctx)
+	logger.Infof("[stream] StreamBlkByHeight Start")
 	var stream proto.HighwayService_StreamBlockByHeightClient
 	defer close(blkChan)
 	logger.Infof("[stream] Server call Client: Start stream request %v", req)
 	sc, _, err := c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
-	if err != nil {
+	if (err != nil) || (sc == nil) {
+		err = errors.Errorf("[stream] getClientWithBlock return error %v, sc return %v", err, sc)
 		logger.Errorf("[stream] getClientWithBlock return error %v", err)
 	} else {
-		stream, err = sc.StreamBlockByHeight(ctx, req.(*proto.BlockByHeightRequest))
-		if err != nil {
-			logger.Errorf("[stream] Server call Client return error %v", err)
+		nreq, ok := req.(*proto.BlockByHeightRequest)
+		if !ok {
+			err = errors.Errorf("Invalid Request %v", req)
 		} else {
-			logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
-			defer stream.CloseSend()
+			nreq.CallDepth++
+			stream, err = sc.StreamBlockByHeight(ctx, nreq)
+			if err != nil {
+				logger.Errorf("[stream] Server call Client return error %v", err)
+			} else {
+				logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
+				defer stream.CloseSend()
+				defer func(stream proto.HighwayService_StreamBlockByHeightClient) {
+					for {
+						_, errStream := stream.Recv()
+						if errStream != nil {
+							break
+						}
+					}
+				}(stream)
+			}
 		}
 	}
 	heights := req.GetHeights()
@@ -56,5 +74,6 @@ func (c *Client) StreamBlkByHeight(
 			Data:   []byte{},
 		}
 	}
+	logger.Infof("[stream] StreamBlkByHeight End")
 	return nil
 }
