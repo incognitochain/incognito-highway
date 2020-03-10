@@ -53,12 +53,8 @@ func (g *BlkGetter) checkWaitingBlk() bool {
 }
 
 func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
-	logger := Logger(ctx)
-	logger.Infof("[goroutine] listenCommingBlk START")
 	defer close(g.blkRecv)
-	logger.Infof("[stream] listen gnewBlk Start")
 	for blk := range g.newBlk {
-		logger.Infof("[stream] ListenComming received %v, wanted %v", blk.Height, g.newHeight)
 		if blk.Height < g.newHeight {
 			continue
 		}
@@ -70,7 +66,6 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 		}
 		g.checkWaitingBlk()
 	}
-	logger.Infof("[stream] listen gnewBlk End")
 	g.checkWaitingBlk()
 }
 
@@ -96,7 +91,6 @@ func (g *BlkGetter) handleBlkRecv(
 	logger := Logger(ctx)
 	missing := []uint64{}
 	for blk := range ch {
-		logger.Infof("[stream] handleBlkRecv received block %v", blk.Height)
 		if len(blk.Data) == 0 {
 			missing = append(missing, blk.Height)
 		} else {
@@ -138,12 +132,12 @@ func (g *BlkGetter) CallForBlocks(
 ) error {
 	logger := Logger(ctx)
 	nreq := g.req
+	logger.Infof("[stream] calling provider for req")
 	for i, p := range providers {
 		if nreq == nil {
 			break
 		}
 		blkCh := make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
-		logger.Infof("[stream] calling provider for req")
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
 		missing := g.handleBlkRecv(ctx, nreq, blkCh, providers[:i])
 		nreq = newReq(nreq, missing)
