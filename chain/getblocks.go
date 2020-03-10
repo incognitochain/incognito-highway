@@ -34,14 +34,20 @@ func (g *BlkGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlk 
 }
 
 func (g *BlkGetter) checkWaitingBlk() bool {
-	if data, ok := g.waiting[g.newHeight]; ok {
-		g.blkRecv <- common.ExpectedBlk{
-			Height: g.newHeight,
-			Data:   data,
+	for {
+		if (g.newHeight == 0) || len(g.waiting) == 0 {
+			return false
 		}
-		delete(g.waiting, g.newHeight)
-		g.updateNewHeight()
-		return true
+		if data, ok := g.waiting[g.newHeight]; ok {
+			g.blkRecv <- common.ExpectedBlk{
+				Height: g.newHeight,
+				Data:   data,
+			}
+			delete(g.waiting, g.newHeight)
+			g.updateNewHeight()
+		} else {
+			break
+		}
 	}
 	return false
 }
@@ -62,20 +68,13 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 		} else {
 			g.waiting[blk.Height] = blk.Data
 		}
-		for hasNewBlk := g.checkWaitingBlk(); hasNewBlk == true; {
-		}
+		g.checkWaitingBlk()
 	}
 	logger.Infof("[stream] listen gnewBlk End")
-	for {
-		if (g.newHeight == 0) || len(g.waiting) == 0 {
-			logger.Infof("[goroutine] listenCommingBlk END")
-			return
-		}
-		ok := g.checkWaitingBlk()
-		if !ok {
-			logger.Infof("[goroutine] listenCommingBlk END")
-			return
-		}
+	ok := g.checkWaitingBlk()
+	if !ok {
+		logger.Infof("[goroutine] listenCommingBlk END")
+		return
 	}
 }
 
