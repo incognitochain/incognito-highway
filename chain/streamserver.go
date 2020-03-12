@@ -28,10 +28,8 @@ func (s *Server) StreamBlockByHeight(
 		if len(blk.Data) == 0 {
 			return nil
 		}
-		logger.Infof("[stream] Received block from channel, send to client")
 		if err := ss.Send(&proto.BlockData{Data: blk.Data}); err != nil {
 			logger.Infof("[stream] Trying send to client but received error %v, return and cancel context", err)
-			logger.Infof("[stream] listen gblkRecv End")
 			return err
 		}
 	}

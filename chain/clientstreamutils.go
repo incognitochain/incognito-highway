@@ -59,7 +59,6 @@ func (c *Client) StreamBlkByHeight(
 		if err == nil {
 			blkData, err = stream.Recv()
 			if err == nil {
-				logger.Infof("[stream] Received block %v", blkHeight)
 				blkChan <- common.ExpectedBlk{
 					Height: blkHeight,
 					Data:   blkData.GetData(),
