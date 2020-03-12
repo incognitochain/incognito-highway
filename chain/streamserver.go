@@ -34,14 +34,6 @@ func (s *Server) StreamBlockByHeight(
 			logger.Infof("[stream] listen gblkRecv End")
 			return err
 		}
-		go func(s *Server, blk common.ExpectedBlk) {
-			for _, p := range s.Providers {
-				err := p.SetSingleBlockByHeight(ctx, req, blk)
-				if err != nil {
-					logger.Errorf("[stream] Caching return error %v", err)
-				}
-			}
-		}(s, blk)
 	}
 	logger.Infof("[stream] listen gblkRecv End")
 	return nil
