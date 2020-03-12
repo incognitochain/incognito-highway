@@ -24,6 +24,8 @@ type ProxyConfig struct {
 	Loglevel      string
 	BootnodePort  int
 	GrafanaDBURL  string
+	HighwayIndex  int
+	PrivateSeed   string
 }
 
 func GetProxyConfig() (*ProxyConfig, error) {
@@ -33,6 +35,8 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	adminPort := flag.Int("admin_port", 8080, "rest api /websocket port for administration, monitoring (optional, default 8080)")
 	isProfiling := flag.Bool("profiling", true, "enable profiling through admin port")
 	supportShards := flag.String("support_shards", "all", "shard list that this proxy will work for (optional, default \"all\")")
+	privateSeed := flag.String("privateseed", "", "private seed of this proxy, use  for authentication with other node")
+	index := flag.Int("index", 0, "index of this proxy in list of proxy")
 	privateKey := flag.String("privatekey", "", "private key of this proxy, use  for authentication with other node")
 	bootstrap := flag.String("bootstrap", "", "address of another highway to get list of highways from (ip:port)")
 	version := flag.String("version", "0.1-local", "proxy version")
@@ -62,6 +66,8 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		Loglevel:      *loglevel,
 		BootnodePort:  *bootnodePort,
 		GrafanaDBURL:  *gDBURL,
+		HighwayIndex:  *index,
+		PrivateSeed:   *privateSeed,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()

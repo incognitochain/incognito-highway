@@ -29,19 +29,20 @@ type Host struct {
 	GRPC     *p2pgrpc.GRPCProtocol
 }
 
-func NewHost(version string, listenAddr string, listenPort int, privKeyStr string) *Host {
-	var privKey crypto.PrivKey
-	if len(privKeyStr) == 0 {
+func NewHost(version string, listenAddr string, listenPort int, privKey crypto.PrivKey) *Host {
+	// var privKey crypto.PrivKey
+	if privKey == nil {
 		privKey, _, _ = crypto.GenerateKeyPair(crypto.ECDSA, 2048)
 		m, _ := crypto.MarshalPrivateKey(privKey)
 		encoded := crypto.ConfigEncodeKey(m)
 		fmt.Println("encoded libp2p key:", encoded)
-	} else {
-		b, err := crypto.ConfigDecodeKey(privKeyStr)
-		catchError(err)
-		privKey, err = crypto.UnmarshalPrivateKey(b)
-		catchError(err)
 	}
+	// else {
+	// 	b, err := crypto.ConfigDecodeKey(privKeyStr)
+	// 	catchError(err)
+	// 	privKey, err = crypto.UnmarshalPrivateKey(b)
+	// 	catchError(err)
+	// }
 
 	addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", listenAddr, listenPort))
 	catchError(err)

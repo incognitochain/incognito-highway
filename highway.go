@@ -10,6 +10,7 @@ import (
 	"highway/config"
 	"highway/grafana"
 	"highway/health"
+	"highway/key"
 	"highway/monitor"
 	"highway/p2p"
 	"highway/process"
@@ -56,8 +57,10 @@ func main() {
 	chainData := new(chaindata.ChainData)
 	chainData.Init(common.NumberOfShard)
 
+	whitelisthw, hostPriKey, err := key.GenWhiteList([]byte(conf.PrivateSeed), conf.HighwayIndex, common.NumberOfHighway)
+
 	// New libp2p host
-	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, conf.PrivateKey)
+	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, hostPriKey)
 
 	// Setup topic
 	topic.Handler = topic.TopicManager{}
@@ -93,6 +96,7 @@ func main() {
 		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 		floodPubSub,
 		gl,
+		whitelisthw,
 	)
 	go rman.Start()
 
