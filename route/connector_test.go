@@ -18,7 +18,7 @@ import (
 func configTime() func() {
 	broadcastMsgEnlistTimestep := common.BroadcastMsgEnlistTimestep
 	routeKeepConnectionTimestep := common.RouteKeepConnectionTimestep
-	routeHighwayKeepaliveTime := common.RouteHighwayRemoveDeadline
+	routeHighwayRemoveDeadline := common.RouteHighwayRemoveDeadline
 	common.BroadcastMsgEnlistTimestep = 100 * time.Millisecond
 	common.RouteKeepConnectionTimestep = 20 * time.Millisecond
 	common.RouteHighwayRemoveDeadline = 100 * time.Millisecond
@@ -27,7 +27,7 @@ func configTime() func() {
 		// Revert time configuration after a test is done
 		common.BroadcastMsgEnlistTimestep = broadcastMsgEnlistTimestep
 		common.RouteKeepConnectionTimestep = routeKeepConnectionTimestep
-		common.RouteHighwayRemoveDeadline = routeHighwayKeepaliveTime
+		common.RouteHighwayRemoveDeadline = routeHighwayRemoveDeadline
 	}
 }
 
