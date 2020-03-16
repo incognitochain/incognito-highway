@@ -19,8 +19,8 @@ type Map struct {
 }
 
 type Status struct {
-	Connecting bool
-	Start      time.Time
+	Connecting bool      `json:"connecting"`
+	Start      time.Time `json:"since"`
 }
 
 func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
@@ -34,6 +34,10 @@ func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 	}
 	m.AddPeer(p, supportShards, rpcUrl)
 	m.ConnectToShardOfPeer(p)
+	m.status[p.ID] = Status{
+		Connecting: true,
+		Start:      time.Now().Add(-time.Duration(common.MinStableDuration)), // Consider ourself as a stable peer
+	}
 	return m
 }
 
