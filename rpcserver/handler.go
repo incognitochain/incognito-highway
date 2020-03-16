@@ -1,7 +1,9 @@
 package rpcserver
 
 import (
+	"highway/common"
 	"strings"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -9,11 +11,6 @@ import (
 
 type Handler struct {
 	rpcServer *RpcServer
-}
-
-type PeerMap interface {
-	CopyPeersMap() map[byte][]peer.AddrInfo
-	CopyRPCUrls() map[peer.ID]string
 }
 
 func (s *Handler) GetPeers(
@@ -25,10 +22,17 @@ func (s *Handler) GetPeers(
 	logger.Debugf("Received new GetPeers request: %+v", req)
 	peers := s.rpcServer.pmap.CopyPeersMap()
 	rpcs := s.rpcServer.pmap.CopyRPCUrls()
+	status := s.rpcServer.pmap.CopyStatus()
 	addrs := []HighwayAddr{}
 
 	// NOTE: assume all highways support all shards => get at 0
 	for _, p := range peers[0] {
+		// Skip disconnected peers or just recently connected ones
+		s, ok := status[p.ID]
+		if !ok || !s.Connecting || time.Since(s.Start) < common.MinStableDuration {
+			continue
+		}
+
 		ma, err := peer.AddrInfoToP2pAddrs(&p)
 		if err != nil {
 			logger.Warnf("Invalid addr info: %+v", p)

@@ -209,3 +209,13 @@ func (m *Map) CopyConnected() []byte {
 	}
 	return c
 }
+
+func (m *Map) CopyStatus() map[peer.ID]Status {
+	m.RLock()
+	defer m.RUnlock()
+	status := map[peer.ID]Status{}
+	for pid, s := range m.status {
+		status[pid] = s // Make a copy
+	}
+	return status
+}

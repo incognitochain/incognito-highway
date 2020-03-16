@@ -40,6 +40,7 @@ var (
 	RouteClientDialTimeout      = 5 * time.Second
 	RouteKeepConnectionTimestep = 40 * time.Second
 	RouteHighwayRemoveDeadline  = 60 * time.Minute
+	MinStableDuration           = 5 * time.Minute
 
 	BroadcastMsgEnlistTimestep = 1 * time.Minute
 )
