@@ -157,6 +157,8 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 			continue
 		}
 		if _, ok := hc.hwwhitelist[msg.GetFrom().String()]; !ok {
+			logger.Infof("%v not from list", msg.GetFrom().String())
+			hc.publisher.BlacklistPeer(msg.GetFrom())
 			continue
 		}
 		// TODO(@0xakk0r0kamui): check highway's signature in msg
@@ -226,6 +228,7 @@ type enlistMessage struct {
 
 type Publisher interface {
 	Publish(topic string, msg []byte) error
+	BlacklistPeer(peer.ID)
 }
 
 type ConnKeeper interface {
