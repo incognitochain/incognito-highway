@@ -3,6 +3,7 @@ package hmap
 import (
 	"highway/common"
 	"sync"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 )
@@ -12,8 +13,14 @@ type Map struct {
 	Supports map[peer.ID][]byte       // peerID => shards supported
 	RPCs     map[peer.ID]string       // peerID => RPC endpoint (to call GetPeers)
 
+	status        map[peer.ID]Status
 	peerConnected map[peer.ID]bool // keep track of connected peers
 	*sync.RWMutex
+}
+
+type Status struct {
+	Connecting bool      `json:"connecting"`
+	Start      time.Time `json:"since"`
 }
 
 func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
@@ -21,21 +28,26 @@ func NewMap(p peer.AddrInfo, supportShards []byte, rpcUrl string) *Map {
 		Peers:         map[byte][]peer.AddrInfo{},
 		Supports:      map[peer.ID][]byte{},
 		RPCs:          map[peer.ID]string{},
+		status:        map[peer.ID]Status{},
 		peerConnected: map[peer.ID]bool{},
 		RWMutex:       &sync.RWMutex{},
 	}
 	m.AddPeer(p, supportShards, rpcUrl)
 	m.ConnectToShardOfPeer(p)
+	m.status[p.ID] = Status{
+		Connecting: true,
+		Start:      time.Now().Add(-time.Duration(common.MinStableDuration)), // Consider ourself as a stable peer
+	}
 	return m
 }
 
-func (h *Map) isConnectedToShard(s byte) bool {
-	for pid, conn := range h.peerConnected {
+func (m *Map) isConnectedToShard(s byte) bool {
+	for pid, conn := range m.peerConnected {
 		if conn == false {
 			continue
 		}
 
-		for _, sup := range h.Supports[pid] {
+		for _, sup := range m.Supports[pid] {
 			if sup == s {
 				return true
 			}
@@ -44,41 +56,67 @@ func (h *Map) isConnectedToShard(s byte) bool {
 	return false
 }
 
-func (h *Map) IsConnectedToShard(s byte) bool {
-	h.RLock()
-	defer h.RUnlock()
-	return h.isConnectedToShard(s)
+func (m *Map) IsConnectedToShard(s byte) bool {
+	m.RLock()
+	defer m.RUnlock()
+	return m.isConnectedToShard(s)
 }
 
-func (h *Map) IsConnectedToPeer(p peer.ID) bool {
-	h.RLock()
-	defer h.RUnlock()
-	return h.peerConnected[p]
+func (m *Map) IsConnectedToPeer(p peer.ID) bool {
+	m.RLock()
+	defer m.RUnlock()
+	return m.peerConnected[p]
 }
 
-func (h *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
-	h.Lock()
-	defer h.Unlock()
-	h.peerConnected[p.ID] = true
+func (m *Map) ConnectToShardOfPeer(p peer.AddrInfo) {
+	m.Lock()
+	defer m.Unlock()
+	m.peerConnected[p.ID] = true
+	m.updateStatus(p.ID, true)
 }
 
-func (h *Map) DisconnectToShardOfPeer(p peer.AddrInfo) {
-	h.Lock()
-	defer h.Unlock()
-	h.peerConnected[p.ID] = false
+func (m *Map) DisconnectToShardOfPeer(p peer.AddrInfo) {
+	m.Lock()
+	defer m.Unlock()
+	m.peerConnected[p.ID] = false
 }
 
 // IsEnlisted checks if a peer has already registered as a valid highway
-func (h *Map) IsEnlisted(p peer.AddrInfo) bool {
-	h.RLock()
-	defer h.RUnlock()
-	_, ok := h.Supports[p.ID]
+func (m *Map) IsEnlisted(p peer.AddrInfo) bool {
+	m.RLock()
+	defer m.RUnlock()
+	_, ok := m.Supports[p.ID]
 	return ok
 }
 
-func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
-	h.Lock()
-	defer h.Unlock()
+func (m *Map) updateStatus(pid peer.ID, connecting bool) {
+	if s, ok := m.status[pid]; !ok || s.Connecting != connecting {
+		m.status[pid] = Status{
+			Connecting: connecting,
+			Start:      time.Now(),
+		}
+	}
+}
+
+func (m *Map) UpdateStatus(pid peer.ID, connecting bool) {
+	m.Lock()
+	defer m.Unlock()
+	m.updateStatus(pid, connecting)
+}
+
+// Status returns connection status of a single peer
+func (m *Map) Status(pid peer.ID) (Status, bool) {
+	m.RLock()
+	defer m.RUnlock()
+	if _, ok := m.status[pid]; !ok {
+		return Status{}, false
+	}
+	return m.status[pid], true
+}
+
+func (m *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
+	m.Lock()
+	defer m.Unlock()
 	mcopy := func(b []byte) []byte { // Create new slice and copy
 		c := make([]byte, len(b))
 		copy(c, b)
@@ -86,10 +124,10 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
 	}
 
 	added := false
-	h.Supports[p.ID] = mcopy(supportShards)
+	m.Supports[p.ID] = mcopy(supportShards)
 	for _, s := range supportShards {
 		found := false
-		for _, q := range h.Peers[s] {
+		for _, q := range m.Peers[s] {
 			if q.ID == p.ID {
 				found = true
 				break
@@ -97,81 +135,91 @@ func (h *Map) AddPeer(p peer.AddrInfo, supportShards []byte, rpcUrl string) {
 		}
 		if !found {
 			added = true
-			h.Peers[s] = append(h.Peers[s], p)
+			m.Peers[s] = append(m.Peers[s], p)
 		}
 	}
 	if added {
 		logger.Infof("Adding peer %+v, rpcUrl %s, support %v", p, rpcUrl, supportShards)
 	}
-	h.RPCs[p.ID] = rpcUrl
+	m.RPCs[p.ID] = rpcUrl
 }
 
-func (h *Map) RemovePeer(p peer.AddrInfo) {
-	h.Lock()
-	defer h.Unlock()
-	delete(h.Supports, p.ID)
-	delete(h.RPCs, p.ID)
-	for i, addrs := range h.Peers {
+func (m *Map) RemovePeer(p peer.AddrInfo) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.Supports, p.ID)
+	delete(m.RPCs, p.ID)
+	for i, addrs := range m.Peers {
 		k := 0
 		for _, addr := range addrs {
 			if addr.ID == p.ID {
 				continue
 			}
-			h.Peers[i][k] = addr
+			m.Peers[i][k] = addr
 			k++
 		}
-		if k < len(h.Peers[i]) {
+		if k < len(m.Peers[i]) {
 			logger.Infof("Removed peer from map of shard %d: %+v", i, p)
 		}
-		h.Peers[i] = h.Peers[i][:k]
+		m.Peers[i] = m.Peers[i][:k]
 	}
 }
 
-func (h *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
-	h.RLock()
-	defer h.RUnlock()
-	m := map[byte][]peer.AddrInfo{}
-	for s, addrs := range h.Peers {
+func (m *Map) CopyPeersMap() map[byte][]peer.AddrInfo {
+	m.RLock()
+	defer m.RUnlock()
+	peers := map[byte][]peer.AddrInfo{}
+	for s, addrs := range m.Peers {
 		for _, addr := range addrs { // NOTE: Addrs in AddrInfo are still referenced
-			m[s] = append(m[s], addr)
+			peers[s] = append(peers[s], addr)
 		}
 	}
-	return m
+	return peers
 }
 
-func (h *Map) CopySupports() map[peer.ID][]byte {
-	h.RLock()
-	defer h.RUnlock()
-	m := map[peer.ID][]byte{}
-	for pid, cids := range h.Supports {
+func (m *Map) CopySupports() map[peer.ID][]byte {
+	m.RLock()
+	defer m.RUnlock()
+	sup := map[peer.ID][]byte{}
+	for pid, cids := range m.Supports {
 		c := make([]byte, len(cids))
 		copy(c, cids)
-		m[pid] = c
+		sup[pid] = c
 	}
-	return m
+	return sup
 }
 
-func (h *Map) CopyRPCUrls() map[peer.ID]string {
-	h.RLock()
-	defer h.RUnlock()
-	m := map[peer.ID]string{}
-	for pid, rpc := range h.RPCs {
-		m[pid] = rpc
+func (m *Map) CopyRPCUrls() map[peer.ID]string {
+	m.RLock()
+	defer m.RUnlock()
+	rpcs := map[peer.ID]string{}
+	for pid, rpc := range m.RPCs {
+		rpcs[pid] = rpc
 	}
-	return m
+	return rpcs
 }
 
-func (h *Map) CopyConnected() []byte {
-	h.RLock()
-	defer h.RUnlock()
+func (m *Map) CopyConnected() []byte {
+	m.RLock()
+	defer m.RUnlock()
 	c := []byte{}
 	for i := byte(0); i < common.NumberOfShard; i++ {
-		if h.isConnectedToShard(i) {
+		if m.isConnectedToShard(i) {
 			c = append(c, i)
 		}
 	}
-	if h.isConnectedToShard(common.BEACONID) {
+	if m.isConnectedToShard(common.BEACONID) {
 		c = append(c, common.BEACONID)
 	}
 	return c
+}
+
+func (m *Map) CopyStatus() map[peer.ID]Status {
+	m.RLock()
+	defer m.RUnlock()
+	status := map[peer.ID]Status{}
+	for pid, s := range m.status {
+		status[pid] = s // Make a copy
+	}
+	return status
 }

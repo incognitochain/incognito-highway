@@ -2,9 +2,18 @@ package rpcserver
 
 import (
 	"fmt"
+	"highway/route/hmap"
 	"net"
 	"net/rpc"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
+
+type PeerMap interface {
+	CopyPeersMap() map[byte][]peer.AddrInfo
+	CopyRPCUrls() map[peer.ID]string
+	CopyStatus() map[peer.ID]hmap.Status
+}
 
 type RpcServer struct {
 	// peers    map[string]*peer // list peers which are still pinging to bootnode continuously
