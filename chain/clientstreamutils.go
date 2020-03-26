@@ -84,7 +84,7 @@ func (c *Client) StreamBlkByHeightv2(
 	logger := Logger(ctx)
 	var stream proto.HighwayService_StreamBlockByHeightClient
 	defer close(blkChan)
-	logger.Infof("[stream] Server call Client: Start stream request, type %s, shard %d -> %d, #heights %d", req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHeights()))
+	logger.Infof("[stream] Server call Client: Start stream request from peer %v, type %s, shard %d -> %d, #heights %d", req.GetSyncFromPeer(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHeights()))
 
 	var (
 		sc  proto.HighwayServiceClient

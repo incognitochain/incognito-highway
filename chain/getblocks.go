@@ -116,13 +116,14 @@ func newReqByHeight(
 		return nil
 	}
 	return &proto.BlockByHeightRequest{
-		Type:      oldReq.Type,
-		Specific:  true,
-		Heights:   missing,
-		From:      oldReq.From,
-		To:        oldReq.To,
-		CallDepth: oldReq.CallDepth,
-		UUID:      oldReq.UUID,
+		Type:         oldReq.Type,
+		Specific:     true,
+		Heights:      missing,
+		From:         oldReq.From,
+		To:           oldReq.To,
+		CallDepth:    oldReq.CallDepth,
+		SyncFromPeer: oldReq.SyncFromPeer,
+		UUID:         oldReq.UUID,
 	}
 }
 
