@@ -113,6 +113,24 @@ func (hc *Client) SetBlockByHeight(_ context.Context, _ GetBlockByHeightRequest,
 func (hc *Client) SetSingleBlockByHeight(
 	_ context.Context,
 	_ RequestBlockByHeight,
+	_ common.ExpectedBlkByHeight,
+) error {
+	// Client no needs to cache block
+	return nil
+}
+
+func (hc *Client) SetSingleBlockByHeightv2(
+	_ context.Context,
+	_ RequestBlockByHeight,
+	_ common.ExpectedBlk,
+) error {
+	// Client no needs to cache block
+	return nil
+}
+
+func (hc *Client) SetSingleBlockByHash(
+	_ context.Context,
+	_ RequestBlockByHash,
 	_ common.ExpectedBlk,
 ) error {
 	// Client no needs to cache block
@@ -417,5 +435,16 @@ type RequestBlockByHeight interface {
 	GetTo() int32
 	GetSpecific() bool
 	GetHeights() []uint64
+	GetSyncFromPeer() string
+	GetUUID() string
+}
+
+type RequestBlockByHash interface {
+	GetType() proto.BlkType
+	GetCallDepth() int32
+	GetFrom() int32
+	GetTo() int32
+	GetHashes() [][]byte
+	GetSyncFromPeer() string
 	GetUUID() string
 }

@@ -65,6 +65,23 @@ func (cache *MemCache) SetBlockByHeight(
 func (cache *MemCache) SetSingleBlockByHeight(
 	ctx context.Context,
 	req RequestBlockByHeight,
+	blk common.ExpectedBlkByHeight,
+) error {
+	// logger := Logger(ctx)
+	if len(blk.Data) == 0 {
+		return errors.Errorf("Block height %v has empty data", blk.Height)
+	}
+	// logger.Debugf("Caching block %s, height %d, shard %d -> %d, len = %d", req.GetType().String(), blk.Height, req.GetFrom(), req.GetTo(), len(blk.Data))
+
+	key := keyByHeight(req, blk.Height)
+	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
+	cache.cacher.Set(key, blk.Data, cost)
+	return nil
+}
+
+func (cache *MemCache) SetSingleBlockByHeightv2(
+	ctx context.Context,
+	req RequestBlockByHeight,
 	blk common.ExpectedBlk,
 ) error {
 	// logger := Logger(ctx)
@@ -74,6 +91,23 @@ func (cache *MemCache) SetSingleBlockByHeight(
 	// logger.Debugf("Caching block %s, height %d, shard %d -> %d, len = %d", req.GetType().String(), blk.Height, req.GetFrom(), req.GetTo(), len(blk.Data))
 
 	key := keyByHeight(req, blk.Height)
+	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
+	cache.cacher.Set(key, blk.Data, cost)
+	return nil
+}
+
+func (cache *MemCache) SetSingleBlockByHash(
+	ctx context.Context,
+	req RequestBlockByHash,
+	blk common.ExpectedBlk,
+) error {
+	// logger := Logger(ctx)
+	if len(blk.Data) == 0 {
+		return errors.Errorf("Block height %v has empty data", blk.Height)
+	}
+	// logger.Debugf("Caching block %s, height %d, shard %d -> %d, len = %d", req.GetType().String(), blk.Height, req.GetFrom(), req.GetTo(), len(blk.Data))
+
+	key := keyByHash(req, blk.Hash)
 	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
 	cache.cacher.Set(key, blk.Data, cost)
 	return nil
@@ -103,7 +137,45 @@ func keyByHeight(req RequestBlockByHeight, h uint64) string {
 	return fmt.Sprintf("byheight-%d-%d-%d", req.GetFrom(), req.GetTo(), h)
 }
 
+func keyByHash(req RequestBlockByHash, h []byte) string {
+	return fmt.Sprintf("byhash-%d-%d-%v", req.GetFrom(), req.GetTo(), h)
+}
+
 func (cache *MemCache) StreamBlkByHeight(
+	_ context.Context,
+	req RequestBlockByHeight,
+	blkChan chan common.ExpectedBlkByHeight,
+) error {
+	heights := req.GetHeights()
+	blkHeight := heights[0] - 1
+	idx := 0
+	for blkHeight < heights[len(heights)-1] {
+		if req.GetSpecific() {
+			blkHeight = heights[idx]
+			idx++
+		} else {
+			blkHeight++
+		}
+		key := keyByHeight(req, blkHeight)
+		if b, ok := cache.cacher.Get(key); ok {
+			if block, ok := b.([]byte); ok {
+				blkChan <- common.ExpectedBlkByHeight{
+					Height: blkHeight,
+					Data:   block,
+				}
+				continue
+			}
+		}
+		blkChan <- common.ExpectedBlkByHeight{
+			Height: blkHeight,
+			Data:   []byte{},
+		}
+	}
+	close(blkChan)
+	return nil
+}
+
+func (cache *MemCache) StreamBlkByHeightv2(
 	_ context.Context,
 	req RequestBlockByHeight,
 	blkChan chan common.ExpectedBlk,
@@ -123,6 +195,7 @@ func (cache *MemCache) StreamBlkByHeight(
 			if block, ok := b.([]byte); ok {
 				blkChan <- common.ExpectedBlk{
 					Height: blkHeight,
+					Hash:   []byte{},
 					Data:   block,
 				}
 				continue
@@ -130,6 +203,35 @@ func (cache *MemCache) StreamBlkByHeight(
 		}
 		blkChan <- common.ExpectedBlk{
 			Height: blkHeight,
+			Hash:   []byte{},
+			Data:   []byte{},
+		}
+	}
+	close(blkChan)
+	return nil
+}
+
+func (cache *MemCache) StreamBlkByHash(
+	_ context.Context,
+	req RequestBlockByHash,
+	blkChan chan common.ExpectedBlk,
+) error {
+	hashes := req.GetHashes()
+	for _, blkHash := range hashes {
+		key := keyByHash(req, blkHash)
+		if b, ok := cache.cacher.Get(key); ok {
+			if block, ok := b.([]byte); ok {
+				blkChan <- common.ExpectedBlk{
+					Height: 0,
+					Hash:   blkHash,
+					Data:   block,
+				}
+				continue
+			}
+		}
+		blkChan <- common.ExpectedBlk{
+			Height: 0,
+			Hash:   blkHash,
 			Data:   []byte{},
 		}
 	}

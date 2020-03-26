@@ -52,7 +52,18 @@ const (
 	NORMAL
 )
 
-type ExpectedBlk struct {
+type ExpectedBlkByHeight struct {
 	Height uint64
 	Data   []byte
+}
+
+type ExpectedBlk struct {
+	Height uint64
+	Hash   []byte
+	Data   []byte
+}
+
+type ExpectedBlkByHash struct {
+	Hash []byte
+	Data []byte
 }

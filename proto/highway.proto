@@ -76,6 +76,7 @@ service HighwayService {
     rpc GetBlockCrossShardByHash(GetBlockCrossShardByHashRequest) returns (GetBlockCrossShardByHashResponse) {};
     
     rpc StreamBlockByHeight(BlockByHeightRequest) returns (stream BlockData) {};
+    rpc StreamBlockByHash(BlockByHashRequest) returns (stream BlockData) {};
 }
 
 enum BlkType {
@@ -94,6 +95,17 @@ message BlockByHeightRequest {
     int32 To = 5; 
     int32 CallDepth = 6;
     string UUID = 7;
+    string SyncFromPeer = 8;
+}
+
+message BlockByHashRequest {
+    BlkType Type = 1;
+    repeated bytes Hashes = 2;
+    int32 From = 3;
+    int32 To = 4; 
+    int32 CallDepth = 5;
+    string UUID = 6;
+    string SyncFromPeer = 7;
 }
 
 message BlockData {
