@@ -57,7 +57,11 @@ func (g *BlkGetter) updateWantedBlock(
 			*currentHeight = g.reqByHeight.Heights[g.idx]
 			g.idx++
 		} else {
-			*currentHeight += 1
+			if *currentHeight == 0 {
+				*currentHeight = g.reqByHeight.Heights[0]
+			} else {
+				*currentHeight++
+			}
 		}
 		return
 	}
@@ -66,10 +70,8 @@ func (g *BlkGetter) updateWantedBlock(
 			*currentHash = []byte{}
 			return
 		}
-		if g.reqByHeight.GetSpecific() {
-			*currentHash = g.reqByHash.Hashes[g.idx]
-			g.idx++
-		}
+		*currentHash = g.reqByHash.Hashes[g.idx]
+		g.idx++
 		return
 	}
 }
@@ -85,6 +87,15 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 				continue
 			}
 			if blk.Height == currentHeight {
+				g.blkRecv <- blk
+				g.updateWantedBlock(&currentHeight, &currentHash)
+			} else {
+				g.waiting[getKeyOfExpectedBlk(&blk)] = blk.Data
+			}
+			g.checkWaitingBlk(&currentHeight, &currentHash)
+		}
+		if g.requestType == 1 {
+			if bytes.Equal(blk.Hash, currentHash) {
 				g.blkRecv <- blk
 				g.updateWantedBlock(&currentHeight, &currentHash)
 			} else {

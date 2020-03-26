@@ -96,8 +96,7 @@ func (c *Client) StreamBlkByHeightv2(
 		if err == nil {
 			sc, err = c.cc.GetServiceClient(pID)
 		}
-	}
-	if err != nil {
+	} else {
 		sc, _, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
 	}
 
