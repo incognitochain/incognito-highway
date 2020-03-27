@@ -407,6 +407,7 @@ type Router interface {
 	GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error)
 	GetHighwayServiceClient(pid peer.ID) (proto.HighwayServiceClient, peer.ID, error)
 	GetID() peer.ID
+	CheckHWPeerID(pID string) bool
 }
 
 type GetBlockByHeightRequest interface {
