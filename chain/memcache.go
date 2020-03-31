@@ -67,11 +67,11 @@ func (cache *MemCache) SetSingleBlockByHeight(
 	req RequestBlockByHeight,
 	blk common.ExpectedBlk,
 ) error {
-	logger := Logger(ctx)
+	// logger := Logger(ctx)
 	if len(blk.Data) == 0 {
 		return errors.Errorf("Block height %v has empty data", blk.Height)
 	}
-	logger.Debugf("Caching block %s, height %d, len = %d", req.GetType().String(), blk.Height, len(blk.Data))
+	// logger.Debugf("Caching block %s, height %d, shard %d -> %d, len = %d", req.GetType().String(), blk.Height, req.GetFrom(), req.GetTo(), len(blk.Data))
 
 	key := keyByHeight(req, blk.Height)
 	cost := int64(len(blk.Data)) // Cost is the size of the block ==> limit maximum memory used by the cache
