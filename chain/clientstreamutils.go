@@ -92,7 +92,7 @@ func (c *Client) StreamBlkByHeightv2(
 		pID peer.ID
 	)
 	if (len(req.GetSyncFromPeer()) > 0) && (!c.router.CheckHWPeerID(req.GetSyncFromPeer())) {
-		pID, err = peer.IDFromString(req.GetSyncFromPeer())
+		pID, err = peer.IDB58Decode(req.GetSyncFromPeer())
 		if err == nil {
 			sc, err = c.cc.GetServiceClient(pID)
 		}
@@ -175,7 +175,7 @@ func (c *Client) StreamBlkByHash(
 		pID peer.ID
 	)
 	if (len(req.GetSyncFromPeer()) > 0) && (!c.router.CheckHWPeerID(req.GetSyncFromPeer())) {
-		pID, err = peer.IDFromString(req.GetSyncFromPeer())
+		pID, err = peer.IDB58Decode(req.GetSyncFromPeer())
 		if err == nil {
 			sc, err = c.cc.GetServiceClient(pID)
 		}
