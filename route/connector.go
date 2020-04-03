@@ -156,17 +156,19 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 			logger.Error(err)
 			continue
 		}
-		if _, ok := hc.hwwhitelist[msg.GetFrom().String()]; !ok {
-			logger.Infof("%v not from list", msg.GetFrom().String())
-			hc.publisher.BlacklistPeer(msg.GetFrom())
-			continue
-		}
-		// TODO(@0xakk0r0kamui): check highway's signature in msg
 		em := &enlistMessage{}
 		if err := json.Unmarshal(msg.Data, em); err != nil {
 			logger.Error(err)
 			continue
 		}
+
+		if _, ok := hc.hwwhitelist[msg.GetFrom().String()]; !ok {
+			logger.Infof("%v not from list", msg.GetFrom().String())
+			hc.publisher.BlacklistPeer(msg.GetFrom())
+			hc.hmap.RemoveRPCUrl(em.RPCUrl)
+			continue
+		}
+
 		logger.Infof("Received highway_enlist msg: %+v", em)
 
 		// Update supported shards of peer
