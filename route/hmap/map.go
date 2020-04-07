@@ -176,14 +176,15 @@ func (h *Map) CopyConnected() []byte {
 	return c
 }
 
-func (h *Map) RemoveRPCUrl(url string) {
-	h.Lock()
-	defer h.Unlock()
+func (m *Map) RemoveRPCUrl(url string) {
+	m.Lock()
+	defer m.Unlock()
 	oldPID := peer.ID("")
-	for pid, rpc := range h.RPCs {
+	for pid, rpc := range m.RPCs {
 		if rpc == url {
 			oldPID = pid
 		}
 	}
-	h.RemovePeer(peer.AddrInfo{ID: oldPID})
+	m.Unlock()
+	m.RemovePeer(peer.AddrInfo{ID: oldPID})
 }
