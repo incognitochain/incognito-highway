@@ -223,14 +223,14 @@ func (m *Map) CopyStatus() map[peer.ID]Status {
 	}
 	return status
 }
-func (h *Map) RemoveRPCUrl(url string) {
-	h.Lock()
-	defer h.Unlock()
+func (m *Map) RemoveRPCUrl(url string) {
+	m.Lock()
 	oldPID := peer.ID("")
-	for pid, rpc := range h.RPCs {
+	for pid, rpc := range m.RPCs {
 		if rpc == url {
 			oldPID = pid
 		}
 	}
-	h.RemovePeer(peer.AddrInfo{ID: oldPID})
+	m.Unlock()
+	m.RemovePeer(peer.AddrInfo{ID: oldPID})
 }

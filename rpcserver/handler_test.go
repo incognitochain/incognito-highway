@@ -27,7 +27,7 @@ func TestHandler_GetPeers(t *testing.T) {
 	fmt.Printf("Connected to %v \n", discoverPeerAddress)
 	req := Request{Shard: []string{"all"}}
 	var res Response
-	fmt.Printf("Start dialing RPC server with param %v", req)
+	fmt.Printf("Start dialing RPC server with param %v\n", req)
 
 	err = client.Call("Handler.GetPeers", req, &res)
 
