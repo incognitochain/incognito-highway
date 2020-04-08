@@ -178,7 +178,6 @@ func (h *Map) CopyConnected() []byte {
 
 func (m *Map) RemoveRPCUrl(url string) {
 	m.Lock()
-	defer m.Unlock()
 	oldPID := peer.ID("")
 	for pid, rpc := range m.RPCs {
 		if rpc == url {
