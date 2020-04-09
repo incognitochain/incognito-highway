@@ -64,7 +64,8 @@ func TestRemoveDeadPeers(t *testing.T) {
 	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[0])))
 	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[1])))
 	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[2])))
-	time.Sleep(common.RouteHighwayKeepaliveTime)
+	manager.checkConnectionStatus()
+	time.Sleep(common.RouteHighwayRemoveDeadline)
 	manager.checkConnectionStatus()
 	assert.False(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[0])))
 	assert.False(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[1])))
@@ -113,7 +114,6 @@ func setupKeepConnectionTest(discoverer HighwayDiscoverer, connectedness []netwo
 		host:          h,
 		supportShards: []byte{0, 1, 2, 3, 4, 5, 6, 7, 255},
 		discoverer:    discoverer,
-		lastSeen:      map[peer.ID]time.Time{},
 		Hmap:          hmap,
 		hc: &Connector{
 			closePeers: make(chan peer.ID, 10),
