@@ -31,7 +31,7 @@ func main() {
 
 	conf, err := config.GetProxyConfig()
 	if err != nil {
-		logger.Errorf("%+v", err)
+		fmt.Println(fmt.Errorf("%+v", err))
 		return
 	}
 
@@ -57,7 +57,7 @@ func main() {
 	chainData := new(chaindata.ChainData)
 	chainData.Init(common.NumberOfShard)
 
-	whitelisthw, hostPriKey, err := key.GenWhiteList([]byte(conf.PrivateSeed), conf.HighwayIndex, common.NumberOfHighway)
+	whitelisthw, hostPriKey, err := key.GenWhiteList(conf.PrivateSeed, conf.HighwayIndex, common.NumberOfHighway)
 
 	// New libp2p host
 	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, hostPriKey)

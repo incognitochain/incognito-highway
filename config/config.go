@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"highway/common"
@@ -25,7 +26,7 @@ type ProxyConfig struct {
 	BootnodePort  int
 	GrafanaDBURL  string
 	HighwayIndex  int
-	PrivateSeed   string
+	PrivateSeed   []byte
 }
 
 func GetProxyConfig() (*ProxyConfig, error) {
@@ -51,6 +52,11 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(*privateSeed)
+	seed, err := base64.StdEncoding.DecodeString(*privateSeed)
+	if err != nil {
+		return nil, err
+	}
 
 	config := &ProxyConfig{
 		ProxyPort:     *proxyPort,
@@ -67,7 +73,7 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		BootnodePort:  *bootnodePort,
 		GrafanaDBURL:  *gDBURL,
 		HighwayIndex:  *index,
-		PrivateSeed:   *privateSeed,
+		PrivateSeed:   seed,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()
