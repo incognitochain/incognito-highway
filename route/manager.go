@@ -43,6 +43,7 @@ func NewManager(
 	rpcUrl string,
 	pubsubManager *process.PubSubManager,
 	gl *grafana.GrafanaLog,
+	whitelisthw map[string]struct{},
 ) *Manager {
 	p := peer.AddrInfo{
 		ID:    h.ID(),
@@ -65,6 +66,7 @@ func NewManager(
 			rpcUrl,
 			p,
 			supportShards,
+			whitelisthw,
 		),
 		host:   h,
 		gralog: gl,
