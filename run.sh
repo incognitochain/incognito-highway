@@ -75,11 +75,11 @@ if [ "$1" == "lc8" ]; then
 fi
 
 if [ "$1" == "newlc1" ]; then
-./highway -privateseed CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= --index 0 -support_shards all  -host "0.0.0.0"  -admin_port 8080 -proxy_port 7337 -bootnode_port 9330  --loglevel debug --gdburl ${GDBURL} --version "0.1-local"
+./highway -privateseed YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE= -index 0 -support_shards all  -host "0.0.0.0"  -admin_port 8080 -proxy_port 7337 -bootnode_port 9330  --loglevel debug --gdburl ${GDBURL} --version "0.1-local"
 fi
 
 if [ "$1" == "newlc2" ]; then
-./highway -privateseed CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= -support_shards all -host "0.0.0.0" -admin_port 8081 -proxy_port 7338 -bootnode_port 9331  --bootstrap "0.0.0.0:9330" --index 1 --loglevel debug --gdburl ${GDBURL} --version "0.1-local" 
+./highway -privateseed YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE= -index 1 -support_shards all -host "0.0.0.0" -admin_port 8081 -proxy_port 7338 -bootnode_port 9331  --bootstrap "0.0.0.0:9330" --loglevel debug --gdburl ${GDBURL} --version "0.1-local" 
 fi
 
 if [ "$1" == "newhw1" ]; then
