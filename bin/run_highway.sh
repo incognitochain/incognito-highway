@@ -1,28 +1,25 @@
 #!/usr/bin/env bash
 mkdir -p /data
-
-echo "/data/*.txt {
-    rotate 3
-    secondly
-    compress
-    missingok
-    delaycompress
-    copytruncate
-    size 200m
-}" > /tmp/logrotate
-logrotate -fv /tmp/logrotate
-
+cron
 if [ -z "$BOOTSTRAP" ]; then
-    BOOTSTRAP=45.56.115.6:9330;
+    echo "NO BOOTSTRAP"
+    exit -1;
 fi
 
 if [ -z "$PUBLIC_IP" ]; then
     PUBLIC_IP=`dig -4 @resolver1.opendns.com ANY myip.opendns.com +short`;
 fi
 
-if [ -z "$PRIVATE_KEY" ]; then
-    PRIVATE_KEY=CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI=
+if [ -z "$PRIVATE_SEED" ]; then
+    echo "NO PRIVATE SEED"
+    exit -1;
 fi
+
+if [ -z "$INDEX" ]; then
+    echo "NO INDEX"
+    exit -1;
+fi
+
 
 if [ -z "$GDBURL" ]; then
     GDBURL=""
@@ -32,5 +29,4 @@ if [ -z "$VERSION" ]; then
     VERSION="version"
 fi
 
-echo ./highway -privatekey $PRIVATE_KEY -support_shards all -host $PUBLIC_IP --gdburl $GDBURL --version $VERSION --loglevel debug
-./highway -privatekey $PRIVATE_KEY -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug > /data/log.txt 2>&1
+./highway -privateseed $PRIVATE_SEED -index $INDEX -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug 2>&1 | cronolog /data/highway-$PUBLIC_IP-%Y-%m-%d.log -S /data/$PUBLIC_IP.cur.log
