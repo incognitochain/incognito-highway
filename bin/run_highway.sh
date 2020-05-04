@@ -1,17 +1,6 @@
 #!/usr/bin/env bash
 mkdir -p /data
-
-echo "/data/*.txt {
-    rotate 3
-    secondly
-    compress
-    missingok
-    delaycompress
-    copytruncate
-    size 200m
-}" > /tmp/logrotate
-logrotate -fv /tmp/logrotate
-
+cron
 if [ -z "$BOOTSTRAP" ]; then
     BOOTSTRAP=45.56.115.6:9330;
 fi
@@ -32,5 +21,5 @@ if [ -z "$VERSION" ]; then
     VERSION="version"
 fi
 
-echo ./highway -privatekey $PRIVATE_KEY -support_shards all -host $PUBLIC_IP --gdburl $GDBURL --version $VERSION --loglevel debug
-./highway -privatekey $PRIVATE_KEY -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug > /data/log.txt 2>&1
+echo './highway -privatekey $PRIVATE_KEY -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug 2>&1 | cronolog /data/highway-$PUBLIC_IP-%Y-%m-%d.log'
+./highway -privatekey $PRIVATE_KEY -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug 2>&1 | cronolog /data/highway-$PUBLIC_IP-%Y-%m-%d.log

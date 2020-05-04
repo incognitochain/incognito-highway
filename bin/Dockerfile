@@ -1,12 +1,13 @@
-FROM alpine:3.9
+FROM ubuntu:16.04
 
-RUN apk add bind-tools
-RUN  apk update && \
-     apk add libc6-compat && \
-     apk add ca-certificates && \
-     apk add logrotate
-
+RUN apt-get update
+RUN apt-get install -y ca-certificates cronolog cron
+RUN apt-get install -y dnsutils
 WORKDIR /
+COPY removeoldlog /etc/cron.d/removeoldlog
+RUN chmod 0644 /etc/cron.d/removeoldlog
+RUN crontab /etc/cron.d/removeoldlog
+
 COPY ./keylist.json /
 COPY ./run_highway.sh /
 RUN chmod +x /run_highway.sh
