@@ -12,6 +12,7 @@ require (
 	github.com/jbenet/goprocess v0.1.3
 	github.com/libp2p/go-libp2p v0.3.1
 	github.com/libp2p/go-libp2p-core v0.2.2
+	github.com/libp2p/go-libp2p-crypto v0.1.0
 	github.com/libp2p/go-libp2p-peer v0.2.0
 	github.com/libp2p/go-libp2p-pubsub v0.1.1
 	github.com/multiformats/go-multiaddr v0.0.4

@@ -74,3 +74,22 @@ if [ "$1" == "lc8" ]; then
 ./highway -privatekey CAMSeTB3AgEBBCB3/STCrATElSzpBR2MmUKk8q09xEnXislZUot/3cCgY6AKBggqhkjOPQMBB6FEA0IABHFjdQdWUWJZHF8qJT9DabY+ZDTdmEDGvf7Emjg7IijRS1c/8NO82NuoGP9a2C0E73oK/NQGMsQrzqSs9QqZoFk= -support_shards all -host "0.0.0.0" -admin_port 8087 -proxy_port 7344 -bootnode_port 9337 --bootstrap "0.0.0.0:9330" --loglevel debug --gdburl ${GDBURL} --version "0.1-local"
 fi
 
+if [ "$1" == "newlc1" ]; then
+./highway -privateseed YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE= -index 0 -support_shards all  -host "0.0.0.0"  -admin_port 8080 -proxy_port 7337 -bootnode_port 9330  --loglevel debug --gdburl ${GDBURL} --version "0.1-local"
+fi
+
+if [ "$1" == "newlc2" ]; then
+./highway -privateseed YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE= -index 1 -support_shards all -host "0.0.0.0" -admin_port 8081 -proxy_port 7338 -bootnode_port 9331  --bootstrap "0.0.0.0:9330" --loglevel debug --gdburl ${GDBURL} --version "0.1-local" 
+fi
+
+if [ "$1" == "newhw1" ]; then
+./highway -privateseed CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= --index 0 -support_shards all -host "139.162.9.169" -admin_port 8080 -proxy_port 7337 -bootnode_port 9330  --loglevel debug --gdburl ${GDBURL} --version "0.1-devnet"
+fi
+
+if [ "$1" == "newhw2" ]; then
+./highway -privateseed CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI= -support_shards all -host "139.162.9.169"  -admin_port 8081 -proxy_port 7338 -bootnode_port 9331  --bootstrap "139.162.9.169:9330" --index 1 --loglevel debug --gdburl ${GDBURL} --version "0.1-devnet" 
+fi
+
+if [ "$1" == "newlc3" ]; then
+./highway -privateseed CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxb -support_shards all -host "0.0.0.0" -admin_port 8082 -proxy_port 7339 -bootnode_port 9332 --bootstrap "0.0.0.0:9330" --index 2 --loglevel debug --gdburl ${GDBURL} --version "0.1-local" 
+fi
