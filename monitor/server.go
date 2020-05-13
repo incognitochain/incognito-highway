@@ -3,6 +3,7 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
+	"highway/process/simulateutils"
 	"net/http"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor) {
+func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor, scenario *simulateutils.Scenario) {
 	// Start all monitors
 	for _, m := range monitors {
 		go m.Start(timestep)
@@ -21,6 +22,10 @@ func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor) {
 	m := &poller{Monitors: monitors, reports: map[string]interface{}{}}
 	go m.start(timestep)
 	http.Handle("/monitor", m)
+	sAPI := &ScenesAPI{
+		Scenario: scenario,
+	}
+	http.Handle("/setscenes", sAPI)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
 			logger.Errorf("Error in ListenAndServe: %s", err)

@@ -56,7 +56,7 @@ func (topicManager *TopicManager) getAllTopicPairForNode(
 	for _, msg := range Message4Process {
 		listPair := map[byte]proto.MessageTopicPair{}
 		for _, s := range topicManager.allCommitteeID {
-			listPair[s] = topicManager.getTopicPairForNode(msg, forPub, s)
+			listPair[s] = topicManager.getTopicPairForNode(msg, forPub, s, "")
 		}
 		res[msg] = listPair
 	}
@@ -123,12 +123,13 @@ func (topicManager *TopicManager) getTopicPairForNode(
 	msgType string,
 	forPub bool,
 	cID byte,
+	nodeKey string,
 ) proto.MessageTopicPair {
 	listTopic := []string{}
 	listAction := []proto.MessageTopicPair_Action{}
 	switch msgType {
 	case CmdBFT:
-		listTopic = append(listTopic, getTopicForPubSub(msgType, int(cID), topicManager.selfID))
+		listTopic = append(listTopic, GetTopicForPubSubPrivate(msgType, int(cID), topicManager.selfID, nodeKey))
 		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 	case CmdPeerState:
 		if forPub {
@@ -196,6 +197,7 @@ func (topicManager *TopicManager) getTopicPairForNode(
 func (topicManager *TopicManager) GetListTopicPairForNode(
 	level byte,
 	msgAndCID map[string][]int,
+	nodePubKey string,
 ) []*proto.MessageTopicPair {
 	res := []*proto.MessageTopicPair{}
 	for msg, listCID := range msgAndCID {
@@ -206,15 +208,27 @@ func (topicManager *TopicManager) GetListTopicPairForNode(
 				if common.HasValuesAt(topicManager.supportShards, byte(cID)) == -1 {
 					continue
 				}
-				topicManager.rwLockTopicNodePub.RLock()
-				for i, topicSub := range topicManager.allTopicPairForNodePub[msg][byte(cID)].Topic {
-					if common.HasStringAt(topics, topicSub) != -1 {
-						continue
+				if _, ok := common.TopicPrivate[msg]; ok {
+					fmt.Println(msg)
+					topicPair := topicManager.getTopicPairForNode(msg, true, byte(cID), nodePubKey)
+					for i, topicSub := range topicPair.Topic {
+						if common.HasStringAt(topics, topicSub) != -1 {
+							continue
+						}
+						topics = append(topics, topicSub)
+						actions = append(actions, topicManager.allTopicPairForNodePub[msg][byte(cID)].Act[i])
 					}
-					topics = append(topics, topicSub)
-					actions = append(actions, topicManager.allTopicPairForNodePub[msg][byte(cID)].Act[i])
+				} else {
+					topicManager.rwLockTopicNodePub.RLock()
+					for i, topicSub := range topicManager.allTopicPairForNodePub[msg][byte(cID)].Topic {
+						if common.HasStringAt(topics, topicSub) != -1 {
+							continue
+						}
+						topics = append(topics, topicSub)
+						actions = append(actions, topicManager.allTopicPairForNodePub[msg][byte(cID)].Act[i])
+					}
+					topicManager.rwLockTopicNodePub.RUnlock()
 				}
-				topicManager.rwLockTopicNodePub.RUnlock()
 			}
 		}
 		if level <= lvlAllowSubOfMsg[msg] {
@@ -222,15 +236,27 @@ func (topicManager *TopicManager) GetListTopicPairForNode(
 				if common.HasValuesAt(topicManager.allCommitteeID, byte(cID)) == -1 {
 					continue
 				}
-				topicManager.rwLockTopicNodeSub.RLock()
-				for i, topicSub := range topicManager.allTopicPairForNodeSub[msg][byte(cID)].Topic {
-					if common.HasStringAt(topics, topicSub) != -1 {
-						continue
+				if _, ok := common.TopicPrivate[msg]; ok {
+					fmt.Println(msg)
+					topicPair := topicManager.getTopicPairForNode(msg, false, byte(cID), nodePubKey)
+					for i, topicSub := range topicPair.Topic {
+						if common.HasStringAt(topics, topicSub) != -1 {
+							continue
+						}
+						topics = append(topics, topicSub)
+						actions = append(actions, topicManager.allTopicPairForNodePub[msg][byte(cID)].Act[i])
 					}
-					topics = append(topics, topicSub)
-					actions = append(actions, topicManager.allTopicPairForNodeSub[msg][byte(cID)].Act[i])
+				} else {
+					topicManager.rwLockTopicNodeSub.RLock()
+					for i, topicSub := range topicManager.allTopicPairForNodeSub[msg][byte(cID)].Topic {
+						if common.HasStringAt(topics, topicSub) != -1 {
+							continue
+						}
+						topics = append(topics, topicSub)
+						actions = append(actions, topicManager.allTopicPairForNodeSub[msg][byte(cID)].Act[i])
+					}
+					topicManager.rwLockTopicNodeSub.RUnlock()
 				}
-				topicManager.rwLockTopicNodeSub.RUnlock()
 			}
 		}
 

@@ -40,15 +40,19 @@ func TestTopicManager_GetListTopicPairForNode(t *testing.T) {
 	tm := new(TopicManager)
 	tm.Init("aa")
 	tm.UpdateSupportShards(tm.allCommitteeID)
-	res := tm.GetListTopicPairForNode(common.NORMAL, map[string][]int{
-		CmdBFT:                []int{2},
-		CmdBlockBeacon:        []int{2, 3, 255},
-		CmdBlkShardToBeacon:   []int{2, 3},
-		CmdBlockShard:         []int{2, 3},
-		CmdTx:                 []int{2, 3},
-		CmdPrivacyCustomToken: []int{2, 3},
-		CmdCustomToken:        []int{2, 3},
-	})
+	res := tm.GetListTopicPairForNode(
+		common.COMMITTEE,
+		map[string][]int{
+			CmdBFT:                []int{2},
+			CmdBlockBeacon:        []int{2, 3, 255},
+			CmdBlkShardToBeacon:   []int{2, 3},
+			CmdBlockShard:         []int{2, 3},
+			CmdTx:                 []int{2, 3},
+			CmdPrivacyCustomToken: []int{2, 3},
+			CmdCustomToken:        []int{2, 3},
+		},
+		"aaaa",
+	)
 	for _, pair := range res {
 		fmt.Printf("%v %v\n", pair.Topic, pair.Act)
 	}

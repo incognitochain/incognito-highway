@@ -46,6 +46,10 @@ var (
 	BroadcastMsgEnlistTimestep = 1 * time.Minute
 )
 
+var TopicPrivate = map[string]struct{}{
+	"bft": struct{}{},
+}
+
 const (
 	COMMITTEE byte = iota
 	PENDING

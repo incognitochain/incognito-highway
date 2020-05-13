@@ -14,6 +14,7 @@ import (
 	"highway/monitor"
 	"highway/p2p"
 	"highway/process"
+	"highway/process/simulateutils"
 	"highway/process/topic"
 	"highway/route"
 	"highway/rpcserver"
@@ -66,12 +67,16 @@ func main() {
 	topic.Handler = topic.TopicManager{}
 	topic.Handler.Init(proxyHost.Host.ID().String())
 	topic.Handler.UpdateSupportShards(conf.SupportShards)
-
+	scenario := simulateutils.NewScenario()
+	cInfo := simulateutils.NewCommitteeTable()
 	// Pubsub
 	floodPubSub, err := process.NewPubSub(
 		proxyHost.Host,
 		conf.SupportShards,
-		chainData)
+		chainData,
+		scenario,
+		cInfo,
+	)
 	if err != nil {
 		logger.Fatal(err)
 		return
@@ -121,6 +126,7 @@ func main() {
 		chainData,
 		conf.SupportShards,
 		gl, //GrafanaLog
+		floodPubSub,
 	)
 	if err != nil {
 		logger.Fatal(err)
@@ -140,7 +146,7 @@ func main() {
 	processReporter := process.NewReporter(chainData)
 	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter, processReporter}
 	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
-	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters)
+	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters, scenario)
 
 	logger.Info("Serving...")
 	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services

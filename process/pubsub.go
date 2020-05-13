@@ -7,6 +7,7 @@ import (
 	"highway/common"
 	"highway/grafana"
 	"highway/process/datahandler"
+	"highway/process/simulateutils"
 	"highway/process/topic"
 	"sync"
 	"time"
@@ -28,17 +29,21 @@ type PubSubManager struct {
 	SupportShards        []byte
 	FloodMachine         *p2pPubSub.PubSub
 	SubHandlers          chan SubHandler
-	followedTopic        []string
+	FollowedTopic        []string
 	SpecialPublishTicker *time.Ticker
 	BlockChainData       *chaindata.ChainData
 	Info                 *PubsubInfo
 	GraLog               *grafana.GrafanaLog
+	CommitteeInfo        *simulateutils.CommitteeTable
+	Scenario             *simulateutils.Scenario
 }
 
 func NewPubSub(
 	s host.Host,
 	supportShards []byte,
 	chainData *chaindata.ChainData,
+	scenario *simulateutils.Scenario,
+	cInfo *simulateutils.CommitteeTable,
 ) (
 	*PubSubManager,
 	error,
@@ -50,6 +55,8 @@ func NewPubSub(
 	if err != nil {
 		return nil, err
 	}
+	pubsub.CommitteeInfo = cInfo
+	pubsub.Scenario = scenario
 	pubsub.SubHandlers = make(chan SubHandler, 100)
 	pubsub.SpecialPublishTicker = time.NewTicker(common.TimeIntervalPublishStates)
 	pubsub.SupportShards = supportShards
@@ -74,7 +81,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 		case newSubHandler := <-pubsub.SubHandlers:
 			logger.Infof("Watching chain sub topic %v", newSubHandler.Topic)
 			subch, err := pubsub.FloodMachine.Subscribe(newSubHandler.Topic)
-			pubsub.followedTopic = append(pubsub.followedTopic, newSubHandler.Topic)
+			pubsub.FollowedTopic = append(pubsub.FollowedTopic, newSubHandler.Topic)
 			if err != nil {
 				logger.Info(err)
 				continue
@@ -88,7 +95,7 @@ func (pubsub *PubSubManager) WatchingChain() {
 }
 
 func (pubsub *PubSubManager) HasTopic(receivedTopic string) bool {
-	for _, flTopic := range pubsub.followedTopic {
+	for _, flTopic := range pubsub.FollowedTopic {
 		if receivedTopic == flTopic {
 			return true
 		}
@@ -127,12 +134,14 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 			continue
 		}
 		logger.Infof("Success subscribe topic %v", topicSub)
-		pubsub.followedTopic = append(pubsub.followedTopic, topicSub)
+		pubsub.FollowedTopic = append(pubsub.FollowedTopic, topicSub)
 		handler := datahandler.SubsHandler{
 			PubSub:         pubsub.FloodMachine,
 			FromInside:     fromInside,
 			BlockchainData: pubsub.BlockChainData,
 			Cacher:         cacher,
+			CommitteeInfo:  pubsub.CommitteeInfo,
+			Scenario:       pubsub.Scenario,
 		}
 		go func() {
 			err := handler.HandlerNewSubs(subs)

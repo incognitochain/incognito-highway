@@ -82,3 +82,28 @@ func getTopicForSub(side, msgType string, cID int, selfID string) string {
 		return commonTopic + NODEPUB
 	}
 }
+
+func GetTopicForPubSubPrivate(msgType string, cID int, selfID string, nodePubKey string) string {
+	if isBroadcastMessage(msgType) {
+		return fmt.Sprintf("%s-%d--%v", msgType, cID, nodePubKey)
+	}
+	if cID == NoCIDInTopic {
+		return fmt.Sprintf("%s--%s-%s", msgType, selfID, nodePubKey)
+	}
+	return fmt.Sprintf("%s-%d-%s-%s", msgType, cID, selfID, nodePubKey)
+}
+
+func GetPubkeyInTopic(topicReceived string) string {
+	topicElements := strings.Split(topicReceived, "-")
+	return topicElements[len(topicElements)-1]
+}
+
+func SwitchTopicPrivate(topicReceived string, newPubKey string) string {
+	topicElements := strings.Split(topicReceived, "-")
+	newTopic := ""
+	for i := 0; i < len(topicElements)-1; i++ {
+		newTopic = newTopic + topicElements[i] + "-"
+	}
+	newTopic = newTopic + newPubKey
+	return newTopic
+}

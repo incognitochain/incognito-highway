@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"highway/chaindata"
 	"highway/common"
+	"highway/process/simulateutils"
 	"highway/process/topic"
 
 	libp2p "github.com/libp2p/go-libp2p-pubsub"
@@ -17,6 +18,8 @@ type SubsHandler struct {
 	dataHandler    DataHandler
 	Cacher         *cache.Cache
 	FromInside     bool
+	CommitteeInfo  *simulateutils.CommitteeTable
+	Scenario       *simulateutils.Scenario
 }
 
 func (handler *SubsHandler) HandlerNewSubs(subs *libp2p.Subscription) error {
@@ -87,7 +90,11 @@ func (handler *SubsHandler) GetDataHandler(
 			BlockchainData: handler.BlockchainData,
 		}, nil
 	case topic.CmdBFT:
-		return &BFTHandler{}, nil
+		return &BFTHandler{
+			CommitteeInfo: handler.CommitteeInfo,
+			Scenario:      handler.Scenario,
+			PubSub:        handler.PubSub,
+		}, nil
 	default:
 		return nil, fmt.Errorf("Handler for msg %v can not found", msgType)
 	}

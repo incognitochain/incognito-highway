@@ -7,6 +7,8 @@ import (
 	"highway/route"
 	"sync"
 
+	"highway/process"
+
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -38,6 +40,7 @@ func ManageChainConnections(
 	chainData *chaindata.ChainData,
 	supportShards []byte,
 	gl *grafana.GrafanaLog,
+	psManager *process.PubSubManager,
 ) (*Reporter, error) {
 	// Manage incoming connections
 	m := &Manager{
@@ -53,7 +56,7 @@ func ManageChainConnections(
 
 	// Server and client instance to communicate to Incognito nodes
 	client := NewClient(m, reporter, rman, prtc, chainData, supportShards)
-	server, err := RegisterServer(m, prtc.GetGRPCServer(), client, chainData, reporter)
+	server, err := RegisterServer(m, prtc.GetGRPCServer(), client, chainData, reporter, psManager)
 	if err != nil {
 		return nil, err
 	}
