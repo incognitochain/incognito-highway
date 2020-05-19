@@ -28,7 +28,8 @@ type Manager struct {
 		num int
 		sync.RWMutex
 	}
-	gralog *grafana.GrafanaLog
+	gralog  *grafana.GrafanaLog
+	watcher *watcher
 }
 
 func ManageChainConnections(
@@ -42,7 +43,9 @@ func ManageChainConnections(
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
+		watcher:  newWatcher(gl),
 	}
+	go m.watcher.process()
 	m.peers.ids = map[int][]PeerInfo{}
 	m.peers.RWMutex = sync.RWMutex{}
 	m.conns.RWMutex = sync.RWMutex{}
@@ -121,6 +124,9 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	logger.Infof("Appended new peer to shard %d, pid = %v, cnt = %d peers", cid, pid, len(m.peers.ids[cid]))
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
+
+		fmt.Println("debugging markPeer", pinfo)
+		m.watcher.markPeer(pinfo)
 	}
 }
 
