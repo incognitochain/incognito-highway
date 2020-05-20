@@ -11,16 +11,21 @@ import (
 
 type watcher struct {
 	gralog   *grafana.GrafanaLog
-	inPeers  chan PeerInfo
+	inPeers  chan PeerInfoWithIP
 	outPeers chan peer.ID
 
 	data map[position]watchInfo
 	pos  map[peer.ID]position
 }
 
+type PeerInfoWithIP struct {
+	PeerInfo
+	ip string
+}
+
 func newWatcher(gralog *grafana.GrafanaLog) *watcher {
 	return &watcher{
-		inPeers:  make(chan PeerInfo, 100),
+		inPeers:  make(chan PeerInfoWithIP, 100),
 		outPeers: make(chan peer.ID, 100),
 		data:     make(map[position]watchInfo),
 		pos:      make(map[peer.ID]position),
@@ -31,6 +36,7 @@ func newWatcher(gralog *grafana.GrafanaLog) *watcher {
 type watchInfo struct {
 	connected int
 	pid       peer.ID
+	ip        string
 }
 
 type position struct {
@@ -49,7 +55,7 @@ var watchingPubkeys = map[string]position{
 	},
 }
 
-func (w *watcher) processInPeer(pinfo PeerInfo) {
+func (w *watcher) processInPeer(pinfo PeerInfoWithIP) {
 	pos := getWatchingPosition(pinfo.Pubkey)
 	fmt.Println("debugging sending pos:", pos.cid, pos.id)
 	fmt.Println("debugging sending id:", pos.cid, fmt.Sprintf("\"%s\"", pinfo.ID.String()))
@@ -57,6 +63,7 @@ func (w *watcher) processInPeer(pinfo PeerInfo) {
 	w.data[pos] = watchInfo{
 		pid:       pinfo.ID,
 		connected: 1,
+		ip:        pinfo.ip,
 	}
 	w.pos[pinfo.ID] = pos
 }
@@ -64,11 +71,12 @@ func (w *watcher) processInPeer(pinfo PeerInfo) {
 func (w *watcher) processOutPeer(pid peer.ID) {
 	if pos, ok := w.pos[pid]; ok {
 		fmt.Println("debugging processOutPeer:", pos)
-		if _, ok := w.data[pos]; ok {
+		if winfo, ok := w.data[pos]; ok {
 			fmt.Println("debugging processOutPeer found")
 			w.data[pos] = watchInfo{
 				pid:       pid,
 				connected: 0,
+				ip:        winfo.ip,
 			}
 		}
 	}
@@ -90,6 +98,7 @@ func (w *watcher) pushData() {
 			"watch_libp2p_id": fmt.Sprintf("\"%s\"", winfo.pid),
 			"watch_cid":       pos.cid,
 			"watch_connected": winfo.connected,
+			"watch_ip":        fmt.Sprintf("\"%s\"", winfo.ip),
 		}
 
 		points = append(points, buildPoint(w.gralog.GetFixedTag(), tags, fields))
@@ -156,11 +165,14 @@ func getWatchingPosition(pubkey string) position {
 	return position{-1, -1}
 }
 
-func (w *watcher) markPeer(pinfo PeerInfo) {
+func (w *watcher) markPeer(pinfo PeerInfo, ip string) {
 	if !isWatching(pinfo.Pubkey) {
 		return
 	}
-	w.inPeers <- pinfo
+	w.inPeers <- PeerInfoWithIP{
+		pinfo,
+		ip,
+	}
 }
 
 func (w *watcher) unmarkPeer(pid peer.ID) {

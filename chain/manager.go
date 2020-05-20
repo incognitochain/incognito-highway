@@ -28,8 +28,10 @@ type Manager struct {
 		num int
 		sync.RWMutex
 	}
+
 	gralog  *grafana.GrafanaLog
 	watcher *watcher
+	host    host.Host
 }
 
 func ManageChainConnections(
@@ -44,6 +46,7 @@ func ManageChainConnections(
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
 		watcher:  newWatcher(gl),
+		host:     h,
 	}
 	go m.watcher.process()
 	m.peers.ids = map[int][]PeerInfo{}
@@ -125,7 +128,11 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
 
-		m.watcher.markPeer(pinfo)
+		maddr := m.host.Peerstore().PeerInfo(pinfo.ID).Addrs[0]
+		ip4, _ := maddr.ValueForProtocol(multiaddr.P_IP4)
+		port, _ := maddr.ValueForProtocol(multiaddr.P_TCP)
+
+		m.watcher.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 	}
 }
 
