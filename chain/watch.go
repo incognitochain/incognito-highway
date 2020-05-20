@@ -14,21 +14,23 @@ type watcher struct {
 	inPeers  chan PeerInfo
 	outPeers chan peer.ID
 
-	data map[string]watchInfo
+	data map[position]watchInfo
+	pos  map[peer.ID]position
 }
 
 func newWatcher(gralog *grafana.GrafanaLog) *watcher {
 	return &watcher{
 		inPeers:  make(chan PeerInfo, 100),
 		outPeers: make(chan peer.ID, 100),
-		data:     make(map[string]watchInfo),
+		data:     make(map[position]watchInfo),
+		pos:      make(map[peer.ID]position),
 		gralog:   gralog,
 	}
 }
 
 type watchInfo struct {
-	pos       position
 	connected int
+	pid       peer.ID
 }
 
 type position struct {
@@ -52,18 +54,22 @@ func (w *watcher) processInPeer(pinfo PeerInfo) {
 	fmt.Println("debugging sending pos:", pos.cid, pos.id)
 	fmt.Println("debugging sending id:", pos.cid, fmt.Sprintf("\"%s\"", pinfo.ID.String()))
 
-	w.data[pinfo.ID.String()] = watchInfo{
-		pos:       pos,
+	w.data[pos] = watchInfo{
+		pid:       pinfo.ID,
 		connected: 1,
 	}
+	w.pos[pinfo.ID] = pos
 }
 
 func (w *watcher) processOutPeer(pid peer.ID) {
-	fmt.Println("debugging processOutPeer:", pid)
-	if winfo, ok := w.data[pid.String()]; ok {
-		w.data[pid.String()] = watchInfo{
-			pos:       winfo.pos,
-			connected: 0,
+	if pos, ok := w.pos[pid]; ok {
+		fmt.Println("debugging processOutPeer:", pos)
+		if _, ok := w.data[pos]; ok {
+			fmt.Println("debugging processOutPeer found")
+			w.data[pos] = watchInfo{
+				pid:       pid,
+				connected: 0,
+			}
 		}
 	}
 }
@@ -74,20 +80,27 @@ func (w *watcher) pushData() {
 	}
 
 	points := []string{}
-	for pid, winfo := range w.data {
+	fmt.Println("debugging len:", len(w.data))
+	fmt.Println("debugging data:", w.data)
+	for pos, winfo := range w.data {
 		tags := map[string]interface{}{
-			"watch_libp2p_id": fmt.Sprintf("\"%s\"", pid),
+			"watch_id": pos.id,
 		}
 		fields := map[string]interface{}{
-			"watch_cid":       winfo.pos.cid,
-			"watch_id":        winfo.pos.id,
+			"watch_libp2p_id": fmt.Sprintf("\"%s\"", winfo.pid),
+			"watch_cid":       pos.cid,
 			"watch_connected": winfo.connected,
 		}
 
 		points = append(points, buildPoint(w.gralog.GetFixedTag(), tags, fields))
 	}
 
+	fmt.Println("debugging points len:", len(points))
+	for i, p := range points {
+		fmt.Println("debugging points:", i, len(p), p)
+	}
 	content := strings.Join(points, "\n")
+	fmt.Printf("debugging content: %d %s\n", len(content), content)
 	w.gralog.WriteContent(content)
 }
 
@@ -108,7 +121,7 @@ func buildPoint(fixedTag string, tags map[string]interface{}, fields map[string]
 		point = point + fmt.Sprintf("%s=%v", key, val)
 		firstField = false
 	}
-	return point
+	return fmt.Sprintf("%s %v", point, time.Now().UnixNano())
 }
 
 func (w *watcher) process() {

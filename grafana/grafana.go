@@ -179,8 +179,8 @@ func (gl *GrafanaLog) Write() {
 }
 
 func (gl *GrafanaLog) WriteContent(content string) {
-	bodyStr := fmt.Sprintf("%s %v", content, time.Now().UnixNano())
-	go makeRequest(bodyStr, gl.dbURL)
+	fmt.Println("debugging write body:", content)
+	go makeRequest(content, gl.dbURL)
 }
 
 func (gl *GrafanaLog) GetFixedTag() string {
@@ -189,7 +189,9 @@ func (gl *GrafanaLog) GetFixedTag() string {
 
 func makeRequest(bodyStr, dbURL string) {
 	body := strings.NewReader(bodyStr)
+	// body := bytes.NewReader([]byte(bodyStr))
 	req, err := http.NewRequest(http.MethodPost, dbURL, body)
+	req.ContentLength = int64(len(bodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		logger.Debug("Create Request failed with err: ", err)
@@ -201,7 +203,6 @@ func makeRequest(bodyStr, dbURL string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	_ = resp
-	fmt.Println("debugging write body:", bodyStr)
 	if resp.StatusCode != 204 {
 		fmt.Println("debugging write err:", resp, err)
 	}

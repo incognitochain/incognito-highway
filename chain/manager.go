@@ -125,7 +125,6 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
 
-		fmt.Println("debugging markPeer", pinfo)
 		m.watcher.markPeer(pinfo)
 	}
 }
@@ -184,8 +183,6 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	// Remove from m.peers to prevent Client from requesting later
 	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
 	m.client.DisconnectedIDs <- pid
-
-	fmt.Println("debugging unmark peer:", pid.String())
 	m.watcher.unmarkPeer(pid)
 }
 
