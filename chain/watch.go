@@ -1,11 +1,15 @@
 package chain
 
 import (
+	"encoding/json"
 	"fmt"
 	"highway/grafana"
+	"io/ioutil"
 	"strings"
 	"time"
 
+	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/incognitokey"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
@@ -16,6 +20,8 @@ type watcher struct {
 
 	data map[position]watchInfo
 	pos  map[peer.ID]position
+
+	watchingPubkeys map[string]position
 }
 
 type PeerInfoWithIP struct {
@@ -24,13 +30,16 @@ type PeerInfoWithIP struct {
 }
 
 func newWatcher(gralog *grafana.GrafanaLog) *watcher {
-	return &watcher{
-		inPeers:  make(chan PeerInfoWithIP, 100),
-		outPeers: make(chan peer.ID, 100),
-		data:     make(map[position]watchInfo),
-		pos:      make(map[peer.ID]position),
-		gralog:   gralog,
+	w := &watcher{
+		inPeers:         make(chan PeerInfoWithIP, 100),
+		outPeers:        make(chan peer.ID, 100),
+		data:            make(map[position]watchInfo),
+		pos:             make(map[peer.ID]position),
+		watchingPubkeys: make(map[string]position),
+		gralog:          gralog,
 	}
+	w.readKeys()
+	return w
 }
 
 type watchInfo struct {
@@ -44,19 +53,8 @@ type position struct {
 	id  int
 }
 
-var watchingPubkeys = map[string]position{
-	"1DiqMXWSgNrBcEGPWt2coFVdmjwNnrG8de43SMziHFvff6A6NgZQe1A1a7Qc9DiRUHUV9vVgYCtpvfFszfTCC2J31SwoKzDiBpGXitLk66umDr9ECN2rTGGqmChF4tcG7R634JF4JDUhL63su6Fpq7ooKWPHMetAjbsnF3VNLX68VxD8nQecs": position{
-		cid: 0,
-		id:  0,
-	},
-	"1SVKWw7tUcCUUguytHav5nU3WaZdZYSADXBvGhXcd3eSPXvUEbS5vKkVKEj8bbh4ZkVMkaNgSZSz1KpBh97TjWJL3aiF6gCKKVvnDfjEG8KHZ9r8ZByYtHjA8UkHwPRUVZMvzmsDQLmVSjgSKm1dnUUAN3kkTqZYyY1K7vw1hqGxbyiMVBg3T": position{
-		cid: 0,
-		id:  1,
-	},
-}
-
 func (w *watcher) processInPeer(pinfo PeerInfoWithIP) {
-	pos := getWatchingPosition(pinfo.Pubkey)
+	pos := getWatchingPosition(pinfo.Pubkey, w.watchingPubkeys)
 	fmt.Println("debugging sending pos:", pos.cid, pos.id)
 	fmt.Println("debugging sending id:", pos.cid, fmt.Sprintf("\"%s\"", pinfo.ID.String()))
 
@@ -153,12 +151,12 @@ func (w *watcher) process() {
 	}
 }
 
-func isWatching(pubkey string) bool {
-	pos := getWatchingPosition(pubkey)
+func isWatching(pubkey string, watchingPubkeys map[string]position) bool {
+	pos := getWatchingPosition(pubkey, watchingPubkeys)
 	return pos.id != -1
 }
 
-func getWatchingPosition(pubkey string) position {
+func getWatchingPosition(pubkey string, watchingPubkeys map[string]position) position {
 	if pos, ok := watchingPubkeys[pubkey]; ok {
 		return pos
 	}
@@ -166,7 +164,7 @@ func getWatchingPosition(pubkey string) position {
 }
 
 func (w *watcher) markPeer(pinfo PeerInfo, ip string) {
-	if !isWatching(pinfo.Pubkey) {
+	if !isWatching(pinfo.Pubkey, w.watchingPubkeys) {
 		return
 	}
 	w.inPeers <- PeerInfoWithIP{
@@ -177,4 +175,58 @@ func (w *watcher) markPeer(pinfo PeerInfo, ip string) {
 
 func (w *watcher) unmarkPeer(pid peer.ID) {
 	w.outPeers <- pid
+}
+
+func (w *watcher) readKeys() {
+	keyData, err := ioutil.ReadFile("keylist.json")
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+
+	type AccountKey struct {
+		PaymentAddress     string
+		CommitteePublicKey string
+	}
+
+	type KeyList struct {
+		Shard  map[int][]AccountKey
+		Beacon []AccountKey
+	}
+
+	keylist := KeyList{}
+
+	err = json.Unmarshal(keyData, &keylist)
+	if err != nil {
+		return
+	}
+
+	for cid, keys := range keylist.Shard {
+		for id, committeeKey := range keys {
+			k := &incognitokey.CommitteePublicKey{}
+			if err := k.FromString(committeeKey.CommitteePublicKey); err != nil {
+				logger.Error(err)
+				continue
+			}
+			pubkey := k.GetMiningKeyBase58(common.BlsConsensus)
+			w.watchingPubkeys[pubkey] = position{
+				cid: cid,
+				id:  id,
+			}
+		}
+	}
+
+	cid := 255 // for beacon
+	for id, committeeKey := range keylist.Beacon {
+		k := &incognitokey.CommitteePublicKey{}
+		if err := k.FromString(committeeKey.CommitteePublicKey); err != nil {
+			logger.Error(err)
+			continue
+		}
+		pubkey := k.GetMiningKeyBase58(common.BlsConsensus)
+		w.watchingPubkeys[pubkey] = position{
+			cid: cid,
+			id:  id,
+		}
+	}
 }
