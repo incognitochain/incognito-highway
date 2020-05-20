@@ -121,6 +121,7 @@ func main() {
 		chainData,
 		conf.SupportShards,
 		gl, //GrafanaLog
+		conf.HighwayIndex,
 	)
 	if err != nil {
 		logger.Fatal(err)

@@ -14,6 +14,7 @@ import (
 )
 
 type watcher struct {
+	hwid     int
 	gralog   *grafana.GrafanaLog
 	inPeers  chan PeerInfoWithIP
 	outPeers chan peer.ID
@@ -29,8 +30,9 @@ type PeerInfoWithIP struct {
 	ip string
 }
 
-func newWatcher(gralog *grafana.GrafanaLog) *watcher {
+func newWatcher(gralog *grafana.GrafanaLog, hwid int) *watcher {
 	w := &watcher{
+		hwid:            hwid,
 		inPeers:         make(chan PeerInfoWithIP, 100),
 		outPeers:        make(chan peer.ID, 100),
 		data:            make(map[position]watchInfo),
@@ -97,10 +99,22 @@ func (w *watcher) pushData() {
 			"watch_cid":       pos.cid,
 			"watch_connected": winfo.connected,
 			"watch_ip":        fmt.Sprintf("\"%s\"", winfo.ip),
+			"watch_hwid":      w.hwid,
 		}
 
 		points = append(points, buildPoint(w.gralog.GetFixedTag(), tags, fields))
 	}
+
+	// Remove disconnected nodes so other highway can report its status
+	data := map[position]watchInfo{}
+	for pos, winfo := range w.data {
+		if winfo.connected == 1 {
+			data[pos] = winfo
+		} else {
+			fmt.Println("debugging remove disconnected node:", pos, winfo)
+		}
+	}
+	w.data = data
 
 	fmt.Println("debugging points len:", len(points))
 	for i, p := range points {

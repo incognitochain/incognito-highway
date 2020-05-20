@@ -41,11 +41,12 @@ func ManageChainConnections(
 	chainData *chaindata.ChainData,
 	supportShards []byte,
 	gl *grafana.GrafanaLog,
+	hwid int,
 ) (*Reporter, error) {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
-		watcher:  newWatcher(gl),
+		watcher:  newWatcher(gl, hwid),
 		host:     h,
 	}
 	go m.watcher.process()
