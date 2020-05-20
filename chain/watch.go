@@ -59,10 +59,11 @@ func (w *watcher) processInPeer(pinfo PeerInfo) {
 }
 
 func (w *watcher) processOutPeer(pid peer.ID) {
+	fmt.Println("debugging processOutPeer:", pid)
 	if winfo, ok := w.data[pid.String()]; ok {
 		w.data[pid.String()] = watchInfo{
 			pos:       winfo.pos,
-			connected: 1,
+			connected: 0,
 		}
 	}
 }

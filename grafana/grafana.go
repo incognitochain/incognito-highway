@@ -202,5 +202,7 @@ func makeRequest(bodyStr, dbURL string) {
 	resp, err := client.Do(req)
 	_ = resp
 	fmt.Println("debugging write body:", bodyStr)
-	fmt.Println("debugging write err:", resp, err)
+	if resp.StatusCode != 204 {
+		fmt.Println("debugging write err:", resp, err)
+	}
 }

@@ -184,6 +184,9 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	// Remove from m.peers to prevent Client from requesting later
 	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
 	m.client.DisconnectedIDs <- pid
+
+	fmt.Println("debugging unmark peer:", pid.String())
+	m.watcher.unmarkPeer(pid)
 }
 
 type PeerInfo struct {
