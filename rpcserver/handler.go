@@ -2,11 +2,9 @@ package rpcserver
 
 import (
 	"highway/common"
-	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
 
 type Handler struct {
@@ -39,7 +37,7 @@ func (s *Handler) GetPeers(
 			continue
 		}
 
-		nonLocal := filterLocalAddrs(ma)
+		nonLocal := common.FilterLocalAddrs(ma)
 		addr := ma[0].String()
 		if len(nonLocal) > 0 {
 			addr = nonLocal[0].String()
@@ -55,27 +53,4 @@ func (s *Handler) GetPeers(
 	}
 	logger.Debugf("GetPeers return: %+v", res.PeerPerShard)
 	return
-}
-
-func filterLocalAddrs(mas []ma.Multiaddr) []ma.Multiaddr {
-	localAddrs := []string{
-		"127.0.0.1",
-		"0.0.0.0",
-		"192.168.",
-		"/ip4/172.",
-	}
-	nonLocal := []ma.Multiaddr{}
-	for _, ma := range mas {
-		local := false
-		for _, s := range localAddrs {
-			if strings.Contains(ma.String(), s) {
-				local = true
-				break
-			}
-		}
-		if !local {
-			nonLocal = append(nonLocal, ma)
-		}
-	}
-	return nonLocal
 }

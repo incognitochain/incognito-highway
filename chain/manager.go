@@ -3,6 +3,7 @@ package chain
 import (
 	"fmt"
 	"highway/chaindata"
+	"highway/common"
 	"highway/grafana"
 	"highway/route"
 	"sync"
@@ -129,9 +130,13 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
 
-		maddr := m.host.Peerstore().PeerInfo(pinfo.ID).Addrs[0]
-		ip4, _ := maddr.ValueForProtocol(multiaddr.P_IP4)
-		port, _ := maddr.ValueForProtocol(multiaddr.P_TCP)
+		maddrs := common.FilterLocalAddrs(m.host.Peerstore().PeerInfo(pinfo.ID).Addrs)
+		ip4 := ""
+		port := ""
+		if len(maddrs) > 0 {
+			ip4, _ = maddrs[0].ValueForProtocol(multiaddr.P_IP4)
+			port, _ = maddrs[0].ValueForProtocol(multiaddr.P_TCP)
+		}
 
 		m.watcher.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 	}
