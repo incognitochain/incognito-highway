@@ -28,7 +28,10 @@ type Manager struct {
 		num int
 		sync.RWMutex
 	}
-	gralog *grafana.GrafanaLog
+
+	gralog  *grafana.GrafanaLog
+	watcher *watcher
+	host    host.Host
 }
 
 func ManageChainConnections(
@@ -38,11 +41,15 @@ func ManageChainConnections(
 	chainData *chaindata.ChainData,
 	supportShards []byte,
 	gl *grafana.GrafanaLog,
+	hwid int,
 ) (*Reporter, error) {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
+		watcher:  newWatcher(gl, hwid),
+		host:     h,
 	}
+	go m.watcher.process()
 	m.peers.ids = map[int][]PeerInfo{}
 	m.peers.RWMutex = sync.RWMutex{}
 	m.conns.RWMutex = sync.RWMutex{}
@@ -121,6 +128,12 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	logger.Infof("Appended new peer to shard %d, pid = %v, cnt = %d peers", cid, pid, len(m.peers.ids[cid]))
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
+
+		maddr := m.host.Peerstore().PeerInfo(pinfo.ID).Addrs[0]
+		ip4, _ := maddr.ValueForProtocol(multiaddr.P_IP4)
+		port, _ := maddr.ValueForProtocol(multiaddr.P_TCP)
+
+		m.watcher.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 	}
 }
 
@@ -178,6 +191,7 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	// Remove from m.peers to prevent Client from requesting later
 	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
 	m.client.DisconnectedIDs <- pid
+	m.watcher.unmarkPeer(pid)
 }
 
 type PeerInfo struct {

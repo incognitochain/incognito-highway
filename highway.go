@@ -10,6 +10,7 @@ import (
 	"highway/config"
 	"highway/grafana"
 	"highway/health"
+	"highway/key"
 	"highway/monitor"
 	"highway/p2p"
 	"highway/process"
@@ -30,7 +31,7 @@ func main() {
 
 	conf, err := config.GetProxyConfig()
 	if err != nil {
-		logger.Errorf("%+v", err)
+		fmt.Println(fmt.Errorf("%+v", err))
 		return
 	}
 
@@ -56,8 +57,10 @@ func main() {
 	chainData := new(chaindata.ChainData)
 	chainData.Init(common.NumberOfShard)
 
+	whitelisthw, hostPriKey, err := key.GenWhiteList(conf.PrivateSeed, conf.HighwayIndex, common.NumberOfHighway)
+
 	// New libp2p host
-	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, conf.PrivateKey)
+	proxyHost := p2p.NewHost(conf.Version, conf.ListenAddr, conf.ProxyPort, hostPriKey)
 
 	// Setup topic
 	topic.Handler = topic.TopicManager{}
@@ -93,6 +96,7 @@ func main() {
 		fmt.Sprintf("%s:%d", conf.PublicIP, conf.BootnodePort),
 		floodPubSub,
 		gl,
+		whitelisthw,
 	)
 	go rman.Start()
 
@@ -117,6 +121,7 @@ func main() {
 		chainData,
 		conf.SupportShards,
 		gl, //GrafanaLog
+		conf.HighwayIndex,
 	)
 	if err != nil {
 		logger.Fatal(err)
@@ -131,7 +136,7 @@ func main() {
 
 	// Setup monitoring
 	confReporter := config.NewReporter(conf)
-	routeReporter := route.NewReporter(rman)
+	routeReporter := route.NewReporter(rman, gl)
 	healthReporter := health.NewReporter()
 	processReporter := process.NewReporter(chainData)
 	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter, processReporter}
