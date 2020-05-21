@@ -57,8 +57,7 @@ type position struct {
 
 func (w *watcher) processInPeer(pinfo PeerInfoWithIP) {
 	pos := getWatchingPosition(pinfo.Pubkey, w.watchingPubkeys)
-	fmt.Println("debugging sending pos:", pos.cid, pos.id)
-	fmt.Println("debugging sending id:", pos.cid, fmt.Sprintf("\"%s\"", pinfo.ID.String()))
+	logger.Infof("Start watching peer: cid = %v, id = %v, ip = %v, pid = %s", pos.cid, pos.id, pinfo.ip, pinfo.ID.String())
 
 	w.data[pos] = watchInfo{
 		pid:       pinfo.ID,
@@ -70,9 +69,8 @@ func (w *watcher) processInPeer(pinfo PeerInfoWithIP) {
 
 func (w *watcher) processOutPeer(pid peer.ID) {
 	if pos, ok := w.pos[pid]; ok {
-		fmt.Println("debugging processOutPeer:", pos)
 		if winfo, ok := w.data[pos]; ok {
-			fmt.Println("debugging processOutPeer found")
+			logger.Infof("Stop watching peer: cid = %v, id = %v, ip = %v, pid = %s", pos.cid, pos.id, winfo.ip, pid.String())
 			w.data[pos] = watchInfo{
 				pid:       pid,
 				connected: 0,
@@ -88,8 +86,6 @@ func (w *watcher) pushData() {
 	}
 
 	points := []string{}
-	fmt.Println("debugging len:", len(w.data))
-	fmt.Println("debugging data:", w.data)
 	for pos, winfo := range w.data {
 		tags := map[string]interface{}{
 			"watch_id": pos.id,
@@ -110,18 +106,11 @@ func (w *watcher) pushData() {
 	for pos, winfo := range w.data {
 		if winfo.connected == 1 {
 			data[pos] = winfo
-		} else {
-			fmt.Println("debugging remove disconnected node:", pos, winfo)
 		}
 	}
 	w.data = data
 
-	fmt.Println("debugging points len:", len(points))
-	for i, p := range points {
-		fmt.Println("debugging points:", i, len(p), p)
-	}
 	content := strings.Join(points, "\n")
-	fmt.Printf("debugging content: %d %s\n", len(content), content)
 	w.gralog.WriteContent(content)
 }
 

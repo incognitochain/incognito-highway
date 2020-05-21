@@ -137,7 +137,6 @@ func (gl *GrafanaLog) AddTags(p ...interface{}) *GrafanaLog {
 	}
 	gl.Lock()
 	defer gl.Unlock()
-	fmt.Println("debugging addtags:", p)
 	for i, v := range p {
 		if i%2 == 0 {
 			gl.tags[v.(string)] = p[i+1]
@@ -179,7 +178,6 @@ func (gl *GrafanaLog) Write() {
 }
 
 func (gl *GrafanaLog) WriteContent(content string) {
-	fmt.Println("debugging write body:", content)
 	go makeRequest(content, gl.dbURL)
 }
 
@@ -201,9 +199,5 @@ func makeRequest(bodyStr, dbURL string) {
 	defer cancel()
 	req = req.WithContext(ctx)
 	client := &http.Client{}
-	resp, err := client.Do(req)
-	_ = resp
-	if resp.StatusCode != 204 {
-		fmt.Println("debugging write err:", resp, err)
-	}
+	client.Do(req)
 }
