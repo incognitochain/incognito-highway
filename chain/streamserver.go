@@ -23,7 +23,7 @@ func (s *Server) StreamBlockByHeight(
 
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
-	logger.Infof("[stream] listen gblkRecv Start")
+	// logger.Infof("[stream] listen gblkRecv Start")
 	for blk := range blkRecv {
 		if len(blk.Data) == 0 {
 			return nil
@@ -33,6 +33,6 @@ func (s *Server) StreamBlockByHeight(
 			return err
 		}
 	}
-	logger.Infof("[stream] listen gblkRecv End")
+	// logger.Infof("[stream] listen gblkRecv End")
 	return nil
 }
