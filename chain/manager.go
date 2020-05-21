@@ -130,16 +130,32 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
 
-		maddrs := common.FilterLocalAddrs(m.host.Peerstore().PeerInfo(pinfo.ID).Addrs)
-		ip4 := ""
-		port := ""
-		if len(maddrs) > 0 {
-			ip4, _ = maddrs[0].ValueForProtocol(multiaddr.P_IP4)
-			port, _ = maddrs[0].ValueForProtocol(multiaddr.P_TCP)
-		}
-
-		m.watcher.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
+		watchPeer(m.watcher, m.host, pinfo)
 	}
+}
+
+func watchPeer(w *watcher, host host.Host, pinfo PeerInfo) {
+	ip4 := ""
+	port := ""
+	maddrs := host.Peerstore().PeerInfo(pinfo.ID).Addrs
+
+	// By default, get an ip address (even if it's local)
+	var maddr multiaddr.Multiaddr
+	if len(maddrs) > 0 {
+		maddr = maddrs[0]
+	}
+
+	// Use global ip address if we have it
+	maddrs = common.FilterLocalAddrs(maddrs)
+	if len(maddrs) > 0 {
+		maddr = maddrs[0]
+	}
+
+	if maddr != nil {
+		ip4, _ = maddr.ValueForProtocol(multiaddr.P_IP4)
+		port, _ = maddr.ValueForProtocol(multiaddr.P_TCP)
+	}
+	w.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 }
 
 func remove(ids map[int][]PeerInfo, rid peer.ID, gl *grafana.GrafanaLog) map[int][]PeerInfo {
