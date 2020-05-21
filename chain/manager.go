@@ -138,23 +138,27 @@ func watchPeer(w *watcher, host host.Host, pinfo PeerInfo) {
 	ip4 := ""
 	port := ""
 	maddrs := host.Peerstore().PeerInfo(pinfo.ID).Addrs
+	logger.Info("maddrs", maddrs)
 
 	// By default, get an ip address (even if it's local)
 	var maddr multiaddr.Multiaddr
 	if len(maddrs) > 0 {
 		maddr = maddrs[0]
+		logger.Info("maddr default:", maddr)
 	}
 
 	// Use global ip address if we have it
 	maddrs = common.FilterLocalAddrs(maddrs)
 	if len(maddrs) > 0 {
 		maddr = maddrs[0]
+		logger.Info("maddr global:", maddr)
 	}
 
 	if maddr != nil {
 		ip4, _ = maddr.ValueForProtocol(multiaddr.P_IP4)
 		port, _ = maddr.ValueForProtocol(multiaddr.P_TCP)
 	}
+	logger.Info("maddr final:", ip4, port)
 	w.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 }
 
