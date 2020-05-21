@@ -139,6 +139,8 @@ func watchPeer(w *watcher, host host.Host, pinfo PeerInfo) {
 	port := ""
 	maddrs := host.Peerstore().PeerInfo(pinfo.ID).Addrs
 	logger.Info("maddrs", maddrs)
+	maddrs2 := host.Peerstore().Addrs(pinfo.ID)
+	logger.Info("maddrs2", maddrs2)
 
 	// By default, get an ip address (even if it's local)
 	var maddr multiaddr.Multiaddr
