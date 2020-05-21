@@ -130,7 +130,7 @@ func (g *BlkGetter) CallForBlocks(
 	ctx context.Context,
 	providers []Provider,
 ) error {
-	logger := Logger(ctx)
+	// logger := Logger(ctx)
 	nreq := g.req
 	// logger.Infof("[stream] calling provider for req")
 	for i, p := range providers {
