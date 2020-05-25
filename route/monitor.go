@@ -3,6 +3,7 @@ package route
 import (
 	"encoding/json"
 	"highway/common"
+	"highway/grafana"
 	hmap "highway/route/hmap"
 	"time"
 
@@ -12,10 +13,13 @@ import (
 type Reporter struct {
 	name string
 
+	gralog  *grafana.GrafanaLog
 	manager *Manager
 }
 
-func (r *Reporter) Start(_ time.Duration) {}
+func (r *Reporter) Start(_ time.Duration) {
+	go r.pushDataToGrafana()
+}
 
 func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	// PID of this highway
@@ -60,9 +64,35 @@ func (r *Reporter) ReportJSON() (string, json.Marshaler, error) {
 	return r.name, marshaler, nil
 }
 
-func NewReporter(manager *Manager) *Reporter {
+func (r *Reporter) pushDataToGrafana() {
+	if r.gralog == nil {
+		return
+	}
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		numConn := 0
+		supports := r.manager.Hmap.CopySupports()
+		status := r.manager.Hmap.CopyStatus()
+		for pid, _ := range supports {
+			s := status[pid]
+			if s.Connecting {
+				numConn++
+			}
+		}
+
+		key := "highway_connected"
+		value := numConn
+		r.gralog.Add(key, value)
+	}
+
+}
+
+func NewReporter(manager *Manager, gralog *grafana.GrafanaLog) *Reporter {
 	return &Reporter{
 		manager: manager,
+		gralog:  gralog,
 		name:    "route",
 	}
 }

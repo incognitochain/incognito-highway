@@ -25,10 +25,14 @@ type Manager struct {
 	}
 
 	conns struct {
-		num int
+		num   int
+		addrs map[peer.ID]multiaddr.Multiaddr
 		sync.RWMutex
 	}
-	gralog *grafana.GrafanaLog
+
+	gralog  *grafana.GrafanaLog
+	watcher *watcher
+	host    host.Host
 }
 
 func ManageChainConnections(
@@ -38,14 +42,19 @@ func ManageChainConnections(
 	chainData *chaindata.ChainData,
 	supportShards []byte,
 	gl *grafana.GrafanaLog,
+	hwid int,
 ) (*Reporter, error) {
 	// Manage incoming connections
 	m := &Manager{
 		newPeers: make(chan PeerInfo, 1000),
+		watcher:  newWatcher(gl, hwid),
+		host:     h,
 	}
+	go m.watcher.process()
 	m.peers.ids = map[int][]PeerInfo{}
 	m.peers.RWMutex = sync.RWMutex{}
 	m.conns.RWMutex = sync.RWMutex{}
+	m.conns.addrs = map[peer.ID]multiaddr.Multiaddr{}
 	m.gralog = gl
 
 	// Monitor
@@ -107,21 +116,42 @@ func (m *Manager) start() {
 }
 
 func (m *Manager) addNewPeer(pinfo PeerInfo) {
-	m.peers.Lock()
-	defer m.peers.Unlock()
-
 	pid := pinfo.ID
 	cid := pinfo.CID
 
-	// Remove from previous lists
-	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
-
-	// Append to list
-	m.peers.ids[cid] = append(m.peers.ids[cid], pinfo)
+	m.peers.Lock()
+	m.peers.ids = remove(m.peers.ids, pid, m.gralog)   // Remove from previous lists
+	m.peers.ids[cid] = append(m.peers.ids[cid], pinfo) // Append to list
 	logger.Infof("Appended new peer to shard %d, pid = %v, cnt = %d peers", cid, pid, len(m.peers.ids[cid]))
+	m.peers.Unlock()
+
 	if m.gralog != nil {
 		m.gralog.Add(fmt.Sprintf("total_cid_%v", cid), len(m.peers.ids[cid]))
+
+		m.watchPeer(pinfo)
 	}
+}
+
+func (m *Manager) watchPeer(pinfo PeerInfo) {
+	var maddr multiaddr.Multiaddr
+	ip4 := ""
+	port := ""
+
+	m.conns.RLock()
+	if savedAddr, ok := m.conns.addrs[pinfo.ID]; ok {
+		// Use global ip address if we have it
+		maddr = savedAddr
+	} else if peerstoreAddrs := m.host.Peerstore().PeerInfo(pinfo.ID).Addrs; len(peerstoreAddrs) > 0 {
+		// Otherwise, get an ip address (even if it's local)
+		maddr = peerstoreAddrs[0]
+	}
+	m.conns.RUnlock()
+
+	if maddr != nil {
+		ip4, _ = maddr.ValueForProtocol(multiaddr.P_IP4)
+		port, _ = maddr.ValueForProtocol(multiaddr.P_TCP)
+	}
+	m.watcher.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 }
 
 func remove(ids map[int][]PeerInfo, rid peer.ID, gl *grafana.GrafanaLog) map[int][]PeerInfo {
@@ -156,10 +186,11 @@ func (m *Manager) GetTotalConnections() int {
 
 func (m *Manager) Listen(network.Network, multiaddr.Multiaddr)      {}
 func (m *Manager) ListenClose(network.Network, multiaddr.Multiaddr) {}
-func (m *Manager) Connected(n network.Network, c network.Conn) {
+func (m *Manager) Connected(n network.Network, conn network.Conn) {
 	// logger.Println("chain/manager: new conn")
 	m.conns.Lock()
 	m.conns.num++
+	m.conns.addrs[conn.RemotePeer()] = conn.RemoteMultiaddr()
 	m.conns.Unlock()
 }
 func (m *Manager) OpenedStream(network.Network, network.Stream) {}
@@ -173,11 +204,12 @@ func (m *Manager) Disconnected(_ network.Network, conn network.Conn) {
 	m.peers.Lock()
 	defer m.peers.Unlock()
 	pid := conn.RemotePeer()
-	logger.Infof("Peer disconnected: %s", pid.String())
+	logger.Infof("Peer disconnected: %s %v", pid.String(), conn.RemoteMultiaddr())
 
 	// Remove from m.peers to prevent Client from requesting later
 	m.peers.ids = remove(m.peers.ids, pid, m.gralog)
 	m.client.DisconnectedIDs <- pid
+	m.watcher.unmarkPeer(pid)
 }
 
 type PeerInfo struct {

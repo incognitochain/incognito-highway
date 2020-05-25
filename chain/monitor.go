@@ -106,11 +106,13 @@ func (r *Reporter) watchRequestsPerPeer(msg string, pid peer.ID, err error) {
 }
 
 func (r *Reporter) pushDataToGrafana() {
+	if r.gralog == nil {
+		return
+	}
+
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	for range ticker.C {
-		if r.gralog == nil {
-			continue
-		}
 		r.requestCounts.Lock()
 		for k, v := range r.requestCounts.m {
 			c := v - r.requestCounts.lm[k]
