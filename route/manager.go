@@ -408,6 +408,15 @@ func (h *Manager) GetID() peer.ID {
 	return h.ID
 }
 
+func (h *Manager) GetWhiteList() map[string]struct{} {
+	return h.hc.hwwhitelist
+}
+
+func (h *Manager) CheckHWPeerID(pID string) bool {
+	_, ok := h.hc.hwwhitelist[pID]
+	return ok
+}
+
 type HighwayInfo struct {
 	AddrInfo      string
 	RPCUrl        string

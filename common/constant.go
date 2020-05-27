@@ -29,7 +29,7 @@ var (
 
 	MaxCallDepth         = int32(2)
 	ChoosePeerBlockDelta = uint64(300)
-	MaxBlocksPerRequest  = uint64(900)
+	MaxBlocksPerRequest  = uint64(10000)
 	MaxTimePerRequest    = 30 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second
@@ -52,7 +52,18 @@ const (
 	NORMAL
 )
 
-type ExpectedBlk struct {
+type ExpectedBlkByHeight struct {
 	Height uint64
 	Data   []byte
+}
+
+type ExpectedBlk struct {
+	Height uint64
+	Hash   []byte
+	Data   []byte
+}
+
+type ExpectedBlkByHash struct {
+	Hash []byte
+	Data []byte
 }

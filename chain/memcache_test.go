@@ -19,7 +19,7 @@ func TestGetBlockByHeight(t *testing.T) {
 	req := &proto.BlockByHeightRequest{}
 	req.Heights = []uint64{3, 4, 5, 6}
 	req.Specific = true
-	blkChan := make(chan common.ExpectedBlk, 10)
+	blkChan := make(chan common.ExpectedBlkByHeight, 10)
 	err := cache.StreamBlkByHeight(context.Background(), req, blkChan)
 
 	if assert.Nil(t, err) {
@@ -44,7 +44,7 @@ func TestSetSingleBlockByHeight(t *testing.T) {
 		From: int32(1),
 		To:   int32(2),
 	}
-	blk := common.ExpectedBlk{
+	blk := common.ExpectedBlkByHeight{
 		Height: 3,
 		Data:   []byte{4},
 	}

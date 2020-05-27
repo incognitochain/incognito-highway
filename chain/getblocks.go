@@ -6,40 +6,40 @@ import (
 	"highway/proto"
 )
 
-type BlkGetter struct {
+type BlkByHeightGetter struct {
 	waiting   map[uint64][]byte
-	newBlk    chan common.ExpectedBlk
+	newBlk    chan common.ExpectedBlkByHeight
 	newHeight uint64
 	idx       int
-	blkRecv   chan common.ExpectedBlk
+	blkRecv   chan common.ExpectedBlkByHeight
 	req       *proto.BlockByHeightRequest
 }
 
-func NewBlkGetter(req *proto.BlockByHeightRequest) *BlkGetter {
-	g := &BlkGetter{}
+func NewBlkByHeightGetter(req *proto.BlockByHeightRequest) *BlkByHeightGetter {
+	g := &BlkByHeightGetter{}
 	g.waiting = map[uint64][]byte{}
-	g.newBlk = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
+	g.newBlk = make(chan common.ExpectedBlkByHeight, common.MaxBlocksPerRequest)
 	g.idx = 0
 	g.req = req
 	g.newHeight = g.req.Heights[0] - 1
-	g.blkRecv = make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
+	g.blkRecv = make(chan common.ExpectedBlkByHeight, common.MaxBlocksPerRequest)
 	g.updateNewHeight()
 	return g
 }
 
-func (g *BlkGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlk {
-	go g.CallForBlocks(ctx, s.Providers)
+func (g *BlkByHeightGetter) Get(ctx context.Context, s *Server) chan common.ExpectedBlkByHeight {
+	go g.CallForBlocksByHeight(ctx, s.Providers)
 	go g.listenCommingBlk(ctx)
 	return g.blkRecv
 }
 
-func (g *BlkGetter) checkWaitingBlk() bool {
+func (g *BlkByHeightGetter) checkWaitingBlk() bool {
 	for {
 		if (g.newHeight == 0) || len(g.waiting) == 0 {
 			return false
 		}
 		if data, ok := g.waiting[g.newHeight]; ok {
-			g.blkRecv <- common.ExpectedBlk{
+			g.blkRecv <- common.ExpectedBlkByHeight{
 				Height: g.newHeight,
 				Data:   data,
 			}
@@ -52,7 +52,7 @@ func (g *BlkGetter) checkWaitingBlk() bool {
 	return false
 }
 
-func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
+func (g *BlkByHeightGetter) listenCommingBlk(ctx context.Context) {
 	defer close(g.blkRecv)
 	for blk := range g.newBlk {
 		if blk.Height < g.newHeight {
@@ -69,7 +69,7 @@ func (g *BlkGetter) listenCommingBlk(ctx context.Context) {
 	g.checkWaitingBlk()
 }
 
-func (g *BlkGetter) updateNewHeight() {
+func (g *BlkByHeightGetter) updateNewHeight() {
 	if g.newHeight == g.req.Heights[len(g.req.Heights)-1] {
 		g.newHeight = 0
 		return
@@ -82,10 +82,10 @@ func (g *BlkGetter) updateNewHeight() {
 	}
 }
 
-func (g *BlkGetter) handleBlkRecv(
+func (g *BlkByHeightGetter) handleBlkRecv(
 	ctx context.Context,
 	req *proto.BlockByHeightRequest,
-	ch chan common.ExpectedBlk,
+	ch chan common.ExpectedBlkByHeight,
 	providers []Provider,
 ) []uint64 {
 	logger := Logger(ctx)
@@ -95,7 +95,7 @@ func (g *BlkGetter) handleBlkRecv(
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
-			go func(providers []Provider, blk common.ExpectedBlk) {
+			go func(providers []Provider, blk common.ExpectedBlkByHeight) {
 				for _, p := range providers {
 					err := p.SetSingleBlockByHeight(ctx, req, blk)
 					if err != nil {
@@ -108,7 +108,7 @@ func (g *BlkGetter) handleBlkRecv(
 	return missing
 }
 
-func newReq(
+func newReqByHeight(
 	oldReq *proto.BlockByHeightRequest,
 	missing []uint64,
 ) *proto.BlockByHeightRequest {
@@ -116,17 +116,18 @@ func newReq(
 		return nil
 	}
 	return &proto.BlockByHeightRequest{
-		Type:      oldReq.Type,
-		Specific:  true,
-		Heights:   missing,
-		From:      oldReq.From,
-		To:        oldReq.To,
-		CallDepth: oldReq.CallDepth,
-		UUID:      oldReq.UUID,
+		Type:         oldReq.Type,
+		Specific:     true,
+		Heights:      missing,
+		From:         oldReq.From,
+		To:           oldReq.To,
+		CallDepth:    oldReq.CallDepth,
+		SyncFromPeer: oldReq.SyncFromPeer,
+		UUID:         oldReq.UUID,
 	}
 }
 
-func (g *BlkGetter) CallForBlocks(
+func (g *BlkByHeightGetter) CallForBlocksByHeight(
 	ctx context.Context,
 	providers []Provider,
 ) error {
@@ -137,10 +138,10 @@ func (g *BlkGetter) CallForBlocks(
 		if nreq == nil {
 			break
 		}
-		blkCh := make(chan common.ExpectedBlk, common.MaxBlocksPerRequest)
+		blkCh := make(chan common.ExpectedBlkByHeight, common.MaxBlocksPerRequest)
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
 		missing := g.handleBlkRecv(ctx, nreq, blkCh, providers[:i])
-		nreq = newReq(nreq, missing)
+		nreq = newReqByHeight(nreq, missing)
 	}
 	close(g.newBlk)
 	return nil

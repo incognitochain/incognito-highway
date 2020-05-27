@@ -29,3 +29,7 @@ func (req *GetBlockCrossShardByHashRequest) SetUUID(uuid string) {
 func (req *BlockByHeightRequest) SetUUID(uuid string) {
 	req.UUID = uuid
 }
+
+func (req *BlockByHashRequest) SetUUID(uuid string) {
+	req.UUID = uuid
+}
