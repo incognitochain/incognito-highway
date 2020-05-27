@@ -237,7 +237,7 @@ func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint
 
 	maxHeight := from + common.MaxBlocksPerRequest - 1
 	if to > maxHeight {
-		return maxHeight, heights
+		return maxHeight, []uint64{heights[0], maxHeight}
 	}
 	return to, []uint64{heights[0], to}
 }
