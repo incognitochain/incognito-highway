@@ -181,16 +181,35 @@ func TestChoosePeerID(t *testing.T) {
 }
 
 func TestGroupPeers(t *testing.T) {
+	// Comment filterPeers (for filter disconnected peer) before test
+	w := newWatcher(nil, 0)
+	w.pos = map[peer.ID]position{}
+	w.pos[peer.ID("123123123")] = position{
+		cid: 2,
+		id:  1,
+	}
+	w.pos[peer.ID("123123124")] = position{
+		cid: 2,
+		id:  1,
+	}
 	// Connected, with blk
 	selfPeerID := peer.ID("abc")
 	blk := uint64(100)
-	a := []chaindata.PeerWithBlk{}
+	a2 := []chaindata.PeerWithBlk{}
 	for i := 0; i < 3; i++ {
-		a = append(a, chaindata.PeerWithBlk{
+		a2 = append(a2, chaindata.PeerWithBlk{
 			HW:     selfPeerID,
 			Height: uint64(123),
 		})
 	}
+
+	// Fixed node Connected, with blk
+	a := []chaindata.PeerWithBlk{}
+	a = append(a, chaindata.PeerWithBlk{
+		HW:     selfPeerID,
+		Height: uint64(123),
+		ID:     peer.ID("123123123"),
+	})
 
 	// Not connected, with blk
 	b := []chaindata.PeerWithBlk{}
@@ -202,8 +221,15 @@ func TestGroupPeers(t *testing.T) {
 
 	// Connected, without blk
 	c := []chaindata.PeerWithBlk{}
+	c = append(c, chaindata.PeerWithBlk{
+		HW:     selfPeerID,
+		Height: uint64(45),
+		ID:     peer.ID("123123124"),
+	})
+
+	c2 := []chaindata.PeerWithBlk{}
 	for i := 0; i < 7; i++ {
-		c = append(c, chaindata.PeerWithBlk{
+		c2 = append(c2, chaindata.PeerWithBlk{
 			HW:     selfPeerID,
 			Height: uint64(45),
 		})
@@ -217,19 +243,21 @@ func TestGroupPeers(t *testing.T) {
 		})
 	}
 
-	expected := [][]chaindata.PeerWithBlk{a, b, c, d}
+	expected := [][]chaindata.PeerWithBlk{a, a2, b, c, c2, d}
 
 	peers := []chaindata.PeerWithBlk{}
 	peers = append(peers, a...)
+	peers = append(peers, a2...)
 	peers = append(peers, b...)
 	peers = append(peers, c...)
+	peers = append(peers, c2...)
 	peers = append(peers, d...)
 	rand.Shuffle(len(peers), func(i, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
 
 	connectedPeers := []PeerInfo{PeerInfo{ID: peer.ID("")}, PeerInfo{ID: selfPeerID}}
-	groups := groupPeersByDistance(peers, blk, selfPeerID, connectedPeers)
+	groups := groupPeersByDistance(peers, blk, selfPeerID, connectedPeers, w)
 	assert.Equal(t, expected, groups)
 }
 

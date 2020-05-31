@@ -188,7 +188,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
-	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers)
+	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers, hc.m.watcher)
 	// logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
@@ -208,16 +208,26 @@ func groupPeersByDistance(
 	blk uint64,
 	selfPeerID peer.ID,
 	connectedPeers []PeerInfo,
+	w *watcher,
 ) [][]chaindata.PeerWithBlk {
 	// Group peers into 4 groups:
-	a := []chaindata.PeerWithBlk{} // 1. Nodes connected to this highway and have all needed blocks
-	b := []chaindata.PeerWithBlk{} // 2. Nodes from other highways and have all needed blocks
-	h := uint64(0)                 // Find maximum height
+	a := []chaindata.PeerWithBlk{}  // 1.  Fixed Nodes connected to this highway and have all needed blocks
+	a2 := []chaindata.PeerWithBlk{} // 1.5 Nodes connected to this highway and have all needed blocks
+	b := []chaindata.PeerWithBlk{}  // 2.  Nodes from other highways and have all needed blocks
+	h := uint64(0)                  // Find maximum height
 	for _, p := range peers {
 		if p.Height >= blk {
 			if p.HW == selfPeerID {
-				a = append(a, p)
+				w.posLocker.RLock()
+				_, ok := w.pos[p.ID]
+				w.posLocker.RUnlock()
+				if ok {
+					a = append(a, p)
+				} else {
+					a2 = append(a2, p)
+				}
 			} else {
+
 				b = append(b, p)
 			}
 		}
@@ -225,21 +235,31 @@ func groupPeersByDistance(
 			h = p.Height
 		}
 	}
-	a = filterPeers(a, connectedPeers) // Retain only connected peers
+	a = filterPeers(a, connectedPeers)   // Retain only connected peers
+	a2 = filterPeers(a2, connectedPeers) // Retain only connected peers
 
-	c := []chaindata.PeerWithBlk{} // 3. Nodes connected to this highway and have the largest amount of blocks
-	d := []chaindata.PeerWithBlk{} // 4. Nodes from other highways and have the largest amount of blocks
+	c := []chaindata.PeerWithBlk{}  // 3.  Fixed Nodes connected to this highway and have the largest amount of blocks
+	c2 := []chaindata.PeerWithBlk{} // 3.5 Nodes connected to this highway and have the largest amount of blocks
+	d := []chaindata.PeerWithBlk{}  // 4.  Nodes from other highways and have the largest amount of blocks
 	for _, p := range peers {
 		if p.Height < blk && p.Height+common.ChoosePeerBlockDelta >= h {
 			if p.HW == selfPeerID {
-				c = append(c, p)
+				w.posLocker.RLock()
+				_, ok := w.pos[p.ID]
+				w.posLocker.RUnlock()
+				if ok {
+					c = append(c, p)
+				} else {
+					c2 = append(c2, p)
+				}
 			} else {
 				d = append(d, p)
 			}
 		}
 	}
-	c = filterPeers(c, connectedPeers) // Retain only connected peers
-	return [][]chaindata.PeerWithBlk{a, b, c, d}
+	c = filterPeers(c, connectedPeers)   // Retain only connected peers
+	c2 = filterPeers(c2, connectedPeers) // Retain only connected peers
+	return [][]chaindata.PeerWithBlk{a, a2, b, c, c2, d}
 }
 
 func choosePeerFromGroup(groups [][]chaindata.PeerWithBlk) (chaindata.PeerWithBlk, error) {
