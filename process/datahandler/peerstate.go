@@ -18,9 +18,8 @@ func (handler *PeerStateHandler) HandleDataFromTopic(topicReceived string, dataR
 	var topicPubs []string
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
 	cID := topic.GetCommitteeIDOfTopic(topicReceived)
-	logger.Debugf("[msgpeerstate] Handle topic %v, isInside %v:", topicReceived, handler.FromNode)
+	// logger.Debugf("[msgpeerstate] Handle topic peerstate, cID %v, isInside %v, from %v, from highway: %v", cID, handler.FromNode, dataReceived.GetFrom(), !handler.FromNode)
 	if handler.FromNode {
-		logger.Debugf("[msgpeerstate] Received Peerstate from %v", dataReceived.GetFrom())
 		topicPub := topic.Handler.GetHWPubSubOutSideFromMsg(msgType, cID)
 		topicPubs = append(topicPubs, topicPub)
 		for _, topicPub := range topicPubs {
@@ -30,7 +29,6 @@ func (handler *PeerStateHandler) HandleDataFromTopic(topicReceived string, dataR
 			}
 		}
 	} else {
-		logger.Debugf("[msgpeerstate] Received Peerstate from highway %v", dataReceived.GetFrom())
 		err := handler.BlockchainData.UpdatePeerStateFromHW(dataReceived.GetFrom(), dataReceived.GetData(), byte(cID))
 		if err != nil {
 			logger.Errorf("Update peerState when received message from %v return error %v ", dataReceived.GetFrom(), err)

@@ -157,7 +157,7 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 	if err != nil {
 		logger.Warnf("Received invalid peerID from msg peerstate: %v %s", err, msgPeerState.SenderID)
 	} else {
-		logger.Debugf("Updating committee: pkey = %v pid = %s cid = %v", pkey, pid.String(), committeeID)
+		// logger.Debugf("Updating committee: pkey = %v pid = %s cid = %v", pkey, pid.String(), committeeID)
 		chainData.UpdateCommittee(pkey, pid, committeeID)
 	}
 

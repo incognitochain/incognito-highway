@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"highway/common"
@@ -24,6 +25,8 @@ type ProxyConfig struct {
 	Loglevel      string
 	BootnodePort  int
 	GrafanaDBURL  string
+	HighwayIndex  int
+	PrivateSeed   []byte
 }
 
 func GetProxyConfig() (*ProxyConfig, error) {
@@ -31,8 +34,10 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	proxyPort := flag.Int("proxy_port", 7337, "port for communication with other node (optional, default 7337)")
 	bootnodePort := flag.Int("bootnode_port", 9330, "rpc port, returns list of known highway (optional, default 9330)")
 	adminPort := flag.Int("admin_port", 8080, "rest api /websocket port for administration, monitoring (optional, default 8080)")
-	isProfiling := flag.Bool("profiling", false, "enable profiling through admin port")
+	isProfiling := flag.Bool("profiling", true, "enable profiling through admin port")
 	supportShards := flag.String("support_shards", "all", "shard list that this proxy will work for (optional, default \"all\")")
+	privateSeed := flag.String("privateseed", "", "private seed of this proxy, use  for authentication with other node")
+	index := flag.Int("index", 0, "index of this proxy in list of proxy")
 	privateKey := flag.String("privatekey", "", "private key of this proxy, use  for authentication with other node")
 	bootstrap := flag.String("bootstrap", "", "address of another highway to get list of highways from (ip:port)")
 	version := flag.String("version", "0.1-local", "proxy version")
@@ -44,6 +49,11 @@ func GetProxyConfig() (*ProxyConfig, error) {
 	flag.Parse()
 
 	ss, err := parseSupportShards(*supportShards)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(*privateSeed)
+	seed, err := base64.StdEncoding.DecodeString(*privateSeed)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +72,8 @@ func GetProxyConfig() (*ProxyConfig, error) {
 		Loglevel:      *loglevel,
 		BootnodePort:  *bootnodePort,
 		GrafanaDBURL:  *gDBURL,
+		HighwayIndex:  *index,
+		PrivateSeed:   seed,
 	}
 	// if config.privateKey == "" {
 	// 	config.printConfig()
@@ -109,5 +121,7 @@ func (s ProxyConfig) PrintConfig() {
 	fmt.Println("IsProfiling: ", s.IsProfiling)
 	fmt.Println("Support shards: ", s.SupportShards)
 	fmt.Println("Private Key: ", s.PrivateKey)
+	fmt.Println("Version: ", s.Version)
+	fmt.Println("GrafanaDBURL: ", s.GrafanaDBURL)
 	fmt.Println("============== End Config =============")
 }

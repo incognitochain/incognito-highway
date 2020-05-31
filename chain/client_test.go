@@ -11,8 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	pmocks "highway/proto/mocks"
-
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,7 +21,7 @@ import (
 
 func TestRegisterTopics(t *testing.T) {
 	s := Server{
-		reporter: NewReporter(nil),
+		reporter: NewReporter(&Manager{}),
 		m: &Manager{
 			newPeers: make(chan PeerInfo, 10),
 		},
@@ -56,7 +54,7 @@ func TestValidatorRegister(t *testing.T) {
 	chainData := &chaindata.ChainData{}
 	chainData.Init(8)
 	s := Server{
-		reporter:  NewReporter(nil),
+		reporter:  NewReporter(&Manager{}),
 		chainData: chainData,
 		m: &Manager{
 			newPeers: make(chan PeerInfo, 10),
@@ -75,59 +73,6 @@ func TestValidatorRegister(t *testing.T) {
 	assert.Len(t, chainData.PeerIDByMiningPubkey, 1)
 	assert.Len(t, chainData.ShardByMiningPubkey, 1)
 	assert.Len(t, s.m.newPeers, 1)
-}
-
-func TestGetBlockShardCapped(t *testing.T) {
-	peerStore := &mocks.PeerStore{}
-	peerStore.On("GetPeerHasBlk", mock.Anything, mock.Anything).Return([]chaindata.PeerWithBlk{chaindata.PeerWithBlk{}}, nil)
-
-	cid := 0
-	m := &Manager{}
-	m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{}}
-	m.peers.RWMutex = sync.RWMutex{}
-
-	calledWithTimeout := false
-	toHeight := uint64(0)
-	maxRecvMsgSize := 0
-	serviceClient := &pmocks.HighwayServiceClient{}
-	serviceClient.On("GetBlockShardByHeight", mock.Anything, mock.Anything, mock.Anything).Return(&proto.GetBlockShardByHeightResponse{}, nil).Run(
-		func(args mock.Arguments) {
-			_, calledWithTimeout = args.Get(0).(context.Context).Deadline()
-			toHeight = args.Get(1).(*proto.GetBlockShardByHeightRequest).ToHeight
-			maxRecvMsgSize = args.Get(2).(grpc.MaxRecvMsgSizeCallOption).MaxRecvMsgSize
-		},
-	)
-
-	router := &mocks.Router{}
-	router.On("GetID").Return(peer.ID("123"))
-	router.On("GetHighwayServiceClient", mock.Anything).Return(serviceClient, peer.ID("123"), nil)
-
-	client := &Client{
-		supportShards: []byte{0, 1, 2, 3},
-		m:             m,
-		router:        router,
-		peerStore:     peerStore,
-		reporter:      NewReporter(nil),
-	}
-
-	specific := false
-	from := uint64(123)
-	to := uint64(456)
-	heights := []uint64{}
-	callDepth := int32(0)
-	_, err := client.GetBlockShardByHeight(
-		context.Background(),
-		int32(cid),
-		specific,
-		from,
-		to,
-		heights,
-		callDepth,
-	)
-	assert.Nil(t, err)
-	assert.True(t, calledWithTimeout)
-	assert.Equal(t, 223, int(toHeight))
-	assert.Equal(t, 50<<20, maxRecvMsgSize)
 }
 
 func TestGetClientNode(t *testing.T) {
@@ -337,6 +282,8 @@ func TestChoosePeerFromGroup(t *testing.T) {
 }
 
 func TestCapBlocks(t *testing.T) {
+	defer configMaxBlock()()
+
 	testCases := []struct {
 		desc            string
 		specific        bool
@@ -358,7 +305,7 @@ func TestCapBlocks(t *testing.T) {
 			specific:   false,
 			from:       15,
 			to:         155,
-			expectedTo: 115,
+			expectedTo: 114,
 		},
 		{
 			desc:            "Specific, not exceeded cap",
@@ -395,6 +342,16 @@ func TestCapBlocks(t *testing.T) {
 				assert.Equal(t, tc.expectedTo, to)
 			}
 		})
+	}
+}
+
+func configMaxBlock() func() {
+	maxBlockPerRequest := common.MaxBlocksPerRequest
+	common.MaxBlocksPerRequest = 100
+
+	return func() {
+		// Revert configuration after a test is done
+		common.MaxBlocksPerRequest = maxBlockPerRequest
 	}
 }
 

@@ -23,12 +23,14 @@ func TestKeepConnectionAtStart(t *testing.T) {
 	manager := setupKeepConnectionTest(discoverer, nil)
 	bootstrap := []string{"123123"}
 	go manager.keepHighwayConnection(bootstrap)
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
 	assert.Len(t, manager.Hmap.Peers[0], 2)
 	assert.Len(t, manager.Hmap.Peers[4], 1)
 }
 
 func TestQueryRandomPeer(t *testing.T) {
+	defer configTime()()
+
 	discoverer, rpcUsed := setupDiscoverer(2)
 	manager := setupKeepConnectionTest(discoverer, nil)
 	bootstrap := []string{"123123"}
@@ -51,6 +53,7 @@ func TestConnectInboundPeers(t *testing.T) {
 }
 
 func TestRemoveDeadPeers(t *testing.T) {
+	defer configTime()()
 	discoverer, _ := setupDiscoverer(1)
 	connectedness := []network.Connectedness{network.Connected, network.Connected, network.Connected, network.NotConnected}
 	manager := setupKeepConnectionTest(discoverer, connectedness)
@@ -61,7 +64,8 @@ func TestRemoveDeadPeers(t *testing.T) {
 	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[0])))
 	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[1])))
 	assert.True(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[2])))
-	time.Sleep(common.RouteHighwayKeepaliveTime)
+	manager.checkConnectionStatus()
+	time.Sleep(common.RouteHighwayRemoveDeadline)
 	manager.checkConnectionStatus()
 	assert.False(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[0])))
 	assert.False(t, manager.Hmap.IsConnectedToPeer(peer.ID(pids[1])))
@@ -110,7 +114,6 @@ func setupKeepConnectionTest(discoverer HighwayDiscoverer, connectedness []netwo
 		host:          h,
 		supportShards: []byte{0, 1, 2, 3, 4, 5, 6, 7, 255},
 		discoverer:    discoverer,
-		lastSeen:      map[peer.ID]time.Time{},
 		Hmap:          hmap,
 		hc: &Connector{
 			closePeers: make(chan peer.ID, 10),

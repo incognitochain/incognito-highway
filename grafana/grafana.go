@@ -47,11 +47,12 @@ func NewLog(
 ) *GrafanaLog {
 	taginfo := fmt.Sprintf("hwsystem,uID=%v,networkinfo=%v", uID, networkinfo)
 	return &GrafanaLog{
+		tags:        make(map[string]interface{}),
 		param:       make(map[string]interface{}),
 		uID:         uID,
 		networkinfo: networkinfo,
 		dbURL:       dbURL,
-		tag:         taginfo,
+		fixedTag:    taginfo,
 	}
 }
 
@@ -69,7 +70,7 @@ func (gl *GrafanaLog) Start() {
 			runtime.ReadMemStats(&m)
 			//disk usage
 			fs := syscall.Statfs_t{}
-			err := syscall.Statfs("/.", &fs)
+			err := syscall.Statfs("./", &fs)
 			if err == nil {
 				All := fs.Blocks * uint64(fs.Bsize)
 				Free := fs.Bfree * uint64(fs.Bsize)
@@ -86,25 +87,30 @@ func (gl *GrafanaLog) Start() {
 }
 
 type GrafanaLog struct {
+	tags  map[string]interface{}
 	param map[string]interface{}
 	sync.RWMutex
 	dbURL       string
 	networkinfo string
 	uID         string
-	tag         string
+	fixedTag    string
 }
 
 func (gl *GrafanaLog) CopyLog(p ...interface{}) *GrafanaLog {
 	nl := (&GrafanaLog{
+		tags:        make(map[string]interface{}),
 		param:       make(map[string]interface{}),
 		dbURL:       gl.dbURL,
 		networkinfo: gl.networkinfo,
 		uID:         gl.uID,
-		tag:         gl.tag,
+		fixedTag:    gl.fixedTag,
 	}).Add(p...)
 	gl.RLock()
 	for k, v := range gl.param {
 		nl.param[k] = v
+	}
+	for k, v := range gl.tags {
+		nl.tags[k] = v
 	}
 	gl.RUnlock()
 	return nl
@@ -125,7 +131,21 @@ func (gl *GrafanaLog) Add(p ...interface{}) *GrafanaLog {
 	return gl
 }
 
-func (gl *GrafanaLog) AllMetricString() string {
+func (gl *GrafanaLog) AddTags(p ...interface{}) *GrafanaLog {
+	if len(p) == 0 || len(p)%2 != 0 {
+		return gl
+	}
+	gl.Lock()
+	defer gl.Unlock()
+	for i, v := range p {
+		if i%2 == 0 {
+			gl.tags[v.(string)] = p[i+1]
+		}
+	}
+	return gl
+}
+
+func (gl *GrafanaLog) AllFields() string {
 	mt := ""
 	gl.RLock()
 	defer gl.RUnlock()
@@ -138,22 +158,46 @@ func (gl *GrafanaLog) AllMetricString() string {
 	return mt
 }
 
+func (gl *GrafanaLog) AllTags() string {
+	mt := ""
+	gl.RLock()
+	defer gl.RUnlock()
+	for k, v := range gl.tags {
+		mt += fmt.Sprintf("%s=%v,", k, v)
+	}
+	if len(mt) > 0 {
+		mt = mt[:len(mt)-1]
+		mt = fmt.Sprintf(",%s", mt)
+	}
+	return mt
+}
+
 func (gl *GrafanaLog) Write() {
-	bodyStr := fmt.Sprintf("%s %s %v", gl.tag, gl.AllMetricString(), time.Now().UnixNano())
-	//	fmt.Println(bodyStr)
+	bodyStr := fmt.Sprintf("%s%s %s %v", gl.fixedTag, gl.AllTags(), gl.AllFields(), time.Now().UnixNano())
+	go makeRequest(bodyStr, gl.dbURL)
+}
+
+func (gl *GrafanaLog) WriteContent(content string) {
+	go makeRequest(content, gl.dbURL)
+}
+
+func (gl *GrafanaLog) GetFixedTag() string {
+	return gl.fixedTag
+}
+
+func makeRequest(bodyStr, dbURL string) {
 	body := strings.NewReader(bodyStr)
-	_ = body
-	go func() {
-		req, err := http.NewRequest(http.MethodPost, gl.dbURL, body)
-		req.Header.Set("Content-Type", "application/json")
-		if err != nil {
-			logger.Debug("Create Request failed with err: ", err)
-			return
-		}
-		ctx, cancel := context.WithTimeout(req.Context(), 30*time.Second)
-		defer cancel()
-		req = req.WithContext(ctx)
-		client := &http.Client{}
-		client.Do(req)
-	}()
+	// body := bytes.NewReader([]byte(bodyStr))
+	req, err := http.NewRequest(http.MethodPost, dbURL, body)
+	req.ContentLength = int64(len(bodyStr))
+	req.Header.Set("Content-Type", "application/json")
+	if err != nil {
+		logger.Debug("Create Request failed with err: ", err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(req.Context(), 30*time.Second)
+	defer cancel()
+	req = req.WithContext(ctx)
+	client := &http.Client{}
+	client.Do(req)
 }

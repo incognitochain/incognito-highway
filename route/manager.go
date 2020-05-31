@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"highway/common"
+	"highway/grafana"
 	"highway/process"
 	"highway/proto"
 	hmap "highway/route/hmap"
@@ -28,8 +29,8 @@ type Manager struct {
 	Hmap       *hmap.Map
 	hc         *Connector
 	host       host.Host
-	lastSeen   map[peer.ID]time.Time
 	discoverer HighwayDiscoverer
+	gralog     *grafana.GrafanaLog
 }
 
 func NewManager(
@@ -41,6 +42,8 @@ func NewManager(
 	addr multiaddr.Multiaddr,
 	rpcUrl string,
 	pubsubManager *process.PubSubManager,
+	gl *grafana.GrafanaLog,
+	whitelisthw map[string]struct{},
 ) *Manager {
 	p := peer.AddrInfo{
 		ID:    h.ID(),
@@ -53,7 +56,6 @@ func NewManager(
 		supportShards: supportShards,
 		Hmap:          hmap,
 		discoverer:    new(rpcserver.RPCClient),
-		lastSeen:      map[peer.ID]time.Time{},
 		hc: NewConnector(
 			h,
 			prtc,
@@ -64,8 +66,10 @@ func NewManager(
 			rpcUrl,
 			p,
 			supportShards,
+			whitelisthw,
 		),
-		host: h,
+		host:   h,
+		gralog: gl,
 	}
 
 	go hw.keepHighwayConnection(bootstrap)
@@ -142,9 +146,8 @@ func (h *Manager) keepHighwayConnection(bootstrap []string) {
 }
 
 func (h *Manager) checkConnectionStatus() {
-	removeDeadline := time.Duration(common.RouteHighwayKeepaliveTime)
+	maxRetryDuration := time.Duration(common.RouteHighwayRemoveDeadline)
 	peerMap := h.Hmap.CopyPeersMap()
-	lastSeen := h.lastSeen
 	for _, peers := range peerMap {
 		for _, p := range peers {
 			// No need to connect to ourself
@@ -153,23 +156,20 @@ func (h *Manager) checkConnectionStatus() {
 			}
 
 			if h.host.Network().Connectedness(p.ID) == network.Connected {
-				lastSeen[p.ID] = time.Now()
-				h.Hmap.ConnectToShardOfPeer(p) // Reupdate here to make sure inbound connection is accounted
+				// Reupdate here to make sure inbound connection is accounted
+				h.Hmap.ConnectToShardOfPeer(p)
 				continue
 			}
+
+			// Not connected, remove from map if it's been too long
+			h.Hmap.UpdateStatus(p.ID, false)
 			logger.Infof("Disconnected to peer %+v", p)
-
-			if _, ok := lastSeen[p.ID]; !ok {
-				lastSeen[p.ID] = time.Now()
-			}
-
-			// Not connected, remove from map it's been too long
-			if time.Since(lastSeen[p.ID]) > removeDeadline {
-				logger.Infof("Removing peer %+v, lastSeen %v", p, lastSeen[p.ID].Format(time.RFC3339))
+			s, _ := h.Hmap.Status(p.ID)
+			if !s.Connecting && time.Since(s.Start) > maxRetryDuration {
+				logger.Infof("Removing peer %+v, lastSeen %v", p, s.Start.Format(time.RFC3339))
 				h.Hmap.RemovePeer(p)
 				h.Hmap.DisconnectToShardOfPeer(p)
 				h.hc.CloseConnection(p.ID)
-				delete(lastSeen, p.ID)
 			}
 		}
 	}
@@ -385,18 +385,19 @@ func (h *Manager) GetHighwayServiceClient(pid peer.ID) (proto.HighwayServiceClie
 	return proto.NewHighwayServiceClient(conn), pid, nil
 }
 
-// GetClientWithBlock returns the grpc client with connection to a highway
+// GetClientSupportShard returns the grpc client with connection to a highway
 // supporting a specific shard
 func (h *Manager) GetClientSupportShard(cid int) (proto.HighwayServiceClient, peer.ID, error) {
-	// TODO(@0xbunyip): make sure peer is still connected
-	peers := h.Hmap.Peers[byte(cid)]
-	if len(peers) == 0 {
+	peersMap := h.Hmap.CopyPeersMap()
+	peersMapOfCID := map[byte][]peer.AddrInfo{}
+	peersMapOfCID[byte(cid)] = peersMap[byte(cid)]
+
+	chosen, ok := getRandomPeer(peersMapOfCID, []peer.ID{h.ID})
+	if !ok {
 		return nil, peer.ID(""), errors.Errorf("no route client with block for cid = %v", cid)
 	}
-
-	// TODO(@0xbunyip): get peer randomly here?
-	pid := peers[0].ID
-	return h.GetHighwayServiceClient(pid)
+	// TODO(@0xbunyip): make sure peer is still connected
+	return h.GetHighwayServiceClient(chosen.ID)
 }
 
 func (h *Manager) GetShardsConnected() []byte {

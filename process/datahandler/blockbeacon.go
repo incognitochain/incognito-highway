@@ -4,6 +4,8 @@ import (
 	"highway/process/topic"
 
 	libp2p "github.com/libp2p/go-libp2p-pubsub"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type BlkBeaconHandler struct {
@@ -30,4 +32,20 @@ func (handler *BlkBeaconHandler) HandleDataFromTopic(topicReceived string, dataR
 		}
 	}
 	return nil
+}
+
+func init() {
+	cf := zap.NewDevelopmentConfig()
+	cf.Level.SetLevel(zapcore.FatalLevel)
+	l, _ := cf.Build()
+	logger = l.Sugar()
+
+	// chain.InitLogger(logger)
+	// chaindata.InitLogger(logger)
+	// process.InitLogger(logger)
+	// topic.InitLogger(logger)
+	// health.InitLogger(logger)
+	// rpcserver.InitLogger(logger)
+	// hmap.InitLogger(logger)
+	InitLogger(logger)
 }
