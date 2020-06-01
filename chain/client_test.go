@@ -183,7 +183,6 @@ func TestChoosePeerID(t *testing.T) {
 }
 
 func TestGroupPeers(t *testing.T) {
-	// Comment filterPeers (for filter disconnected peer) before test
 	w := newWatcher(nil, 0)
 	w.pos = map[peer.ID]position{}
 	w.setPeerPosition(peer.ID("123123123"), position{
