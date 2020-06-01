@@ -141,12 +141,9 @@ func (m *Manager) watchPeer(pinfo PeerInfo) {
 	if savedAddr, ok := m.conns.addrs[pinfo.ID]; ok {
 		// Use global ip address if we have it
 		maddr = savedAddr
-		logger.Info("maddr global:", maddr)
 	} else if peerstoreAddrs := m.host.Peerstore().PeerInfo(pinfo.ID).Addrs; len(peerstoreAddrs) > 0 {
 		// Otherwise, get an ip address (even if it's local)
-		logger.Info("maddrs", peerstoreAddrs)
 		maddr = peerstoreAddrs[0]
-		logger.Info("maddr default:", maddr)
 	}
 	m.conns.RUnlock()
 
@@ -154,7 +151,6 @@ func (m *Manager) watchPeer(pinfo PeerInfo) {
 		ip4, _ = maddr.ValueForProtocol(multiaddr.P_IP4)
 		port, _ = maddr.ValueForProtocol(multiaddr.P_TCP)
 	}
-	logger.Info("maddr final:", ip4, port)
 	m.watcher.markPeer(pinfo, fmt.Sprintf("%s:%s", ip4, port))
 }
 

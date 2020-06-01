@@ -6,11 +6,13 @@ import (
 	"highway/process/topic"
 	"testing"
 
+	crypto "github.com/libp2p/go-libp2p-crypto"
 	libp2p "github.com/libp2p/go-libp2p-pubsub"
 )
 
 func TestBlkBeaconHandler_HandleDataFromTopic(t *testing.T) {
-	proxyHost := p2p.NewHost("0", "0.0.0.0", 8000, "CAMSeTB3AgEBBCDtIHJcnRKCWVtitn0gkRTHlKvJCvSO12XVtzHna3oSEqAKBggqhkjOPQMBB6FEA0IABKQXV3mHcxNSmL3n4mtWTO4vNP2IuPvizYngBGxf6Fx9cCJhYUYH8r+Plp40dVcz53iXFxbtxIU3Z5oIVVOsYvI=")
+	pri, _, _ := crypto.GenerateKeyPair(crypto.ECDSA, 2048)
+	proxyHost := p2p.NewHost("0", "0.0.0.0", 8000, pri)
 	FloodMachine, err := libp2p.NewFloodSub(context.Background(), proxyHost.Host)
 	if err != nil {
 		t.Error(err)

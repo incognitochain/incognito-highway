@@ -201,6 +201,7 @@ func (w *watcher) readKeys() {
 
 	err = json.Unmarshal(keyData, &keylist)
 	if err != nil {
+		logger.Error(err)
 		return
 	}
 
@@ -227,6 +228,7 @@ func (w *watcher) readKeys() {
 			continue
 		}
 		pubkey := k.GetMiningKeyBase58(common.BlsConsensus)
+		logger.Infof("Beacon pubkey: %d %v", id, pubkey)
 		w.watchingPubkeys[pubkey] = position{
 			cid: cid,
 			id:  id,
