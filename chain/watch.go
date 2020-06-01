@@ -67,15 +67,11 @@ func (w *watcher) processInPeer(pinfo PeerInfoWithIP) {
 		connected: 1,
 		ip:        pinfo.ip,
 	}
-	w.posLocker.Lock()
-	w.pos[pinfo.ID] = pos
-	w.posLocker.Unlock()
+	w.setPeerPosition(pinfo.ID, pos)
 }
 
 func (w *watcher) processOutPeer(pid peer.ID) {
-	w.posLocker.RLock()
-	pos, ok := w.pos[pid]
-	w.posLocker.RUnlock()
+	pos, ok := w.getPeerPosition(pid)
 	if ok {
 		if winfo, ok := w.data[pos]; ok {
 			logger.Infof("Stop watching peer: cid = %v, id = %v, ip = %v, pid = %s", pos.cid, pos.id, winfo.ip, pid.String())
@@ -242,4 +238,17 @@ func (w *watcher) readKeys() {
 			id:  id,
 		}
 	}
+}
+
+func (w *watcher) getPeerPosition(pID peer.ID) (position, bool) {
+	w.posLocker.RLock()
+	pos, ok := w.pos[pID]
+	w.posLocker.RUnlock()
+	return pos, ok
+}
+
+func (w *watcher) setPeerPosition(pID peer.ID, pos position) {
+	w.posLocker.Lock()
+	w.pos[pID] = pos
+	w.posLocker.Unlock()
 }

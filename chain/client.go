@@ -218,16 +218,13 @@ func groupPeersByDistance(
 	for _, p := range peers {
 		if p.Height >= blk {
 			if p.HW == selfPeerID {
-				w.posLocker.RLock()
-				_, ok := w.pos[p.ID]
-				w.posLocker.RUnlock()
+				_, ok := w.getPeerPosition(p.ID)
 				if ok {
 					a = append(a, p)
 				} else {
 					a2 = append(a2, p)
 				}
 			} else {
-
 				b = append(b, p)
 			}
 		}
@@ -244,9 +241,7 @@ func groupPeersByDistance(
 	for _, p := range peers {
 		if p.Height < blk && p.Height+common.ChoosePeerBlockDelta >= h {
 			if p.HW == selfPeerID {
-				w.posLocker.RLock()
-				_, ok := w.pos[p.ID]
-				w.posLocker.RUnlock()
+				_, ok := w.getPeerPosition(p.ID)
 				if ok {
 					c = append(c, p)
 				} else {

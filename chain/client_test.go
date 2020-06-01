@@ -81,7 +81,9 @@ func TestGetClientNode(t *testing.T) {
 	peerStore.On("GetPeerHasBlk", mock.Anything, mock.Anything).Return([]chaindata.PeerWithBlk{chaindata.PeerWithBlk{HW: hwPID, Height: 1235}}, nil)
 
 	cid := 0
-	m := &Manager{}
+	m := &Manager{
+		watcher: newWatcher(nil, 0),
+	}
 	m.peers.ids = map[int][]PeerInfo{cid: []PeerInfo{PeerInfo{ID: peer.ID("")}}}
 	m.peers.RWMutex = sync.RWMutex{}
 
@@ -184,14 +186,14 @@ func TestGroupPeers(t *testing.T) {
 	// Comment filterPeers (for filter disconnected peer) before test
 	w := newWatcher(nil, 0)
 	w.pos = map[peer.ID]position{}
-	w.pos[peer.ID("123123123")] = position{
+	w.setPeerPosition(peer.ID("123123123"), position{
 		cid: 2,
 		id:  1,
-	}
-	w.pos[peer.ID("123123124")] = position{
+	})
+	w.setPeerPosition(peer.ID("123123124"), position{
 		cid: 2,
 		id:  1,
-	}
+	})
 	// Connected, with blk
 	selfPeerID := peer.ID("abc")
 	blk := uint64(100)
@@ -256,7 +258,7 @@ func TestGroupPeers(t *testing.T) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
 
-	connectedPeers := []PeerInfo{PeerInfo{ID: peer.ID("")}, PeerInfo{ID: selfPeerID}}
+	connectedPeers := []PeerInfo{PeerInfo{ID: peer.ID("")}, PeerInfo{ID: selfPeerID}, PeerInfo{ID: peer.ID("123123124")}, PeerInfo{ID: peer.ID("123123123")}}
 	groups := groupPeersByDistance(peers, blk, selfPeerID, connectedPeers, w)
 	assert.Equal(t, expected, groups)
 }
