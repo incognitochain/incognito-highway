@@ -200,6 +200,7 @@ func (g *BlkGetter) CallForBlocks(
 			}
 			go p.StreamBlkByHash(ctx, nreqByHash, blkCh)
 			missing := g.handleBlkByHashRecv(ctx, nreqByHash, blkCh, providers[:i])
+			logger.Infof("[stream] Provider %v return %v block", i, len(nreqByHash.GetHashes())-len(missing))
 			nreqByHash = newReqByHash(nreqByHash, missing)
 			break
 		case 0:
@@ -208,6 +209,7 @@ func (g *BlkGetter) CallForBlocks(
 			}
 			go p.StreamBlkByHeightv2(ctx, nreqByHeight, blkCh)
 			missing := g.handleBlkByHeightRecv(ctx, nreqByHeight, blkCh, providers[:i])
+			logger.Infof("[stream] Provider %v return %v block", i, len(nreqByHeight.GetHeights())-len(missing))
 			nreqByHeight = newReqByHeight(nreqByHeight, missing)
 			break
 		}

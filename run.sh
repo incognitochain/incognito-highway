@@ -75,7 +75,7 @@ if [ "$1" == "lc8" ]; then
 fi
 
 if [ "$1" == "newlc1" ]; then
-./highway -privateseed YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE= -index 0 -support_shards all  -host "0.0.0.0"  -admin_port 8080 -proxy_port 7337 -bootnode_port 9335  --loglevel debug --gdburl ${GDBURL} --version "0.1-local"
+./highway -privateseed YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE= -index 0 -support_shards all  -host "0.0.0.0"  -admin_port 8080 -proxy_port 7337 -bootnode_port 9330  --loglevel debug --gdburl ${GDBURL} --version "0.1-local"
 fi
 
 if [ "$1" == "newlc2" ]; then
