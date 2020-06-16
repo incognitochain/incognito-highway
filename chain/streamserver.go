@@ -12,15 +12,21 @@ func (s *Server) StreamBlockByHeight(
 	req *proto.BlockByHeightRequest,
 	ss proto.HighwayService_StreamBlockByHeightServer,
 ) error {
-	if req.GetCallDepth() > common.MaxCallDepth {
-		return errors.Errorf("reach max calldepth %v ", req)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
-	logger.Infof("Receive StreamBlockByHeight request, type = %s, heights = %v %v", req.GetType().String(), req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1])
-
+	logger.Infof("Receive StreamBlockByHeight request, type = %s - specific %v, heights = %v %v #%v", req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
+	if req.GetCallDepth() > common.MaxCallDepth {
+		err := errors.Errorf("reach max calldepth %v ", req)
+		logger.Error(err)
+		return err
+	}
+	if !proto.CheckReq(req) {
+		err := errors.Errorf("Invalid request")
+		logger.Error(err)
+		return err
+	}
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
 	// logger.Infof("[stream] listen gblkRecv Start")
