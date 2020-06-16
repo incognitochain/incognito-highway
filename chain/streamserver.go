@@ -12,9 +12,6 @@ func (s *Server) StreamBlockByHeight(
 	req *proto.BlockByHeightRequest,
 	ss proto.HighwayService_StreamBlockByHeightServer,
 ) error {
-	if req.GetCallDepth() > common.MaxCallDepth {
-		return errors.Errorf("reach max calldepth %v ", req)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
