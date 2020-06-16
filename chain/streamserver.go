@@ -22,8 +22,7 @@ func (s *Server) StreamBlockByHeight(
 		logger.Error(err)
 		return err
 	}
-	if !proto.CheckReq(req) {
-		err := errors.Errorf("Invalid request")
+	if err := proto.CheckReq(req); err != nil {
 		logger.Error(err)
 		return err
 	}
