@@ -29,28 +29,17 @@ func (s *Server) StreamBlockByHeight(
 		logger.Error(err)
 		return err
 	}
-	if err := proto.CheckReq(req); err != nil {
+	if err := proto.CheckReqNCapBlocks(req); err != nil {
 		logger.Error(err)
 		return err
 	}
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
-	// logger.Infof("[stream] listen gblkRecv Start")
 	sent, err := SendWithTimeout(blkRecv, common.MaxTimeForSend, ss.Send)
 	logger.Infof("[stream] Successfully sent %v block to client", sent)
 	if err != nil {
 		return err
 	}
-	for blk := range blkRecv {
-		if len(blk.Data) == 0 {
-			return nil
-		}
-		if err := ss.Send(&proto.BlockData{Data: blk.Data}); err != nil {
-			logger.Infof("[stream] Trying send to client but received error %v, return and cancel context", err)
-			return err
-		}
-	}
-	// logger.Infof("[stream] listen gblkRecv End")
 	return nil
 }
 
