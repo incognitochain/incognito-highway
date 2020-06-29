@@ -33,6 +33,7 @@ var (
 	ChoosePeerBlockDelta = uint64(300)
 	MaxBlocksPerRequest  = uint64(900)
 	MaxTimePerRequest    = 30 * time.Second
+	MaxTimeForSend       = 12 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second
 	MaxTimeKeepPeerState      = 90 * time.Second
