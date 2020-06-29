@@ -6,6 +6,7 @@ import (
 	"highway/proto"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/peer"
 )
 
 func (s *Server) StreamBlockByHeight(
@@ -16,7 +17,12 @@ func (s *Server) StreamBlockByHeight(
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
-	logger.Infof("Receive StreamBlockByHeight request, type = %s - specific %v, heights = %v %v #%v", req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
+	pClient, ok := peer.FromContext(ss.Context())
+	pIP := "Can not get IP, so sorry"
+	if ok {
+		pIP = pClient.Addr.String()
+	}
+	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	if req.GetCallDepth() > common.MaxCallDepth {
 		err := errors.Errorf("reach max calldepth %v ", req)
 		logger.Error(err)
