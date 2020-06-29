@@ -4,6 +4,7 @@ import (
 	context "context"
 	"highway/common"
 	"highway/proto"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/peer"
@@ -35,6 +36,11 @@ func (s *Server) StreamBlockByHeight(
 	g := NewBlkGetter(req)
 	blkRecv := g.Get(ctx, s)
 	// logger.Infof("[stream] listen gblkRecv Start")
+	sent, err := SendWithTimeout(blkRecv, common.MaxTimeForSend, ss.Send)
+	logger.Infof("[stream] Successfully sent %v block to client", sent)
+	if err != nil {
+		return err
+	}
 	for blk := range blkRecv {
 		if len(blk.Data) == 0 {
 			return nil
@@ -46,4 +52,30 @@ func (s *Server) StreamBlockByHeight(
 	}
 	// logger.Infof("[stream] listen gblkRecv End")
 	return nil
+}
+
+func SendWithTimeout(blkChan chan common.ExpectedBlk, timeout time.Duration, send func(*proto.BlockData) error) (uint, error) {
+	errChan := make(chan error)
+	defer close(errChan)
+	t := time.NewTimer(timeout)
+	defer t.Stop()
+	numOfSentBlk := uint(0)
+	for blk := range blkChan {
+		if len(blk.Data) == 0 {
+			return numOfSentBlk, nil
+		}
+		go func() {
+			errChan <- send(&proto.BlockData{Data: blk.Data})
+		}()
+		select {
+		case <-t.C:
+			return numOfSentBlk, errors.Errorf("[stream] Trying send to client but timeout")
+		case err := <-errChan:
+			if err != nil {
+				return numOfSentBlk, err
+			}
+			numOfSentBlk++
+		}
+	}
+	return numOfSentBlk, nil
 }
