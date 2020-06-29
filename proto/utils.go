@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func CheckReq(req *BlockByHeightRequest) error {
+func CheckReqNCapBlocks(req *BlockByHeightRequest) error {
 	if len(req.Heights) < 1 {
 		return errors.Errorf("List requested heights is empty")
 	}
@@ -21,12 +21,18 @@ func CheckReq(req *BlockByHeightRequest) error {
 			}
 			req.Heights[0]++
 		}
+		if req.Heights[1] > req.Heights[0]+common.MaxBlocksPerRequest {
+			req.Heights[1] = req.Heights[0] + common.MaxBlocksPerRequest
+		}
 	} else {
 		sort.Slice(req.Heights, func(i, j int) bool {
 			return req.Heights[i] < req.Heights[j]
 		})
 		if req.Heights[0] == 1 {
 			req.Heights[0] = 2
+		}
+		if uint64(len(req.Heights)) > common.MaxBlocksPerRequest {
+			req.Heights = req.Heights[:common.MaxBlocksPerRequest]
 		}
 	}
 	return nil
