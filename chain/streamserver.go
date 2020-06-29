@@ -55,8 +55,8 @@ func (s *Server) StreamBlockByHeight(
 }
 
 func SendWithTimeout(blkChan chan common.ExpectedBlk, timeout time.Duration, send func(*proto.BlockData) error) (uint, error) {
-	errChan := make(chan error)
-	defer close(errChan)
+	errChan := make(chan error, 10)
+	// defer close(errChan)
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	numOfSentBlk := uint(0)
