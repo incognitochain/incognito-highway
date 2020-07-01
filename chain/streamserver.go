@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/peer"
 )
 
 func (s *Server) StreamBlockByHeight(
@@ -17,7 +18,12 @@ func (s *Server) StreamBlockByHeight(
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
-	logger.Infof("Receive StreamBlockByHeight request spec %v, type = %s, heights = %v %v", req.Specific, req.GetType().String(), req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1])
+	pClient, ok := peer.FromContext(ss.Context())
+	pIP := "Can not get IP, so sorry"
+	if ok {
+		pIP = pClient.Addr.String()
+	}
+	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	if err := proto.CheckReqNCapBlocks(req); err != nil {
 		logger.Error(err)
 		return err
@@ -44,7 +50,12 @@ func (s *Server) StreamBlockByHash(
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
-	logger.Infof("Receive StreamBlockByHash request, type = %s, hashes = %v %v", req.GetType().String(), req.GetHashes()[0], req.GetHashes()[len(req.GetHashes())-1])
+	pClient, ok := peer.FromContext(ss.Context())
+	pIP := "Can not get IP, so sorry"
+	if ok {
+		pIP = pClient.Addr.String()
+	}
+	logger.Infof("Receive StreamBlockByHash request from IP: %v, type = %s, hashes = %v %v", pIP, req.GetType().String(), req.GetHashes()[0], req.GetHashes()[len(req.GetHashes())-1])
 
 	g := NewBlkGetter(nil, req)
 	blkRecv := g.Get(ctx, s)
