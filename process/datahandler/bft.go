@@ -1,6 +1,6 @@
 package datahandler
 
-import libp2p "github.com/libp2p/go-libp2p-pubsub"
+import libp2p "github.com/incognitochain/go-libp2p-pubsub"
 
 type BFTHandler struct {
 }

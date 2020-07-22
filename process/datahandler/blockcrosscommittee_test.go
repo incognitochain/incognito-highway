@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	crypto "github.com/libp2p/go-libp2p-crypto"
-	libp2p "github.com/libp2p/go-libp2p-pubsub"
+	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 )
 
 func TestBlkCrossCommitteeHandler_HandleDataFromTopic(t *testing.T) {

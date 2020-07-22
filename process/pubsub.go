@@ -13,7 +13,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/host"
 	peer "github.com/libp2p/go-libp2p-peer"
-	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	p2pPubSub "github.com/incognitochain/go-libp2p-pubsub"
 	"github.com/patrickmn/go-cache"
 )
 
