@@ -200,7 +200,7 @@ func (g *BlkGetter) CallForBlocks(
 			}
 			go p.StreamBlkByHash(ctx, nreqByHash, blkCh)
 			missing := g.handleBlkByHashRecv(ctx, nreqByHash, blkCh, providers[:i])
-			logger.Infof("[stream] Provider %v return %v block", i, len(nreqByHash.GetHashes())-len(missing))
+			logger.Infof("[stream] Provider %v return %v block", i, getReqNumHashes(nreqByHash)-len(missing))
 			nreqByHash = newReqByHash(nreqByHash, missing)
 			break
 		case 0:
@@ -209,7 +209,7 @@ func (g *BlkGetter) CallForBlocks(
 			}
 			go p.StreamBlkByHeightv2(ctx, nreqByHeight, blkCh)
 			missing := g.handleBlkByHeightRecv(ctx, nreqByHeight, blkCh, providers[:i])
-			logger.Infof("[stream] Provider %v return %v block", i, len(nreqByHeight.GetHeights())-len(missing))
+			logger.Infof("[stream] Provider %v return %v block", i, getReqNumBlks(nreqByHeight)-len(missing))
 			nreqByHeight = newReqByHeight(nreqByHeight, missing)
 			break
 		}
@@ -242,4 +242,19 @@ func (g *BlkGetter) handleBlkByHeightRecv(
 		}
 	}
 	return missing
+}
+
+func getReqNumBlks(
+	req *proto.BlockByHeightRequest,
+) int {
+	if req.Specific {
+		return len(req.Heights)
+	}
+	return int(req.Heights[len(req.Heights)-1] - req.Heights[0] + 1)
+}
+
+func getReqNumHashes(
+	req *proto.BlockByHashRequest,
+) int {
+	return len(req.Hashes)
 }
