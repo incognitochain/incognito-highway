@@ -152,14 +152,16 @@ func (g *BlkGetter) handleBlkByHashRecv(
 			missing = append(missing, blk.Hash)
 		} else {
 			g.newBlk <- blk
-			go func(providers []Provider, blk common.ExpectedBlk) {
-				for _, p := range providers {
-					err := p.SetSingleBlockByHash(ctx, req, blk)
-					if err != nil {
-						logger.Errorf("[stream] Caching return error %v", err)
+			if req.Type != proto.BlkType_BlkS2B {
+				go func(providers []Provider, blk common.ExpectedBlk) {
+					for _, p := range providers {
+						err := p.SetSingleBlockByHash(ctx, req, blk)
+						if err != nil {
+							logger.Errorf("[stream] Caching return error %v", err)
+						}
 					}
-				}
-			}(providers, blk)
+				}(providers, blk)
+			}
 		}
 	}
 	return missing
@@ -198,6 +200,11 @@ func (g *BlkGetter) CallForBlocks(
 			if nreqByHash == nil {
 				break
 			}
+			if g.reqByHash.Type == proto.BlkType_BlkS2B {
+				if i == 0 {
+					continue
+				}
+			}
 			go p.StreamBlkByHash(ctx, nreqByHash, blkCh)
 			missing := g.handleBlkByHashRecv(ctx, nreqByHash, blkCh, providers[:i])
 			logger.Infof("[stream] Provider %v return %v block", i, getReqNumHashes(nreqByHash)-len(missing))
@@ -206,6 +213,11 @@ func (g *BlkGetter) CallForBlocks(
 		case 0:
 			if nreqByHeight == nil {
 				break
+			}
+			if g.reqByHeight.Type == proto.BlkType_BlkS2B {
+				if i == 0 {
+					continue
+				}
 			}
 			go p.StreamBlkByHeightv2(ctx, nreqByHeight, blkCh)
 			missing := g.handleBlkByHeightRecv(ctx, nreqByHeight, blkCh, providers[:i])
@@ -231,14 +243,16 @@ func (g *BlkGetter) handleBlkByHeightRecv(
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
-			go func(providers []Provider, blk common.ExpectedBlk) {
-				for _, p := range providers {
-					err := p.SetSingleBlockByHeightv2(ctx, req, blk)
-					if err != nil {
-						logger.Errorf("[stream] Caching return error %v", err)
+			if req.Type != proto.BlkType_BlkS2B {
+				go func(providers []Provider, blk common.ExpectedBlk) {
+					for _, p := range providers {
+						err := p.SetSingleBlockByHeightv2(ctx, req, blk)
+						if err != nil {
+							logger.Errorf("[stream] Caching return error %v", err)
+						}
 					}
-				}
-			}(providers, blk)
+				}(providers, blk)
+			}
 		}
 	}
 	return missing
