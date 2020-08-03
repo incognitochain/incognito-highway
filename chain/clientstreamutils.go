@@ -84,7 +84,6 @@ func (c *Client) StreamBlkByHeightv2(
 	logger := Logger(ctx)
 	var stream proto.HighwayService_StreamBlockByHeightClient
 	defer close(blkChan)
-	logger.Infof("[stream] Server call Client: Start stream request from peer %v, type %s, shard %d -> %d, #heights %d", req.GetSyncFromPeer(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHeights()))
 
 	var (
 		sc  proto.HighwayServiceClient
@@ -98,9 +97,9 @@ func (c *Client) StreamBlkByHeightv2(
 		}
 	} else {
 		logger.Infof("[stream2] Call for block. %v %v", req.GetSyncFromPeer(), c.router.CheckHWPeerID(req.GetSyncFromPeer()))
-		sc, _, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
+		sc, pID, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
 	}
-
+	logger.Infof("[stream] Server call Client: Start stream request from peer %v, HW call peer %v, type %s, shard %d -> %d, #heights %d", req.GetSyncFromPeer(), pID.String(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHeights()))
 	if (err != nil) || (sc == nil) {
 		err = errors.Errorf("[stream] getClientWithBlock return error %v, sc return %v", err, sc)
 		logger.Errorf("[stream] getClientWithBlock return error %v", err)
@@ -168,7 +167,6 @@ func (c *Client) StreamBlkByHash(
 	logger := Logger(ctx)
 	var stream proto.HighwayService_StreamBlockByHashClient
 	defer close(blkChan)
-	logger.Infof("[stream] Server call Client: Start stream request, type %s, shard %d -> %d, #hash %d", req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHashes()))
 	var (
 		sc  proto.HighwayServiceClient
 		err error
@@ -180,9 +178,9 @@ func (c *Client) StreamBlkByHash(
 			sc, err = c.cc.GetServiceClient(pID)
 		}
 	} else {
-		sc, _, err = c.getClientWithHashes(int(req.GetFrom()), req.GetHashes())
+		sc, pID, err = c.getClientWithHashes(int(req.GetFrom()), req.GetHashes())
 	}
-
+	logger.Infof("[stream] Server call Client: Start stream request, call client %v, type %s, shard %d -> %d, #hash %d", pID.String(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHashes()))
 	if (err != nil) || (sc == nil) {
 		err = errors.Errorf("[stream] getClientWithBlock return error %v, sc return %v", err, sc)
 		logger.Errorf("[stream] getClientWithBlock return error %v", err)
