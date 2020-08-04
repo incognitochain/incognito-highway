@@ -191,13 +191,13 @@ func RegisterServer(
 	chainData *chaindata.ChainData,
 	reporter *Reporter,
 ) (*Server, error) {
-	memcache, err := NewRistrettoMemCache()
-	if err != nil {
-		return nil, err
-	}
+	// memcache, err := NewRistrettoMemCache()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	s := &Server{
-		Providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
+		Providers: []Provider{hc}, // NOTE: memcache must go before client
 		m:         m,
 		reporter:  reporter,
 		chainData: chainData,
