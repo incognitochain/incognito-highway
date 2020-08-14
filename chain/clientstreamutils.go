@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	grpcpeer "google.golang.org/grpc/peer"
 )
 
 func (c *Client) StreamBlkByHeight(
@@ -113,7 +114,12 @@ func (c *Client) StreamBlkByHeightv2(
 			if err != nil {
 				logger.Errorf("[stream] Server call Client return error %v", err)
 			} else {
-				logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
+				pClient, ok := grpcpeer.FromContext(stream.Context())
+				pIP := "Can not get IP, so sorry"
+				if ok {
+					pIP = pClient.Addr.String()
+				}
+				logger.Infof("[stream] Server call Client: OK, return stream %v from IP %v", stream, pIP)
 				defer stream.CloseSend()
 				defer func(stream proto.HighwayService_StreamBlockByHeightClient) {
 					for {
@@ -194,7 +200,13 @@ func (c *Client) StreamBlkByHash(
 			if err != nil {
 				logger.Errorf("[stream] Server call Client return error %v", err)
 			} else {
-				logger.Infof("[stream] Server call Client: OK, return stream %v", stream)
+				pClient, ok := grpcpeer.FromContext(stream.Context())
+				pIP := "Can not get IP, so sorry"
+				if ok {
+					pIP = pClient.Addr.String()
+				}
+				logger.Infof("[stream] Server call Client: OK, return stream %v from IP %v", stream, pIP)
+				stream.Context()
 				defer stream.CloseSend()
 				defer func(stream proto.HighwayService_StreamBlockByHashClient) {
 					for {
