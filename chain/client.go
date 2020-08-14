@@ -154,10 +154,14 @@ func (hc *Client) getClientWithHashes(
 ) (proto.HighwayServiceClient, peer.ID, error) {
 	connectedPeers := hc.m.GetPeers(cid)
 	if len(connectedPeers) > 0 {
-		peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
-		client, err := hc.cc.GetServiceClient(peerPicked.ID)
-		if err == nil {
-			return client, peerPicked.ID, nil
+		// Find block proposer (position = 0) and ask it
+		for _, p := range connectedPeers {
+			if pos, ok := hc.m.watcher.pos[p.ID]; ok && pos.id == 0 {
+				client, err := hc.cc.GetServiceClient(p.ID)
+				if err == nil {
+					return client, p.ID, nil
+				}
+			}
 		}
 	}
 	return hc.router.GetClientSupportShard(cid)
