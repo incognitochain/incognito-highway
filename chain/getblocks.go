@@ -141,6 +141,7 @@ func (g *BlkByHeightGetter) CallForBlocksByHeight(
 		blkCh := make(chan common.ExpectedBlkByHeight, common.MaxBlocksPerRequest)
 		go p.StreamBlkByHeight(ctx, nreq, blkCh)
 		missing := g.handleBlkRecv(ctx, nreq, blkCh, providers[:i])
+		logger.Infof("[stream] Provider %v return %v block", i, getReqNumBlks(nreq)-len(missing))
 		nreq = newReqByHeight(nreq, missing)
 	}
 	close(g.newBlk)
