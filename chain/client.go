@@ -157,7 +157,7 @@ func (hc *Client) getClientWithHashes(
 		// Find block proposer (position = 0) and ask it
 		for _, p := range connectedPeers {
 			if pos, ok := hc.m.watcher.pos[p.ID]; ok && pos.id == 0 {
-				client, err := hc.cc.GetServiceClient(p.ID)
+				client, err := hc.FindServiceClient(p.ID)
 				if err == nil {
 					return client, p.ID, nil
 				}
@@ -190,6 +190,20 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 		return nil, peerID, err
 	}
 	return client, peerID, nil
+}
+
+func (hc *Client) FindServiceClient(pID peer.ID) (proto.HighwayServiceClient, error) {
+	hwID, err := hc.peerStore.GetHWIDOfPeer(pID)
+	if err != nil {
+		return nil, err
+	}
+	if hwID != hc.router.GetID() { // Peer not connected, let ask the other highway
+		logger.Debugf("Peer %v is not connected, connect to hw %s", pID.String(), hwID.String())
+		hwClient, _, err := hc.router.GetHighwayServiceClient(hwID)
+		return hwClient, err
+	}
+	// Connected peer, get connection
+	return hc.cc.GetServiceClient(pID)
 }
 
 // choosePeerIDWithBlock returns peerID of a node that holds some blocks
@@ -358,10 +372,18 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
 	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
 	cc.conns.Lock()
-	defer cc.conns.Unlock()
-	_, ok := cc.conns.connMap[peerID]
+	c, ok := cc.conns.connMap[peerID]
+	if !ok {
+		cc.conns.connMap[peerID] = struct {
+			conn *grpc.ClientConn
+			sync.Mutex
+		}{}
+		c = cc.conns.connMap[peerID]
+	}
+	cc.conns.Unlock()
 
 	if !ok {
+		c.Lock()
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
 		conn, err := cc.dialer.Dial(
@@ -375,12 +397,21 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 			}),
 		)
 		if err != nil {
+			c.Unlock()
 			return nil, errors.WithStack(err)
 		}
-
-		cc.conns.connMap[peerID] = conn
+		cc.conns.Lock()
+		cc.conns.connMap[peerID] = struct {
+			conn *grpc.ClientConn
+			sync.Mutex
+		}{
+			conn: conn,
+		}
+		cc.conns.Unlock()
+		c.Unlock()
+		return proto.NewHighwayServiceClient(conn), nil
 	}
-	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
+	client := proto.NewHighwayServiceClient(c.conn)
 	return client, nil
 }
 
@@ -388,9 +419,9 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 	cc.conns.Lock()
 	defer cc.conns.Unlock()
 
-	if conn, ok := cc.conns.connMap[peerID]; ok {
+	if c, ok := cc.conns.connMap[peerID]; ok {
 		logger.Infof("Closing connection to pID %s", peerID.String())
-		if err := conn.Close(); err != nil {
+		if err := c.conn.Close(); err != nil {
 			logger.Warnf("Failed closing connection to pID %s: %s", peerID.String(), errors.WithStack(err))
 		} else {
 			delete(cc.conns.connMap, peerID)
@@ -402,20 +433,27 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 type ClientConnector struct {
 	dialer Dialer
 	conns  struct {
-		connMap map[peer.ID]*grpc.ClientConn
+		connMap map[peer.ID]struct {
+			conn *grpc.ClientConn
+			sync.Mutex
+		}
 		sync.RWMutex
 	}
 }
 
 func NewClientConnector(dialer Dialer) *ClientConnector {
 	connector := &ClientConnector{dialer: dialer}
-	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	connector.conns.connMap = map[peer.ID]struct {
+		conn *grpc.ClientConn
+		sync.Mutex
+	}{}
 	connector.conns.RWMutex = sync.RWMutex{}
 	return connector
 }
 
 type PeerStore interface {
 	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
+	GetHWIDOfPeer(pID peer.ID) (peer.ID, error)
 }
 
 type Dialer interface {

@@ -94,7 +94,7 @@ func (c *Client) StreamBlkByHeight(
 	if (len(req.GetSyncFromPeer()) > 0) && (!c.router.CheckHWPeerID(req.GetSyncFromPeer())) {
 		pID, err = peer.IDB58Decode(req.GetSyncFromPeer())
 		if err == nil {
-			sc, err = c.cc.GetServiceClient(pID)
+			sc, err = c.FindServiceClient(pID)
 		}
 	} else {
 		logger.Infof("[stream2] Call for block. %v %v", req.GetSyncFromPeer(), c.router.CheckHWPeerID(req.GetSyncFromPeer()))
@@ -181,7 +181,7 @@ func (c *Client) StreamBlkByHash(
 	if (len(req.GetSyncFromPeer()) > 0) && (!c.router.CheckHWPeerID(req.GetSyncFromPeer())) {
 		pID, err = peer.IDB58Decode(req.GetSyncFromPeer())
 		if err == nil {
-			sc, err = c.cc.GetServiceClient(pID)
+			sc, err = c.FindServiceClient(pID)
 		}
 	} else {
 		sc, pID, err = c.getClientWithHashes(int(req.GetFrom()), req.GetHashes())
