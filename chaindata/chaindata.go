@@ -104,6 +104,26 @@ func (chainData *ChainData) GetPeerHasBlk(
 	return peers, nil
 }
 
+func (chainData *ChainData) GetHWIDOfPeer(
+	pID peer.ID,
+) (
+	peer.ID,
+	error,
+) {
+	chainData.Locker.RLock()
+	miningPubkey, ok := chainData.MiningPubkeyByPeerID[pID]
+	chainData.Locker.RUnlock()
+	if !ok {
+		return "", errors.Errorf("Can not found info of this peerID %v", pID.String())
+	}
+
+	HWID, err := chainData.CurrentNetworkState.GetHWIDOfPubKey(miningPubkey)
+	if err != nil {
+		return "", err
+	}
+	return HWID, nil
+}
+
 // UpdateCommittee saves peerID, mining pubkey and committeeID of a validator
 func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID peer.ID, cid byte) {
 	// Convert from CommitteePubkey to MiningPubKey if user submitted one
