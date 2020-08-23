@@ -144,40 +144,6 @@ func keyByHash(req RequestBlockByHash, h []byte) string {
 func (cache *MemCache) StreamBlkByHeight(
 	_ context.Context,
 	req RequestBlockByHeight,
-	blkChan chan common.ExpectedBlkByHeight,
-) error {
-	heights := req.GetHeights()
-	blkHeight := heights[0] - 1
-	idx := 0
-	for blkHeight < heights[len(heights)-1] {
-		if req.GetSpecific() {
-			blkHeight = heights[idx]
-			idx++
-		} else {
-			blkHeight++
-		}
-		key := keyByHeight(req, blkHeight)
-		if b, ok := cache.cacher.Get(key); ok {
-			if block, ok := b.([]byte); ok {
-				blkChan <- common.ExpectedBlkByHeight{
-					Height: blkHeight,
-					Data:   block,
-				}
-				continue
-			}
-		}
-		blkChan <- common.ExpectedBlkByHeight{
-			Height: blkHeight,
-			Data:   []byte{},
-		}
-	}
-	close(blkChan)
-	return nil
-}
-
-func (cache *MemCache) StreamBlkByHeightv2(
-	_ context.Context,
-	req RequestBlockByHeight,
 	blkChan chan common.ExpectedBlk,
 ) error {
 	heights := req.GetHeights()

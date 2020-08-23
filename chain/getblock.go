@@ -185,6 +185,25 @@ func newReqByHash(
 	}
 }
 
+func newReqByHeight(
+	oldReq *proto.BlockByHeightRequest,
+	missing []uint64,
+) *proto.BlockByHeightRequest {
+	if len(missing) == 0 {
+		return nil
+	}
+	return &proto.BlockByHeightRequest{
+		Type:         oldReq.Type,
+		Specific:     true,
+		Heights:      missing,
+		From:         oldReq.From,
+		To:           oldReq.To,
+		CallDepth:    oldReq.CallDepth,
+		SyncFromPeer: oldReq.SyncFromPeer,
+		UUID:         oldReq.UUID,
+	}
+}
+
 func (g *BlkGetter) CallForBlocks(
 	ctx context.Context,
 	providers []Provider,
@@ -219,7 +238,7 @@ func (g *BlkGetter) CallForBlocks(
 					continue
 				}
 			}
-			go p.StreamBlkByHeightv2(ctx, nreqByHeight, blkCh)
+			go p.StreamBlkByHeight(ctx, nreqByHeight, blkCh)
 			missing := g.handleBlkByHeightRecv(ctx, nreqByHeight, blkCh, providers[:i])
 			logger.Infof("[stream] Provider %v return %v block", i, getReqNumBlks(nreqByHeight)-len(missing))
 			nreqByHeight = newReqByHeight(nreqByHeight, missing)
