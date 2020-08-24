@@ -156,7 +156,7 @@ func (hc *Client) getClientWithHashes(
 	if len(connectedPeers) > 0 {
 		// Find block proposer (position = 0) and ask it
 		for _, p := range connectedPeers {
-			if pos, ok := hc.m.watcher.pos[p.ID]; ok && pos.id == 0 {
+			if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id == 20) || (pos.id == 21)) {
 				client, err := hc.FindServiceClient(p.ID)
 				if err == nil {
 					return client, p.ID, nil
@@ -381,9 +381,9 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 		c = cc.conns.connMap[peerID]
 	}
 	cc.conns.Unlock()
-
+	c.Lock()
+	defer c.Unlock()
 	if !ok {
-		c.Lock()
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
 		conn, err := cc.dialer.Dial(
@@ -397,7 +397,6 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 			}),
 		)
 		if err != nil {
-			c.Unlock()
 			cc.conns.Lock()
 			delete(cc.conns.connMap, peerID)
 			cc.conns.Unlock()
@@ -411,7 +410,6 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 			conn: conn,
 		}
 		cc.conns.Unlock()
-		c.Unlock()
 		return proto.NewHighwayServiceClient(conn), nil
 	}
 	client := proto.NewHighwayServiceClient(c.conn)
