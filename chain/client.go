@@ -394,6 +394,9 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 		)
 		if err != nil {
 			c.Unlock()
+			cc.conns.Lock()
+			delete(cc.conns.connMap, peerID)
+			cc.conns.Unlock()
 			return nil, errors.WithStack(err)
 		}
 		cc.conns.Lock()
