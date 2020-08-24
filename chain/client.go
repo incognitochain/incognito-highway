@@ -371,15 +371,18 @@ func NewClient(
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
 	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
-	cc.conns.Lock()
-	c, ok := cc.conns.connMap[peerID]
-	if !ok {
+	cc.conns.pLock.Lock()
+	_, exist := cc.conns.peerLocker[peerID]
+	if !exist {
 		cc.conns.peerLocker[peerID] = sync.Mutex{}
 	}
 	locker := cc.conns.peerLocker[peerID]
-	cc.conns.Unlock()
+	cc.conns.pLock.Unlock()
 	locker.Lock()
 	defer locker.Unlock()
+	cc.conns.cLock.Lock()
+	c, ok := cc.conns.connMap[peerID]
+	cc.conns.cLock.Unlock()
 	if !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
@@ -394,10 +397,10 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 			}),
 		)
 		if err == nil {
-			cc.conns.Lock()
+			cc.conns.cLock.Lock()
 			cc.conns.connMap[peerID] = conn
 			c = cc.conns.connMap[peerID]
-			cc.conns.Unlock()
+			cc.conns.cLock.Unlock()
 		} else {
 			return nil, errors.WithStack(err)
 		}
@@ -406,8 +409,10 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 }
 
 func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
-	cc.conns.Lock()
-	defer cc.conns.Unlock()
+	cc.conns.pLock.Lock()
+	cc.conns.cLock.Lock()
+	defer cc.conns.cLock.Unlock()
+	defer cc.conns.pLock.Unlock()
 
 	if c, ok := cc.conns.connMap[peerID]; ok {
 		logger.Infof("Closing connection to pID %s", peerID.String())
@@ -426,7 +431,8 @@ type ClientConnector struct {
 	conns  struct {
 		connMap    map[peer.ID]*grpc.ClientConn
 		peerLocker map[peer.ID]sync.Mutex
-		sync.RWMutex
+		cLock      sync.RWMutex
+		pLock      sync.RWMutex
 	}
 }
 
@@ -434,7 +440,8 @@ func NewClientConnector(dialer Dialer) *ClientConnector {
 	connector := &ClientConnector{dialer: dialer}
 	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
 	connector.conns.peerLocker = map[peer.ID]sync.Mutex{}
-	connector.conns.RWMutex = sync.RWMutex{}
+	connector.conns.cLock = sync.RWMutex{}
+	connector.conns.pLock = sync.RWMutex{}
 	return connector
 }
 
