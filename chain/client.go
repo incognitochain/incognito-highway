@@ -370,16 +370,13 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	cc.conns.Lock()
 	c, ok := cc.conns.connMap[peerID]
 	if !ok {
-		cc.conns.connMap[peerID] = struct {
-			conn *grpc.ClientConn
-			sync.Mutex
-		}{}
-		c = cc.conns.connMap[peerID]
+		cc.conns.peerLocker[peerID] = sync.Mutex{}
 	}
+	locker := cc.conns.peerLocker[peerID]
 	cc.conns.Unlock()
-
+	locker.Lock()
+	defer locker.Unlock()
 	if !ok {
-		c.Lock()
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
 		conn, err := cc.dialer.Dial(
@@ -392,26 +389,16 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 				Timeout: common.ChainClientKeepaliveTimeout,
 			}),
 		)
-		if err != nil {
-			c.Unlock()
+		if err == nil {
 			cc.conns.Lock()
-			delete(cc.conns.connMap, peerID)
+			cc.conns.connMap[peerID] = conn
+			c = cc.conns.connMap[peerID]
 			cc.conns.Unlock()
+		} else {
 			return nil, errors.WithStack(err)
 		}
-		cc.conns.Lock()
-		cc.conns.connMap[peerID] = struct {
-			conn *grpc.ClientConn
-			sync.Mutex
-		}{
-			conn: conn,
-		}
-		cc.conns.Unlock()
-		c.Unlock()
-		return proto.NewHighwayServiceClient(conn), nil
 	}
-	client := proto.NewHighwayServiceClient(c.conn)
-	return client, nil
+	return proto.NewHighwayServiceClient(c), nil
 }
 
 func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
@@ -420,10 +407,11 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 
 	if c, ok := cc.conns.connMap[peerID]; ok {
 		logger.Infof("Closing connection to pID %s", peerID.String())
-		if err := c.conn.Close(); err != nil {
+		if err := c.Close(); err != nil {
 			logger.Warnf("Failed closing connection to pID %s: %s", peerID.String(), errors.WithStack(err))
 		} else {
 			delete(cc.conns.connMap, peerID)
+			delete(cc.conns.peerLocker, peerID)
 			logger.Infof("Closed connection to pID %s successfully", peerID.String())
 		}
 	}
@@ -432,20 +420,16 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 type ClientConnector struct {
 	dialer Dialer
 	conns  struct {
-		connMap map[peer.ID]struct {
-			conn *grpc.ClientConn
-			sync.Mutex
-		}
+		connMap    map[peer.ID]*grpc.ClientConn
+		peerLocker map[peer.ID]sync.Mutex
 		sync.RWMutex
 	}
 }
 
 func NewClientConnector(dialer Dialer) *ClientConnector {
 	connector := &ClientConnector{dialer: dialer}
-	connector.conns.connMap = map[peer.ID]struct {
-		conn *grpc.ClientConn
-		sync.Mutex
-	}{}
+	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
+	connector.conns.peerLocker = map[peer.ID]sync.Mutex{}
 	connector.conns.RWMutex = sync.RWMutex{}
 	return connector
 }
