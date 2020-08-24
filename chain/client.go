@@ -371,6 +371,8 @@ func NewClient(
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
 	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
+	rC := &grpc.ClientConn{}
+	var rE error
 	cc.conns.Lock()
 	c, ok := cc.conns.connMap[peerID]
 	if !ok {
@@ -382,11 +384,10 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 	}
 	cc.conns.Unlock()
 	c.Lock()
-	defer c.Unlock()
 	if !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
-		conn, err := cc.dialer.Dial(
+		rC, rE = cc.dialer.Dial(
 			ctx,
 			peerID,
 			grpc.WithInsecure(),
@@ -396,24 +397,26 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 				Timeout: common.ChainClientKeepaliveTimeout,
 			}),
 		)
-		if err != nil {
-			cc.conns.Lock()
-			delete(cc.conns.connMap, peerID)
-			cc.conns.Unlock()
-			return nil, errors.WithStack(err)
-		}
+	} else {
+		rC = c.conn
+		rE = nil
+	}
+	c.Unlock()
+	if !ok {
 		cc.conns.Lock()
-		cc.conns.connMap[peerID] = struct {
-			conn *grpc.ClientConn
-			sync.Mutex
-		}{
-			conn: conn,
+		if rE != nil {
+			delete(cc.conns.connMap, peerID)
+		} else {
+			cc.conns.connMap[peerID] = struct {
+				conn *grpc.ClientConn
+				sync.Mutex
+			}{
+				conn: rC,
+			}
 		}
 		cc.conns.Unlock()
-		return proto.NewHighwayServiceClient(conn), nil
 	}
-	client := proto.NewHighwayServiceClient(c.conn)
-	return client, nil
+	return proto.NewHighwayServiceClient(rC), rE
 }
 
 func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
