@@ -229,7 +229,7 @@ type enlistMessage struct {
 }
 
 type Publisher interface {
-	Publish(topic string, msg []byte) error
+	Publish(topic string, msg []byte, opts ...pubsub.PubOpt) error
 	BlacklistPeer(peer.ID)
 }
 

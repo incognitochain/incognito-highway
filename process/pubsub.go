@@ -2,7 +2,6 @@ package process
 
 import (
 	"context"
-	"fmt"
 	"highway/chaindata"
 	"highway/common"
 	"highway/grafana"
@@ -156,29 +155,29 @@ func deletePeerIDinSlice(target peer.ID, slice []peer.ID) []peer.ID {
 }
 
 // For Grafana, will complete in next pull request
-func (pubsub *PubSubManager) WatchingSubs(subs *p2pPubSub.Subscription) {
-	for {
-		event, err := subs.NextPeerEvent(context.Background())
-		if err != nil {
-			logger.Error(err)
-		}
-		tp := subs.Topic()
-		msgType := topic.GetMsgTypeOfTopic(tp)
-		if event.Type == p2pPubSub.PeerJoin {
-			pubsub.Info.Locker.Lock()
-			pubsub.Info.Info[tp] = append(pubsub.Info.Info[tp], event.Peer)
-			if pubsub.GraLog != nil {
-				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
-			}
-			pubsub.Info.Locker.Unlock()
-		}
-		if event.Type == p2pPubSub.PeerLeave {
-			pubsub.Info.Locker.Lock()
-			pubsub.Info.Info[subs.Topic()] = deletePeerIDinSlice(event.Peer, pubsub.Info.Info[subs.Topic()])
-			if pubsub.GraLog != nil {
-				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
-			}
-			pubsub.Info.Locker.Unlock()
-		}
-	}
-}
+// func (pubsub *PubSubManager) WatchingSubs(subs *p2pPubSub.Subscription) {
+// 	for {
+// 		event, err := subs.Next() PeerEvent(context.Background())
+// 		if err != nil {
+// 			logger.Error(err)
+// 		}
+// 		tp := subs.Topic()
+// 		msgType := topic.GetMsgTypeOfTopic(tp)
+// 		if event.Type == p2pPubSub.PeerJoin {
+// 			pubsub.Info.Locker.Lock()
+// 			pubsub.Info.Info[tp] = append(pubsub.Info.Info[tp], event.Peer)
+// 			if pubsub.GraLog != nil {
+// 				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
+// 			}
+// 			pubsub.Info.Locker.Unlock()
+// 		}
+// 		if event.Type == p2pPubSub.PeerLeave {
+// 			pubsub.Info.Locker.Lock()
+// 			pubsub.Info.Info[subs.Topic()] = deletePeerIDinSlice(event.Peer, pubsub.Info.Info[subs.Topic()])
+// 			if pubsub.GraLog != nil {
+// 				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
+// 			}
+// 			pubsub.Info.Locker.Unlock()
+// 		}
+// 	}
+// }
