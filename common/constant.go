@@ -47,6 +47,8 @@ var (
 	MinStableDuration           = 2 * time.Minute
 
 	BroadcastMsgEnlistTimestep = 1 * time.Minute
+
+	PercentGetFromCache = 80
 )
 
 const (
