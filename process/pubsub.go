@@ -45,7 +45,8 @@ func NewPubSub(
 	pubsub := new(PubSubManager)
 	ctx := context.Background()
 	var err error
-	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s)
+	tracer, err := p2pPubSub.NewJSONTracer("/tmp/trace.out.json")
+	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s, p2pPubSub.WithEventTracer(tracer))
 	if err != nil {
 		return nil, err
 	}
