@@ -152,14 +152,16 @@ func (g *BlkGetter) handleBlkByHashRecv(
 			missing = append(missing, blk.Hash)
 		} else {
 			g.newBlk <- blk
-			go func(providers []Provider, blk common.ExpectedBlk) {
-				for _, p := range providers {
-					err := p.SetSingleBlockByHash(ctx, req, blk)
-					if err != nil {
-						logger.Errorf("[stream] Caching return error %v", err)
+			if req.Type != proto.BlkType_BlkS2B {
+				go func(providers []Provider, blk common.ExpectedBlk) {
+					for _, p := range providers {
+						err := p.SetSingleBlockByHash(ctx, req, blk)
+						if err != nil {
+							logger.Errorf("[stream] Caching return error %v", err)
+						}
 					}
-				}
-			}(providers, blk)
+				}(providers, blk)
+			}
 		}
 	}
 	return missing
@@ -183,6 +185,25 @@ func newReqByHash(
 	}
 }
 
+func newReqByHeight(
+	oldReq *proto.BlockByHeightRequest,
+	missing []uint64,
+) *proto.BlockByHeightRequest {
+	if len(missing) == 0 {
+		return nil
+	}
+	return &proto.BlockByHeightRequest{
+		Type:         oldReq.Type,
+		Specific:     true,
+		Heights:      missing,
+		From:         oldReq.From,
+		To:           oldReq.To,
+		CallDepth:    oldReq.CallDepth,
+		SyncFromPeer: oldReq.SyncFromPeer,
+		UUID:         oldReq.UUID,
+	}
+}
+
 func (g *BlkGetter) CallForBlocks(
 	ctx context.Context,
 	providers []Provider,
@@ -198,6 +219,11 @@ func (g *BlkGetter) CallForBlocks(
 			if nreqByHash == nil {
 				break
 			}
+			if g.reqByHash.Type == proto.BlkType_BlkS2B {
+				if i == 0 {
+					continue
+				}
+			}
 			go p.StreamBlkByHash(ctx, nreqByHash, blkCh)
 			missing := g.handleBlkByHashRecv(ctx, nreqByHash, blkCh, providers[:i])
 			logger.Infof("[stream] Provider %v return %v block", i, getReqNumHashes(nreqByHash)-len(missing))
@@ -207,7 +233,12 @@ func (g *BlkGetter) CallForBlocks(
 			if nreqByHeight == nil {
 				break
 			}
-			go p.StreamBlkByHeightv2(ctx, nreqByHeight, blkCh)
+			if g.reqByHeight.Type == proto.BlkType_BlkS2B {
+				if i == 0 {
+					continue
+				}
+			}
+			go p.StreamBlkByHeight(ctx, nreqByHeight, blkCh)
 			missing := g.handleBlkByHeightRecv(ctx, nreqByHeight, blkCh, providers[:i])
 			logger.Infof("[stream] Provider %v return %v block", i, getReqNumBlks(nreqByHeight)-len(missing))
 			nreqByHeight = newReqByHeight(nreqByHeight, missing)
@@ -231,14 +262,16 @@ func (g *BlkGetter) handleBlkByHeightRecv(
 			missing = append(missing, blk.Height)
 		} else {
 			g.newBlk <- blk
-			go func(providers []Provider, blk common.ExpectedBlk) {
-				for _, p := range providers {
-					err := p.SetSingleBlockByHeightv2(ctx, req, blk)
-					if err != nil {
-						logger.Errorf("[stream] Caching return error %v", err)
+			if req.Type != proto.BlkType_BlkS2B {
+				go func(providers []Provider, blk common.ExpectedBlk) {
+					for _, p := range providers {
+						err := p.SetSingleBlockByHeightv2(ctx, req, blk)
+						if err != nil {
+							logger.Errorf("[stream] Caching return error %v", err)
+						}
 					}
-				}
-			}(providers, blk)
+				}(providers, blk)
+			}
 		}
 	}
 	return missing

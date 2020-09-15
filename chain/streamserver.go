@@ -18,6 +18,11 @@ func (s *Server) StreamBlockByHeight(
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
+	if req.GetCallDepth() > common.MaxCallDepth {
+		err := errors.Errorf("reach max calldepth %v ", req)
+		logger.Error(err)
+		return err
+	}
 	pClient, ok := peer.FromContext(ss.Context())
 	pIP := "Can not get IP, so sorry"
 	if ok {
@@ -43,13 +48,15 @@ func (s *Server) StreamBlockByHash(
 	req *proto.BlockByHashRequest,
 	ss proto.HighwayService_StreamBlockByHashServer,
 ) error {
-	if req.GetCallDepth() > common.MaxCallDepth {
-		return errors.Errorf("reach max calldepth %v ", req)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
+	if req.GetCallDepth() > common.MaxCallDepth {
+		err := errors.Errorf("reach max calldepth %v ", req)
+		logger.Error(err)
+		return err
+	}
 	pClient, ok := peer.FromContext(ss.Context())
 	pIP := "Can not get IP, so sorry"
 	if ok {
@@ -69,6 +76,7 @@ func (s *Server) StreamBlockByHash(
 
 func SendWithTimeout(blkChan chan common.ExpectedBlk, timeout time.Duration, send func(*proto.BlockData) error) (uint, error) {
 	errChan := make(chan error, 10)
+	// defer close(errChan)
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	numOfSentBlk := uint(0)

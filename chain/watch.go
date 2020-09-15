@@ -6,6 +6,7 @@ import (
 	"highway/grafana"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -21,6 +22,8 @@ type watcher struct {
 
 	data map[position]watchInfo
 	pos  map[peer.ID]position
+
+	posLocker sync.RWMutex
 
 	watchingPubkeys map[string]position
 }
@@ -64,11 +67,12 @@ func (w *watcher) processInPeer(pinfo PeerInfoWithIP) {
 		connected: 1,
 		ip:        pinfo.ip,
 	}
-	w.pos[pinfo.ID] = pos
+	w.setPeerPosition(pinfo.ID, pos)
 }
 
 func (w *watcher) processOutPeer(pid peer.ID) {
-	if pos, ok := w.pos[pid]; ok {
+	pos, ok := w.getPeerPosition(pid)
+	if ok {
 		if winfo, ok := w.data[pos]; ok {
 			logger.Infof("Stop watching peer: cid = %v, id = %v, ip = %v, pid = %s", pos.cid, pos.id, winfo.ip, pid.String())
 			w.data[pos] = watchInfo{
@@ -234,4 +238,17 @@ func (w *watcher) readKeys() {
 			id:  id,
 		}
 	}
+}
+
+func (w *watcher) getPeerPosition(pID peer.ID) (position, bool) {
+	w.posLocker.RLock()
+	pos, ok := w.pos[pID]
+	w.posLocker.RUnlock()
+	return pos, ok
+}
+
+func (w *watcher) setPeerPosition(pID peer.ID, pos position) {
+	w.posLocker.Lock()
+	w.pos[pID] = pos
+	w.posLocker.Unlock()
 }
