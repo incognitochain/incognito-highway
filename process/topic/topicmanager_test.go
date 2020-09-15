@@ -40,7 +40,7 @@ func TestTopicManager_GetListTopicPairForNode(t *testing.T) {
 	tm := new(TopicManager)
 	tm.Init("aa")
 	tm.UpdateSupportShards(tm.allCommitteeID)
-	res := tm.GetListTopicPairForNode(common.NORMAL, map[string][]int{
+	res := tm.GetListTopicPairForNode(common.COMMITTEE, map[string][]int{
 		CmdBFT:                []int{2},
 		CmdBlockBeacon:        []int{2, 3, 255},
 		CmdBlkShardToBeacon:   []int{2, 3},
