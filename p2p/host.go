@@ -5,6 +5,7 @@ import (
 	crypto2 "crypto"
 	"fmt"
 
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p"
 	core "github.com/libp2p/go-libp2p-core"
@@ -12,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -30,6 +32,7 @@ type Host struct {
 }
 
 func NewHost(version string, listenAddr string, listenPort int, privKey crypto.PrivKey) *Host {
+	tracer := opentracing.GlobalTracer()
 	// var privKey crypto.PrivKey
 	if privKey == nil {
 		privKey, _, _ = crypto.GenerateKeyPair(crypto.ECDSA, 2048)
@@ -71,7 +74,14 @@ func NewHost(version string, listenAddr string, listenPort int, privKey crypto.P
 		Host:     p2pHost,
 		SelfPeer: selfPeer,
 		Version:  version,
-		GRPC:     p2pgrpc.NewGRPCProtocol(context.Background(), p2pHost, grpc.KeepaliveParams(kasp)),
+		GRPC: p2pgrpc.NewGRPCProtocol(
+			context.Background(),
+			p2pHost,
+			grpc.KeepaliveParams(kasp),
+			grpc.UnaryInterceptor(
+				otgrpc.OpenTracingServerInterceptor(tracer)),
+			grpc.StreamInterceptor(
+				otgrpc.OpenTracingStreamServerInterceptor(tracer))),
 	}
 
 	return node
