@@ -7,7 +7,7 @@ import (
 	"highway/common"
 	"highway/process/topic"
 
-	libp2p "github.com/libp2p/go-libp2p-pubsub"
+	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 	"github.com/patrickmn/go-cache"
 )
 

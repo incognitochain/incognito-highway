@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	"fmt"
 	"highway/chaindata"
 	"highway/common"
 	"highway/grafana"
@@ -10,9 +11,10 @@ import (
 	"sync"
 	"time"
 
+	p2pPubSub "github.com/incognitochain/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p-core/host"
-	peer "github.com/libp2p/go-libp2p-peer"
-	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -45,7 +47,13 @@ func NewPubSub(
 	pubsub := new(PubSubManager)
 	ctx := context.Background()
 	var err error
-	tracer, err := p2pPubSub.NewJSONTracer("/tmp/trace.out.json")
+	id, err := peer.Decode("Qmanj8hF7toLni73idcW1e9mNjjzBcRoQqjNWQSMPMSZEK")
+	addr, err := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/17339")
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	tracer, err := p2pPubSub.NewRemoteTracer(ctx, s, peer.AddrInfo{ID: id, Addrs: []multiaddr.Multiaddr{addr}})
 	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s, p2pPubSub.WithEventTracer(tracer))
 	if err != nil {
 		return nil, err

@@ -6,8 +6,8 @@ import (
 	"highway/process/topic"
 	"testing"
 
+	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 	crypto "github.com/libp2p/go-libp2p-crypto"
-	libp2p "github.com/libp2p/go-libp2p-pubsub"
 )
 
 func TestTxHandler_HandleDataFromTopic(t *testing.T) {

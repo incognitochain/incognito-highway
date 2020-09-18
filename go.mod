@@ -5,10 +5,11 @@ go 1.12
 require (
 	github.com/dgraph-io/ristretto v0.0.2
 	github.com/ethereum/go-ethereum v1.9.5 // indirect
-	github.com/golang/protobuf v1.4.0
+	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20191225095939-98e504cb1c95
+	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20200917095920-400872e3a6a6
 	github.com/incognitochain/incognito-chain v0.0.0-20191101095820-aa5b73f50a1b
 	github.com/jbenet/goprocess v0.1.4
 	github.com/libp2p/go-libp2p v0.11.0
