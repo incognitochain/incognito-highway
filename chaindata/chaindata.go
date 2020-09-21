@@ -18,6 +18,7 @@ import (
 type ChainData struct {
 	ListMsgPeerStateOfShard    map[byte]CommitteeState //AllPeerState
 	CurrentNetworkState        NetworkState
+	CurrentNetworkStateV2      NetworkStateV2
 	MiningPubkeyByPeerID       map[peer.ID]string
 	PeerIDByMiningPubkey       map[string]peer.ID
 	ShardByMiningPubkey        map[string]byte
@@ -39,6 +40,7 @@ func (chainData *ChainData) Init(numberOfShard int) error {
 		chainData.ListMsgPeerStateOfShard[byte(i)] = map[string][]byte{}
 	}
 	chainData.CurrentNetworkState.Init(numberOfShard)
+	chainData.CurrentNetworkStateV2.Init(numberOfShard)
 	chainData.MiningPubkeyByPeerID = map[peer.ID]string{}
 	chainData.PeerIDByMiningPubkey = map[string]peer.ID{}
 	chainData.ShardPendingByMiningPubkey = map[string]byte{}
@@ -104,6 +106,51 @@ func (chainData *ChainData) GetPeerHasBlk(
 	return peers, nil
 }
 
+func (chainData *ChainData) GetPeerHasBlkV2(
+	blkHeight uint64,
+	committeeID byte,
+) (
+	[]PeerWithBlk,
+	error,
+) {
+	var exist bool
+	var committeeState map[string]ChainState
+	chainData.Locker.RLock()
+	defer chainData.Locker.RUnlock()
+	if committeeID == common.BEACONID {
+		committeeState = chainData.CurrentNetworkStateV2.BeaconState
+	} else {
+		if committeeState, exist = chainData.CurrentNetworkStateV2.ShardState[committeeID]; !exist {
+			return nil, errors.New("committeeID " + string(committeeID) + " not found")
+		}
+	}
+	peers := []PeerWithBlk{}
+	for pID, nodeState := range committeeState {
+		HWID, err := chainData.CurrentNetworkStateV2.GetHWIDOfPeerID(pID)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		peerID, err := peer.IDB58Decode(pID)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		peer := PeerWithBlk{
+			HW:     HWID,
+			ID:     peerID,
+			Height: nodeState.Height,
+		}
+		peers = append(peers, peer)
+	}
+
+	// Sort based on block height
+	sort.Slice(peers, func(i, j int) bool {
+		return peers[i].Height > peers[j].Height
+	})
+	return peers, nil
+}
+
 func (chainData *ChainData) GetHWIDOfPeer(
 	pID peer.ID,
 ) (
@@ -137,6 +184,33 @@ func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID p
 	chainData.ShardByMiningPubkey[miningPubkey] = cid
 }
 
+func (chainData *ChainData) UpdateStateV2WithMsgPeerState(
+	committeeID byte,
+	peerID string,
+	msgPeerState *wire.MessagePeerState,
+) error {
+	chainData.Locker.Lock()
+	chainData.CurrentNetworkStateV2.BeaconState[peerID] = MergeChainState(newChainStateFromMsgPeerState(msgPeerState, common.BEACONID), chainData.CurrentNetworkStateV2.BeaconState[peerID])
+	for i := 0; i < 8; i++ {
+		chainData.CurrentNetworkStateV2.ShardState[byte(i)][peerID] = MergeChainState(newChainStateFromMsgPeerState(msgPeerState, byte(i)), chainData.CurrentNetworkStateV2.ShardState[byte(i)][peerID])
+	}
+	// // }
+	// logger.Infof("[newpeerstate] NetworkState:")
+	// logger.Infof("[newpeerstate] Beacon:")
+	// for k, v := range chainData.CurrentNetworkStateV2.BeaconState {
+	// 	logger.Infof("[newpeerstate] Peer %v: Height %v", k, v.Height)
+	// }
+	// for k, v := range chainData.CurrentNetworkStateV2.ShardState {
+	// 	logger.Infof("[newpeerstate] Shard %v:", k)
+	// 	for pID, state := range v {
+	// 		logger.Infof("[newpeerstate] Peer %v: Height %v", pID, state.Height)
+	// 	}
+	// }
+	// logger.Infof("[newpeerstate]-----------------------------------")
+	defer chainData.Locker.Unlock()
+	return nil
+}
+
 func (chainData *ChainData) UpdateStateWithMsgPeerState(
 	committeeID byte,
 	committeePublicKey string,
@@ -156,6 +230,7 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 	//TODO check Highway signature
 	msgPeerState, err := common.ParsePeerStateData(string(data))
 	if err != nil {
+		logger.Errorf(err.Error())
 		return err
 	}
 	peerPublicKey := msgPeerState.SenderMiningPublicKey
@@ -163,7 +238,6 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 	if err != nil {
 		return err
 	}
-
 	// Store peerID of HW connected to a peer
 	miningPubkey := string(pkey)
 	err = chainData.CurrentNetworkState.SetHWIDOfPubKey(publisher, miningPubkey)
@@ -171,32 +245,38 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 		logger.Errorf(err.Error())
 		return err
 	}
-
+	err = chainData.CurrentNetworkStateV2.SetHWIDOfPeerID(publisher, msgPeerState.SenderID)
+	if err != nil {
+		logger.Errorf(err.Error())
+		return err
+	}
 	// Store committeeID, peerID and pubkey of a peer
 	pid, err := peer.IDB58Decode(msgPeerState.SenderID)
 	if err != nil {
-		logger.Warnf("Received invalid peerID from msg peerstate: %v %s", err, msgPeerState.SenderID)
+		logger.Errorf("Received invalid peerID from msg peerstate: %v %s", err, msgPeerState.SenderID)
 	} else {
 		// logger.Debugf("Updating committee: pkey = %v pid = %s cid = %v", pkey, pid.String(), committeeID)
 		chainData.UpdateCommittee(pkey, pid, committeeID)
 	}
-
 	// Save peerstate by miningPubkey
 	chainData.Locker.Lock()
 	if chainData.ListMsgPeerStateOfShard[committeeID] == nil {
 		chainData.ListMsgPeerStateOfShard[committeeID] = map[string][]byte{}
 	}
-
 	if !bytes.Equal(chainData.ListMsgPeerStateOfShard[committeeID][miningPubkey], data) {
 		chainData.ListMsgPeerStateOfShard[committeeID][miningPubkey] = data
-		chainData.Locker.Unlock()
-		return chainData.UpdateStateWithMsgPeerState(
-			committeeID,
-			miningPubkey,
-			msgPeerState,
-		)
 	}
 	chainData.Locker.Unlock()
+	err = chainData.UpdateStateV2WithMsgPeerState(committeeID, msgPeerState.SenderID, msgPeerState)
+	if err != nil {
+		logger.Errorf(err.Error())
+		return err
+	}
+	return chainData.UpdateStateWithMsgPeerState(
+		committeeID,
+		miningPubkey,
+		msgPeerState,
+	)
 	return nil
 }
 
@@ -288,4 +368,11 @@ func GetUserRole(role string, cid int) *proto.UserRole {
 		Role:  role,
 		Shard: int32(cid),
 	}
+}
+
+func MergeChainState(src, dst ChainState) ChainState {
+	if src.Height > dst.Height {
+		return src
+	}
+	return dst
 }
