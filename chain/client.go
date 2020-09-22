@@ -156,7 +156,7 @@ func (hc *Client) getClientWithHashes(
 	if len(connectedPeers) > 0 {
 		// Find block proposer (position = 0) and ask it
 		for _, p := range connectedPeers {
-			if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id == 20) || (pos.id == 21)) {
+			if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id > 0) || (pos.id <= 21)) {
 				client, err := hc.FindServiceClient(p.ID)
 				if err == nil {
 					return client, p.ID, nil
@@ -212,7 +212,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 	logger := Logger(ctx)
 	_ = logger
 
-	peersHasBlk, err := hc.peerStore.GetPeerHasBlk(blk, byte(cid)) // Get all peers from peerstate
+	peersHasBlk, err := hc.peerStore.GetPeerHasBlkV2(blk, byte(cid)) // Get all peers from peerstate
 	// logger.Debugf("PeersHasBlk for cid %v blk %v: %+v", cid, blk, peersHasBlk)
 	// logger.Debugf("PeersHasBlk for cid %v: %+v", cid, peersHasBlk)
 	if err != nil {
@@ -447,6 +447,7 @@ func NewClientConnector(dialer Dialer) *ClientConnector {
 
 type PeerStore interface {
 	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
+	GetPeerHasBlkV2(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
 	GetHWIDOfPeer(pID peer.ID) (peer.ID, error)
 }
 
