@@ -127,6 +127,7 @@ func main() {
 		conf.SupportShards,
 		gl, //GrafanaLog
 		floodPubSub,
+		conf.HighwayIndex,
 	)
 	if err != nil {
 		logger.Fatal(err)
@@ -141,7 +142,7 @@ func main() {
 
 	// Setup monitoring
 	confReporter := config.NewReporter(conf)
-	routeReporter := route.NewReporter(rman)
+	routeReporter := route.NewReporter(rman, gl)
 	healthReporter := health.NewReporter()
 	processReporter := process.NewReporter(chainData)
 	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter, processReporter}

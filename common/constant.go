@@ -16,6 +16,8 @@ const (
 	DefaultRPCServerPort = 9330
 	DefaultHWPeerID      = "/ip4/127.0.0.1/tcp/9330/p2p/QmSPa4gxx6PRmoNRu6P2iFwEwmayaoLdR5By3i3MgM9gMv"
 	NumberOfHighway      = 10
+
+	GenesisBlockHeight = 1
 )
 
 var (
@@ -24,13 +26,14 @@ var (
 	ChainClientKeepaliveTimeout = 20 * time.Second
 	ChainClientDialTimeout      = 5 * time.Second
 	CacheNumCounters            = int64(100000)
-	CacheMaxCost                = int64(8 * 1 << 30) // 8 GiB
+	CacheMaxCost                = int64(2 * 1 << 30) // 2 GiB
 	CacheBufferItems            = int64(64)
 
 	MaxCallDepth         = int32(2)
 	ChoosePeerBlockDelta = uint64(300)
 	MaxBlocksPerRequest  = uint64(900)
 	MaxTimePerRequest    = 30 * time.Second
+	MaxTimeForSend       = 12 * time.Second
 
 	TimeIntervalPublishStates = 5 * time.Second
 	MaxTimeKeepPeerState      = 90 * time.Second

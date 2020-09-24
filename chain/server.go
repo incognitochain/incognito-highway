@@ -216,8 +216,8 @@ type Provider interface {
 	SetBlockByHeight(ctx context.Context, req GetBlockByHeightRequest, heights []uint64, blocks [][]byte) error
 	// GetBlockByHeight(ctx context.Context, req GetBlockByHeightRequest, heights []uint64) ([][]byte, error)
 	GetBlockByHash(ctx context.Context, req GetBlockByHashRequest, hashes [][]byte) ([][]byte, error)
-	StreamBlkByHeight(ctx context.Context, req RequestBlockByHeight, blkChan chan common.ExpectedBlkByHeight) error
-	StreamBlkByHeightv2(ctx context.Context, req RequestBlockByHeight, blkChan chan common.ExpectedBlk) error
+	StreamBlkByHeight(ctx context.Context, req RequestBlockByHeight, blkChan chan common.ExpectedBlk) error
+	// StreamBlkByHeightv2(ctx context.Context, req RequestBlockByHeight, blkChan chan common.ExpectedBlk) error
 	StreamBlkByHash(ctx context.Context, req RequestBlockByHash, blkChan chan common.ExpectedBlk) error
 	SetSingleBlockByHeight(ctx context.Context, req RequestBlockByHeight, data common.ExpectedBlkByHeight) error
 	SetSingleBlockByHash(ctx context.Context, req RequestBlockByHash, data common.ExpectedBlk) error
@@ -280,7 +280,7 @@ func capBlocksPerRequest(specific bool, from, to uint64, heights []uint64) (uint
 
 	maxHeight := from + common.MaxBlocksPerRequest - 1
 	if to > maxHeight {
-		return maxHeight, heights
+		return maxHeight, []uint64{heights[0], maxHeight}
 	}
-	return to, heights
+	return to, []uint64{heights[0], to}
 }

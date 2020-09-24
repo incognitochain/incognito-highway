@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/wire"
@@ -192,4 +193,27 @@ func ParseMsgChainData(data []byte) (wire.Message, error) {
 		return nil, errors.WithStack(err)
 	}
 	return message, nil
+}
+
+func FilterLocalAddrs(mas []multiaddr.Multiaddr) []multiaddr.Multiaddr {
+	localAddrs := []string{
+		"127.0.0.1",
+		"0.0.0.0",
+		"192.168.",
+		"/ip4/172.",
+	}
+	nonLocal := []multiaddr.Multiaddr{}
+	for _, ma := range mas {
+		local := false
+		for _, s := range localAddrs {
+			if strings.Contains(ma.String(), s) {
+				local = true
+				break
+			}
+		}
+		if !local {
+			nonLocal = append(nonLocal, ma)
+		}
+	}
+	return nonLocal
 }

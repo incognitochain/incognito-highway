@@ -154,10 +154,14 @@ func (hc *Client) getClientWithHashes(
 ) (proto.HighwayServiceClient, peer.ID, error) {
 	connectedPeers := hc.m.GetPeers(cid)
 	if len(connectedPeers) > 0 {
-		peerPicked := connectedPeers[rand.Intn(len(connectedPeers))]
-		client, err := hc.cc.GetServiceClient(peerPicked.ID)
-		if err == nil {
-			return client, peerPicked.ID, nil
+		// Find block proposer (position = 0) and ask it
+		for _, p := range connectedPeers {
+			if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id > 0) || (pos.id <= 21)) {
+				client, err := hc.FindServiceClient(p.ID)
+				if err == nil {
+					return client, p.ID, nil
+				}
+			}
 		}
 	}
 	return hc.router.GetClientSupportShard(cid)
@@ -188,6 +192,20 @@ func (hc *Client) getClientOfSupportedShard(ctx context.Context, cid int, height
 	return client, peerID, nil
 }
 
+func (hc *Client) FindServiceClient(pID peer.ID) (proto.HighwayServiceClient, error) {
+	hwID, err := hc.peerStore.GetHWIDOfPeer(pID)
+	if err != nil {
+		return nil, err
+	}
+	if hwID != hc.router.GetID() { // Peer not connected, let ask the other highway
+		logger.Debugf("Peer %v is not connected, connect to hw %s", pID.String(), hwID.String())
+		hwClient, _, err := hc.router.GetHighwayServiceClient(hwID)
+		return hwClient, err
+	}
+	// Connected peer, get connection
+	return hc.cc.GetServiceClient(pID)
+}
+
 // choosePeerIDWithBlock returns peerID of a node that holds some blocks
 // and its corresponding highway's peerID
 func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64) (pid peer.ID, hw peer.ID, err error) {
@@ -206,7 +224,7 @@ func (hc *Client) choosePeerIDWithBlock(ctx context.Context, cid int, blk uint64
 
 	// Prioritize peers and sort into different groups
 	connectedPeers := hc.m.GetPeers(cid) // Filter out disconnected peers
-	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers)
+	groups := groupPeersByDistance(peersHasBlk, blk, hc.router.GetID(), connectedPeers, hc.m.watcher)
 	// logger.Debugf("Peers by groups: %+v", groups)
 
 	// Choose a single peer from the sorted groups
@@ -226,15 +244,22 @@ func groupPeersByDistance(
 	blk uint64,
 	selfPeerID peer.ID,
 	connectedPeers []PeerInfo,
+	w *watcher,
 ) [][]chaindata.PeerWithBlk {
 	// Group peers into 4 groups:
-	a := []chaindata.PeerWithBlk{} // 1. Nodes connected to this highway and have all needed blocks
-	b := []chaindata.PeerWithBlk{} // 2. Nodes from other highways and have all needed blocks
-	h := uint64(0)                 // Find maximum height
+	a := []chaindata.PeerWithBlk{}  // 1.  Fixed Nodes connected to this highway and have all needed blocks
+	a2 := []chaindata.PeerWithBlk{} // 1.5 Nodes connected to this highway and have all needed blocks
+	b := []chaindata.PeerWithBlk{}  // 2.  Nodes from other highways and have all needed blocks
+	h := uint64(0)                  // Find maximum height
 	for _, p := range peers {
 		if p.Height >= blk {
 			if p.HW == selfPeerID {
-				a = append(a, p)
+				_, ok := w.getPeerPosition(p.ID)
+				if ok {
+					a = append(a, p)
+				} else {
+					a2 = append(a2, p)
+				}
 			} else {
 				b = append(b, p)
 			}
@@ -243,21 +268,29 @@ func groupPeersByDistance(
 			h = p.Height
 		}
 	}
-	a = filterPeers(a, connectedPeers) // Retain only connected peers
+	a = filterPeers(a, connectedPeers)   // Retain only connected peers
+	a2 = filterPeers(a2, connectedPeers) // Retain only connected peers
 
-	c := []chaindata.PeerWithBlk{} // 3. Nodes connected to this highway and have the largest amount of blocks
-	d := []chaindata.PeerWithBlk{} // 4. Nodes from other highways and have the largest amount of blocks
+	c := []chaindata.PeerWithBlk{}  // 3.  Fixed Nodes connected to this highway and have the largest amount of blocks
+	c2 := []chaindata.PeerWithBlk{} // 3.5 Nodes connected to this highway and have the largest amount of blocks
+	d := []chaindata.PeerWithBlk{}  // 4.  Nodes from other highways and have the largest amount of blocks
 	for _, p := range peers {
 		if p.Height < blk && p.Height+common.ChoosePeerBlockDelta >= h {
 			if p.HW == selfPeerID {
-				c = append(c, p)
+				_, ok := w.getPeerPosition(p.ID)
+				if ok {
+					c = append(c, p)
+				} else {
+					c2 = append(c2, p)
+				}
 			} else {
 				d = append(d, p)
 			}
 		}
 	}
-	c = filterPeers(c, connectedPeers) // Retain only connected peers
-	return [][]chaindata.PeerWithBlk{a, b, c, d}
+	c = filterPeers(c, connectedPeers)   // Retain only connected peers
+	c2 = filterPeers(c2, connectedPeers) // Retain only connected peers
+	return [][]chaindata.PeerWithBlk{a, a2, b, c, c2, d}
 }
 
 func choosePeerFromGroup(groups [][]chaindata.PeerWithBlk) (chaindata.PeerWithBlk, error) {
@@ -338,10 +371,18 @@ func NewClient(
 func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServiceClient, error) {
 	// TODO(@0xbunyip): check if connection is alive or not; maybe return a list of conn for Client to retry if fail to connect
 	// We might not write but still do a Lock() since we don't want to Dial to a same peerID twice
-	cc.conns.Lock()
-	defer cc.conns.Unlock()
-	_, ok := cc.conns.connMap[peerID]
-
+	cc.conns.pLock.Lock()
+	_, exist := cc.conns.peerLocker[peerID]
+	if !exist {
+		cc.conns.peerLocker[peerID] = sync.Mutex{}
+	}
+	locker := cc.conns.peerLocker[peerID]
+	cc.conns.pLock.Unlock()
+	locker.Lock()
+	defer locker.Unlock()
+	cc.conns.cLock.Lock()
+	c, ok := cc.conns.connMap[peerID]
+	cc.conns.cLock.Unlock()
 	if !ok {
 		ctx, cancel := context.WithTimeout(context.Background(), common.ChainClientDialTimeout)
 		defer cancel()
@@ -355,26 +396,31 @@ func (cc *ClientConnector) GetServiceClient(peerID peer.ID) (proto.HighwayServic
 				Timeout: common.ChainClientKeepaliveTimeout,
 			}),
 		)
-		if err != nil {
+		if err == nil {
+			cc.conns.cLock.Lock()
+			cc.conns.connMap[peerID] = conn
+			c = cc.conns.connMap[peerID]
+			cc.conns.cLock.Unlock()
+		} else {
 			return nil, errors.WithStack(err)
 		}
-
-		cc.conns.connMap[peerID] = conn
 	}
-	client := proto.NewHighwayServiceClient(cc.conns.connMap[peerID])
-	return client, nil
+	return proto.NewHighwayServiceClient(c), nil
 }
 
 func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
-	cc.conns.Lock()
-	defer cc.conns.Unlock()
+	cc.conns.pLock.Lock()
+	cc.conns.cLock.Lock()
+	defer cc.conns.cLock.Unlock()
+	defer cc.conns.pLock.Unlock()
 
-	if conn, ok := cc.conns.connMap[peerID]; ok {
+	if c, ok := cc.conns.connMap[peerID]; ok {
 		logger.Infof("Closing connection to pID %s", peerID.String())
-		if err := conn.Close(); err != nil {
+		if err := c.Close(); err != nil {
 			logger.Warnf("Failed closing connection to pID %s: %s", peerID.String(), errors.WithStack(err))
 		} else {
 			delete(cc.conns.connMap, peerID)
+			delete(cc.conns.peerLocker, peerID)
 			logger.Infof("Closed connection to pID %s successfully", peerID.String())
 		}
 	}
@@ -383,20 +429,25 @@ func (cc *ClientConnector) CloseDisconnected(peerID peer.ID) {
 type ClientConnector struct {
 	dialer Dialer
 	conns  struct {
-		connMap map[peer.ID]*grpc.ClientConn
-		sync.RWMutex
+		connMap    map[peer.ID]*grpc.ClientConn
+		peerLocker map[peer.ID]sync.Mutex
+		cLock      sync.RWMutex
+		pLock      sync.RWMutex
 	}
 }
 
 func NewClientConnector(dialer Dialer) *ClientConnector {
 	connector := &ClientConnector{dialer: dialer}
 	connector.conns.connMap = map[peer.ID]*grpc.ClientConn{}
-	connector.conns.RWMutex = sync.RWMutex{}
+	connector.conns.peerLocker = map[peer.ID]sync.Mutex{}
+	connector.conns.cLock = sync.RWMutex{}
+	connector.conns.pLock = sync.RWMutex{}
 	return connector
 }
 
 type PeerStore interface {
 	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
+	GetHWIDOfPeer(pID peer.ID) (peer.ID, error)
 }
 
 type Dialer interface {
