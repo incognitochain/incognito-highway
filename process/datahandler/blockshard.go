@@ -21,6 +21,7 @@ func (handler *BlkShardHandler) HandleDataFromTopic(topicReceived string, dataRe
 		topicPubs = append(topicPubs, topicPub)
 	} else {
 		topicPubs = topic.Handler.GetHWPubTopicsFromMsg(msgType, cID)
+		topicPubs = topic.Handler.GetHWPubTopicsFromMsg(msgType, topic.NoCIDInTopic)
 	}
 	for _, topicPub := range topicPubs {
 		err := handler.PubSub.Publish(topicPub, dataReceived.GetData())
