@@ -28,9 +28,9 @@ func (handler *BFTHandler) HandleDataFromTopic(topicReceived string, dataReceive
 	if !ok {
 		return nil
 	}
-	pubGroup := handler.Scenario.GetPubGroup(msgBFT.ChainKey, uint64(msgBFT.Timestamp))
+	pubGroup := handler.Scenario.GetPubGroup(msgBFT.ChainKey, uint64(msgBFT.TimeSlot))
 	if msgBFT.ChainKey == "beacon" {
-		logger.Infof("[monitor] srckey %v Block %v Get PubGroup %v", srcPKey, msgBFT.Timestamp, pubGroup)
+		logger.Infof("[monitor] srckey %v Block %v Get PubGroup %v", srcPKey, msgBFT.TimeSlot, pubGroup)
 	}
 	if pubGroup != nil {
 		for _, dstPKey := range pubGroup[srcPKey] {
