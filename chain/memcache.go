@@ -4,6 +4,8 @@ import (
 	context "context"
 	"fmt"
 	"highway/common"
+	"math/rand"
+	"time"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -146,6 +148,8 @@ func (cache *MemCache) StreamBlkByHeight(
 	req RequestBlockByHeight,
 	blkChan chan common.ExpectedBlk,
 ) error {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
 	heights := req.GetHeights()
 	blkHeight := heights[0] - 1
 	idx := 0
@@ -157,14 +161,17 @@ func (cache *MemCache) StreamBlkByHeight(
 			blkHeight++
 		}
 		key := keyByHeight(req, blkHeight)
-		if b, ok := cache.cacher.Get(key); ok {
-			if block, ok := b.([]byte); ok {
-				blkChan <- common.ExpectedBlk{
-					Height: blkHeight,
-					Hash:   []byte{},
-					Data:   block,
+		drop := r1.Intn(100)
+		if drop <= common.PercentGetFromCache {
+			if b, ok := cache.cacher.Get(key); ok {
+				if block, ok := b.([]byte); ok {
+					blkChan <- common.ExpectedBlk{
+						Height: blkHeight,
+						Hash:   []byte{},
+						Data:   block,
+					}
+					continue
 				}
-				continue
 			}
 		}
 		blkChan <- common.ExpectedBlk{

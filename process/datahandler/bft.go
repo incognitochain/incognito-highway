@@ -5,8 +5,8 @@ import (
 	"highway/process/simulateutils"
 	"highway/process/topic"
 
+	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 	"github.com/incognitochain/incognito-chain/wire"
-	libp2p "github.com/libp2p/go-libp2p-pubsub"
 )
 
 type BFTHandler struct {

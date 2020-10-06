@@ -4,7 +4,7 @@ import (
 	"highway/chaindata"
 	"highway/process/topic"
 
-	libp2p "github.com/libp2p/go-libp2p-pubsub"
+	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 )
 
 type PeerStateHandler struct {
@@ -18,7 +18,6 @@ func (handler *PeerStateHandler) HandleDataFromTopic(topicReceived string, dataR
 	var topicPubs []string
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
 	cID := topic.GetCommitteeIDOfTopic(topicReceived)
-	// logger.Debugf("[msgpeerstate] Handle topic peerstate, cID %v, isInside %v, from %v, from highway: %v", cID, handler.FromNode, dataReceived.GetFrom(), !handler.FromNode)
 	if handler.FromNode {
 		topicPub := topic.Handler.GetHWPubSubOutSideFromMsg(msgType, cID)
 		topicPubs = append(topicPubs, topicPub)

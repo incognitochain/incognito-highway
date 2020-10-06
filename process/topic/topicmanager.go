@@ -148,6 +148,11 @@ func (topicManager *TopicManager) getTopicPairForNode(
 				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, int(cID), topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_SUB)
 			}
+		} else {
+			if !forPub {
+				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
+				listAction = append(listAction, proto.MessageTopicPair_SUB)
+			}
 		}
 	case CmdBlockBeacon:
 		if forPub {

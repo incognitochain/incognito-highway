@@ -12,9 +12,10 @@ import (
 	"sync"
 	"time"
 
+	p2pPubSub "github.com/incognitochain/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p-core/host"
-	peer "github.com/libp2p/go-libp2p-peer"
-	p2pPubSub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/multiformats/go-multiaddr"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -51,7 +52,14 @@ func NewPubSub(
 	pubsub := new(PubSubManager)
 	ctx := context.Background()
 	var err error
-	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s)
+	id, err := peer.Decode("Qmanj8hF7toLni73idcW1e9mNjjzBcRoQqjNWQSMPMSZEK")
+	addr, err := multiaddr.NewMultiaddr("/ip4/127.0.0.1/tcp/17339")
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	tracer, err := p2pPubSub.NewRemoteTracer(ctx, s, peer.AddrInfo{ID: id, Addrs: []multiaddr.Multiaddr{addr}})
+	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s, p2pPubSub.WithEventTracer(tracer))
 	if err != nil {
 		return nil, err
 	}
@@ -165,29 +173,29 @@ func deletePeerIDinSlice(target peer.ID, slice []peer.ID) []peer.ID {
 }
 
 // For Grafana, will complete in next pull request
-func (pubsub *PubSubManager) WatchingSubs(subs *p2pPubSub.Subscription) {
-	for {
-		event, err := subs.NextPeerEvent(context.Background())
-		if err != nil {
-			logger.Error(err)
-		}
-		tp := subs.Topic()
-		msgType := topic.GetMsgTypeOfTopic(tp)
-		if event.Type == p2pPubSub.PeerJoin {
-			pubsub.Info.Locker.Lock()
-			pubsub.Info.Info[tp] = append(pubsub.Info.Info[tp], event.Peer)
-			if pubsub.GraLog != nil {
-				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
-			}
-			pubsub.Info.Locker.Unlock()
-		}
-		if event.Type == p2pPubSub.PeerLeave {
-			pubsub.Info.Locker.Lock()
-			pubsub.Info.Info[subs.Topic()] = deletePeerIDinSlice(event.Peer, pubsub.Info.Info[subs.Topic()])
-			if pubsub.GraLog != nil {
-				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
-			}
-			pubsub.Info.Locker.Unlock()
-		}
-	}
-}
+// func (pubsub *PubSubManager) WatchingSubs(subs *p2pPubSub.Subscription) {
+// 	for {
+// 		event, err := subs.Next() PeerEvent(context.Background())
+// 		if err != nil {
+// 			logger.Error(err)
+// 		}
+// 		tp := subs.Topic()
+// 		msgType := topic.GetMsgTypeOfTopic(tp)
+// 		if event.Type == p2pPubSub.PeerJoin {
+// 			pubsub.Info.Locker.Lock()
+// 			pubsub.Info.Info[tp] = append(pubsub.Info.Info[tp], event.Peer)
+// 			if pubsub.GraLog != nil {
+// 				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
+// 			}
+// 			pubsub.Info.Locker.Unlock()
+// 		}
+// 		if event.Type == p2pPubSub.PeerLeave {
+// 			pubsub.Info.Locker.Lock()
+// 			pubsub.Info.Info[subs.Topic()] = deletePeerIDinSlice(event.Peer, pubsub.Info.Info[subs.Topic()])
+// 			if pubsub.GraLog != nil {
+// 				pubsub.GraLog.Add(fmt.Sprintf("total_%s", msgType), len(pubsub.Info.Info[tp]))
+// 			}
+// 			pubsub.Info.Locker.Unlock()
+// 		}
+// 	}
+// }

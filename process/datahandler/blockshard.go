@@ -3,7 +3,7 @@ package datahandler
 import (
 	"highway/process/topic"
 
-	libp2p "github.com/libp2p/go-libp2p-pubsub"
+	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 )
 
 type BlkShardHandler struct {
@@ -21,6 +21,7 @@ func (handler *BlkShardHandler) HandleDataFromTopic(topicReceived string, dataRe
 		topicPubs = append(topicPubs, topicPub)
 	} else {
 		topicPubs = topic.Handler.GetHWPubTopicsFromMsg(msgType, cID)
+		topicPubs = topic.Handler.GetHWPubTopicsFromMsg(msgType, topic.NoCIDInTopic)
 	}
 	for _, topicPub := range topicPubs {
 		err := handler.PubSub.Publish(topicPub, dataReceived.GetData())
