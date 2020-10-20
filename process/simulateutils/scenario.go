@@ -1,8 +1,22 @@
 package simulateutils
 
 import (
+	"encoding/json"
+	"fmt"
 	"sync"
 )
+
+type TriggerByBlockInput struct {
+	Heights     []uint64 `json:"Heights"`
+	TotalBranch int      `json:"Branchs"`
+	ChoseBranch int      `json:"Chose"`
+}
+
+type TriggerByTxIDInput struct {
+	TxIDs       []string `json:"TxIDs"`
+	TotalBranch int      `json:"Branchs"`
+	ChoseBranch int      `json:"Chose"`
+}
 
 type Scenario struct {
 	Scenes map[string][]Scene
@@ -14,6 +28,20 @@ func NewScenario() *Scenario {
 		Scenes: map[string][]Scene{},
 		Lock:   &sync.RWMutex{},
 	}
+}
+
+type ScenarioBasic struct {
+	Scenes map[int]*SimpleTrigger
+	Lock   sync.RWMutex
+}
+
+func NewScenarioBasic(supportShard []byte) *ScenarioBasic {
+	res := &ScenarioBasic{}
+	res.Scenes = make(map[int]*SimpleTrigger)
+	for _, cID := range supportShard {
+		res.Scenes[int(cID)] = NewSimpleTrigger()
+	}
+	return res
 }
 
 type Scene struct {
@@ -62,6 +90,48 @@ func (s *Scenario) SetScenes(scenes map[string]Scene) error {
 		} else {
 			s.Scenes[ck] = []Scene{scene}
 		}
+	}
+	return nil
+}
+
+func (s *ScenarioBasic) SetScenes(sType SceneType, scene []byte, cID int) error {
+	s.Lock.RLock()
+	simpleScene, ok := s.Scenes[cID]
+	s.Lock.RUnlock()
+	if !ok {
+		return fmt.Errorf("Set fork scenes error: Do not support committee ID %v", cID)
+	}
+	switch sType {
+	case TRIGGER_BY_BLOCKHEIGHT:
+		newS := new(TriggerByBlockInput)
+		err := json.Unmarshal(scene, newS)
+		if err != nil {
+			return err
+		}
+		simpleScene.Lock()
+		bs := BasicForkScene{
+			TotalForkBlock: uint64(newS.TotalBranch),
+			NextBlock:      uint64(newS.ChoseBranch),
+		}
+		for _, h := range newS.Heights {
+			simpleScene.ByBlock[h] = bs
+		}
+		simpleScene.Unlock()
+	case TRIGGER_BY_TXID:
+		newS := new(TriggerByTxIDInput)
+		err := json.Unmarshal(scene, newS)
+		if err != nil {
+			return err
+		}
+		simpleScene.Lock()
+		bs := BasicForkScene{
+			TotalForkBlock: uint64(newS.TotalBranch),
+			NextBlock:      uint64(newS.ChoseBranch),
+		}
+		for _, txID := range newS.TxIDs {
+			simpleScene.ByTxID[txID] = bs
+		}
+		simpleScene.Unlock()
 	}
 	return nil
 }

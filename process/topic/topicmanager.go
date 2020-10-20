@@ -129,8 +129,13 @@ func (topicManager *TopicManager) getTopicPairForNode(
 	listAction := []proto.MessageTopicPair_Action{}
 	switch msgType {
 	case CmdBFT:
-		listTopic = append(listTopic, GetTopicForPubSubPrivate(msgType, int(cID), topicManager.selfID, nodeKey))
-		listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
+		if forPub {
+			listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID), topicManager.selfID))
+			listAction = append(listAction, proto.MessageTopicPair_PUB)
+		} else {
+			listTopic = append(listTopic, GetTopicForPubSubPrivate(msgType, int(cID), topicManager.selfID, nodeKey))
+			listAction = append(listAction, proto.MessageTopicPair_SUB)
+		}
 	case CmdPeerState:
 		if forPub {
 			listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, int(cID), topicManager.selfID))
@@ -221,7 +226,7 @@ func (topicManager *TopicManager) GetListTopicPairForNode(
 							continue
 						}
 						topics = append(topics, topicSub)
-						actions = append(actions, topicManager.allTopicPairForNodePub[msg][byte(cID)].Act[i])
+						actions = append(actions, topicPair.Act[i])
 					}
 				} else {
 					topicManager.rwLockTopicNodePub.RLock()
@@ -249,7 +254,7 @@ func (topicManager *TopicManager) GetListTopicPairForNode(
 							continue
 						}
 						topics = append(topics, topicSub)
-						actions = append(actions, topicManager.allTopicPairForNodePub[msg][byte(cID)].Act[i])
+						actions = append(actions, topicPair.Act[i])
 					}
 				} else {
 					topicManager.rwLockTopicNodeSub.RLock()

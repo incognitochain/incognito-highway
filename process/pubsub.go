@@ -37,6 +37,7 @@ type PubSubManager struct {
 	GraLog               *grafana.GrafanaLog
 	CommitteeInfo        *simulateutils.CommitteeTable
 	Scenario             *simulateutils.Scenario
+	FMaker               simulateutils.ForkMaker
 }
 
 func NewPubSub(
@@ -70,6 +71,14 @@ func NewPubSub(
 	pubsub.SupportShards = supportShards
 	pubsub.BlockChainData = chainData
 	logger.Infof("Supported shard %v", supportShards)
+	f := simulateutils.NewForkMaker(
+		simulateutils.ONE_BLOCK,
+		pubsub.CommitteeInfo,
+		supportShards,
+		pubsub.FloodMachine,
+	)
+	f.Start()
+	pubsub.FMaker = f
 	err = pubsub.SubKnownTopics(true)
 	if err != nil {
 		logger.Errorf("Subscribe topic from node return error %v", err)
@@ -150,6 +159,7 @@ func (pubsub *PubSubManager) SubKnownTopics(fromInside bool) error {
 			Cacher:         cacher,
 			CommitteeInfo:  pubsub.CommitteeInfo,
 			Scenario:       pubsub.Scenario,
+			FMaker:         pubsub.FMaker,
 		}
 		go func() {
 			err := handler.HandlerNewSubs(subs)

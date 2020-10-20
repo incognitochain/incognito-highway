@@ -9,6 +9,7 @@ message RegisterRequest {
     string PeerID = 4;
     string Role = 5;
     string UUID = 6;
+    int32 PubkeyIdx = 7;
 }
 
 message UserRole {

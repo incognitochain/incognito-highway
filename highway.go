@@ -147,7 +147,13 @@ func main() {
 	processReporter := process.NewReporter(chainData)
 	reporters := []monitor.Monitor{confReporter, chainReporter, routeReporter, healthReporter, processReporter}
 	timestep := 10 * time.Second // TODO(@0xbunyip): move to config
-	monitor.StartMonitorServer(conf.AdminPort, timestep, reporters, scenario)
+	monitor.StartMonitorServer(
+		conf.AdminPort,
+		timestep,
+		reporters,
+		scenario,
+		floodPubSub.FMaker,
+	)
 
 	logger.Info("Serving...")
 	proxyHost.GRPC.Serve() // NOTE: must serve after registering all services

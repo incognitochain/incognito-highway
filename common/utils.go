@@ -7,7 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
+	"reflect"
 	"strings"
+	"time"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/wire"
@@ -216,4 +219,47 @@ func FilterLocalAddrs(mas []multiaddr.Multiaddr) []multiaddr.Multiaddr {
 		}
 	}
 	return nonLocal
+}
+
+func GetCurrentTimeSlot() int64 {
+	return int64(math.Floor(float64(time.Now().Unix() / TIMESLOT)))
+}
+
+func EncodeMessage(msg wire.Message) (string, error) {
+	// NOTE: copy from peerConn.outMessageHandler
+	// Create messageHex
+	messageBytes, err := msg.JsonSerialize()
+	if err != nil {
+		fmt.Println(fmt.Errorf("Can not serialize json format for messageHex:"+msg.MessageType(), err))
+		return "", err
+	}
+
+	// Add 24 bytes headerBytes into messageHex
+	headerBytes := make([]byte, wire.MessageHeaderSize)
+	// add command type of message
+	cmdType, messageErr := wire.GetCmdType(reflect.TypeOf(msg))
+	if messageErr != nil {
+		fmt.Println(fmt.Errorf("Can not get cmd type for "+msg.MessageType(), messageErr))
+		return "", err
+	}
+	copy(headerBytes[:], []byte(cmdType))
+	// add forward type of message at 13st byte
+	forwardType := byte('s')
+	forwardValue := byte(0)
+	copy(headerBytes[wire.MessageCmdTypeSize:], []byte{forwardType})
+	copy(headerBytes[wire.MessageCmdTypeSize+1:], []byte{forwardValue})
+	messageBytes = append(messageBytes, headerBytes...)
+	// Logger.Infof("Encoded message TYPE %s CONTENT %s", cmdType, string(messageBytes))
+
+	// zip data before send
+	messageBytes, err = common.GZipFromBytes(messageBytes)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Can not gzip for messageHex:"+msg.MessageType(), err))
+		return "", err
+	}
+	messageHex := hex.EncodeToString(messageBytes)
+	//log.Debugf("Content in hex encode: %s", string(messageHex))
+	// add end character to messageHex (delim '\n')
+	// messageHex += "\n"
+	return messageHex, nil
 }

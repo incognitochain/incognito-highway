@@ -5,11 +5,9 @@ import (
 	"highway/chaindata"
 	"highway/common"
 	"highway/process"
-	"highway/process/datahandler"
 	"highway/process/topic"
 	"highway/proto"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -45,45 +43,50 @@ func (s *Server) Register(
 	}
 
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
-	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs, req.CommitteePublicKey)
+	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
+	if err != nil {
+		return nil, err
+	}
+	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs, string(key))
 	if err != nil {
 		logger.Warnf("Couldn't process wantedMsgs: %+v %+v %+v", req.GetWantedMessages(), role, cIDs)
 		return nil, err
 	}
 
-	for _, p := range pairs {
-		for _, t := range p.Topic {
-			msgType := topic.GetMsgTypeOfTopic(t)
-			if _, ok := common.TopicPrivate[msgType]; ok {
-				if common.HasStringAt(s.psManager.FollowedTopic, t) == 0 {
-					continue
-				}
-				handler := datahandler.SubsHandler{
-					PubSub:         s.psManager.FloodMachine,
-					FromInside:     true,
-					BlockchainData: s.psManager.BlockChainData,
-					Cacher:         cache.New(common.MaxTimeKeepPubSubData, common.MaxTimeKeepPubSubData),
-					CommitteeInfo:  s.psManager.CommitteeInfo,
-					Scenario:       s.psManager.Scenario,
-				}
-				go func() {
-					subs, err := s.psManager.FloodMachine.Subscribe(t)
-					if err != nil {
-						logger.Info(err)
-						return
-					}
-					logger.Infof("Success subscribe topic %v", t)
-					logger.Infof("aaaaaaaaaaaaaaa %v", handler.Scenario)
-					logger.Infof("aaaaaaaaaaaaaaa %v", handler.Scenario.Lock)
-					err = handler.HandlerNewSubs(subs)
-					if err != nil {
-						logger.Errorf("Handle Subsciption topic %v return error %v", subs.Topic(), err)
-					}
-				}()
-				s.psManager.FollowedTopic = append(s.psManager.FollowedTopic, t)
-			}
-		}
-	}
+	// for _, p := range pairs {
+	// 	for _, t := range p.Topic {
+	// 		msgType := topic.GetMsgTypeOfTopic(t)
+	// 		if _, ok := common.TopicPrivate[msgType]; ok {
+	// 			if common.HasStringAt(s.psManager.FollowedTopic, t) == 0 {
+	// 				continue
+	// 			}
+	// 			handler := datahandler.SubsHandler{
+	// 				PubSub:         s.psManager.FloodMachine,
+	// 				FromInside:     true,
+	// 				BlockchainData: s.psManager.BlockChainData,
+	// 				Cacher:         cache.New(common.MaxTimeKeepPubSubData, common.MaxTimeKeepPubSubData),
+	// 				CommitteeInfo:  s.psManager.CommitteeInfo,
+	// 				Scenario:       s.psManager.Scenario,
+	// 				FMaker:         s.psManager.FMaker,
+	// 			}
+	// 			go func() {
+	// 				subs, err := s.psManager.FloodMachine.Subscribe(t)
+	// 				if err != nil {
+	// 					logger.Info(err)
+	// 					return
+	// 				}
+	// 				logger.Infof("Success subscribe topic %v", t)
+	// 				logger.Infof("aaaaaaaaaaaaaaa %v", handler.Scenario)
+	// 				logger.Infof("aaaaaaaaaaaaaaa %v", handler.Scenario.Lock)
+	// 				err = handler.HandlerNewSubs(subs)
+	// 				if err != nil {
+	// 					logger.Errorf("Handle Subsciption topic %v return error %v", subs.Topic(), err)
+	// 				}
+	// 			}()
+	// 			s.psManager.FollowedTopic = append(s.psManager.FollowedTopic, t)
+	// 		}
+	// 	}
+	// }
 
 	cID := 0
 	if len(cIDs) > 0 {
@@ -96,16 +99,16 @@ func (s *Server) Register(
 		return nil, errors.WithStack(err)
 	}
 
-	key, err := common.PreprocessKey(req.GetCommitteePublicKey())
-	if err != nil {
-		return nil, err
-	}
+	// key, err := common.PreprocessKey(req.GetCommitteePublicKey())
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	pinfo := PeerInfo{ID: pid, Pubkey: string(key)}
 	if role == common.COMMITTEE {
-		logger.Infof("Update peerID of MiningPubkey: %v %v", pid.String(), key)
+		logger.Infof("Update peerID of MiningPubkey: %v %v %v %v", pid.String(), key, byte(cID), req.PubkeyIdx)
 		s.chainData.UpdateCommittee(key, pid, byte(cID))
-		s.psManager.CommitteeInfo.AddPubKey(string(key), byte(cID))
+		s.psManager.CommitteeInfo.AddPubKey(string(key), byte(cID), int(req.PubkeyIdx))
 		pinfo.CID = int(cID)
 		pinfo.Role = r.Role
 	} else {

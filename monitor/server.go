@@ -12,7 +12,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor, scenario *simulateutils.Scenario) {
+func StartMonitorServer(
+	port int,
+	timestep time.Duration,
+	monitors []Monitor,
+	scenario *simulateutils.Scenario,
+	fMaker simulateutils.ForkMaker,
+) {
 	// Start all monitors
 	for _, m := range monitors {
 		go m.Start(timestep)
@@ -26,6 +32,10 @@ func StartMonitorServer(port int, timestep time.Duration, monitors []Monitor, sc
 		Scenario: scenario,
 	}
 	http.Handle("/setscenes", sAPI)
+	fAPI := &ForkAPI{
+		FMaker: fMaker,
+	}
+	http.Handle("/setbasicscenes", fAPI)
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
 			logger.Errorf("Error in ListenAndServe: %s", err)

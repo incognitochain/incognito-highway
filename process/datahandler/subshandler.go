@@ -7,6 +7,7 @@ import (
 	"highway/common"
 	"highway/process/simulateutils"
 	"highway/process/topic"
+	"sync"
 
 	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 	"github.com/patrickmn/go-cache"
@@ -20,7 +21,10 @@ type SubsHandler struct {
 	FromInside     bool
 	CommitteeInfo  *simulateutils.CommitteeTable
 	Scenario       *simulateutils.Scenario
+	FMaker         simulateutils.ForkMaker
 }
+
+var locker sync.Mutex
 
 func (handler *SubsHandler) HandlerNewSubs(subs *libp2p.Subscription) error {
 	var err error
@@ -34,11 +38,16 @@ func (handler *SubsHandler) HandlerNewSubs(subs *libp2p.Subscription) error {
 		data, err := subs.Next(context.Background())
 		if (err == nil) && (data != nil) {
 			dataBytes := data.GetData()
-			data4cache := common.NewKeyForCacheDataOfTopic(subs.Topic(), dataBytes)
+			key4cache := fmt.Sprintf("%v-%v", topic.GetMsgTypeOfTopic(subs.Topic()), topic.GetCommitteeIDOfTopic(subs.Topic()))
+			data4cache := common.NewKeyForCacheDataOfTopic(key4cache, dataBytes)
+			// fmt.Printf("[debugcache] Cache data for topic %v data hash %v\n", key4cache, chaincommon.HashB(data4cache))
+			locker.Lock()
 			if _, isExist := handler.Cacher.Get(string(data4cache)); isExist {
+				locker.Unlock()
 				continue
 			}
 			handler.Cacher.Set(string(data4cache), nil, common.MaxTimeKeepPubSubData)
+			locker.Unlock()
 			go func() {
 				err := handler.dataHandler.HandleDataFromTopic(subs.Topic(), *data)
 				if err != nil {
@@ -94,6 +103,7 @@ func (handler *SubsHandler) GetDataHandler(
 			CommitteeInfo: handler.CommitteeInfo,
 			Scenario:      handler.Scenario,
 			PubSub:        handler.PubSub,
+			FMaker:        handler.FMaker,
 		}, nil
 	default:
 		return nil, fmt.Errorf("Handler for msg %v can not found", msgType)

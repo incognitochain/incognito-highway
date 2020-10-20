@@ -49,6 +49,7 @@ var (
 	BroadcastMsgEnlistTimestep = 1 * time.Minute
 
 	PercentGetFromCache = 80
+	TIMESLOT            = int64(10)
 )
 
 var TopicPrivate = map[string]struct{}{
