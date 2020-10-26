@@ -60,6 +60,7 @@ func NewPubSub(
 		return nil, err
 	}
 	tracer, err := p2pPubSub.NewRemoteTracer(ctx, s, peer.AddrInfo{ID: id, Addrs: []multiaddr.Multiaddr{addr}})
+	fmt.Println("ei yo")
 	pubsub.FloodMachine, err = p2pPubSub.NewFloodSub(ctx, s, p2pPubSub.WithMaxMessageSize(common.MaxPSMsgSize), p2pPubSub.WithEventTracer(tracer))
 	if err != nil {
 		return nil, err
