@@ -50,6 +50,7 @@ var (
 
 	PercentGetFromCache = 80
 	TIMESLOT            = int64(10)
+	MaxPSMsgSize        = 1 << 23
 )
 
 var TopicPrivate = map[string]struct{}{
