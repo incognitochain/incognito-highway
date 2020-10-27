@@ -49,6 +49,8 @@ var (
 	BroadcastMsgEnlistTimestep = 1 * time.Minute
 
 	PercentGetFromCache = 80
+
+	MaxPSMsgSize = 1 << 22 //4Mb
 )
 
 const (
