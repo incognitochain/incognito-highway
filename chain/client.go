@@ -156,12 +156,17 @@ func (hc *Client) getClientWithHashes(
 	if len(connectedPeers) > 0 {
 		// Find block proposer (position = 0) and ask it
 		for _, p := range connectedPeers {
-			// if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id > 0) || (pos.id <= 21)) {
-			client, err := hc.FindServiceClient(p.ID)
-			if err == nil {
-				return client, p.ID, nil
-			}
+			// pRnd := connectedPeers[rand.Intn(len(connectedPeers))]
+			// client, err := hc.FindServiceClient(pRnd.ID)
+			// if err == nil {
+			// 	return client, pRnd.ID, nil
 			// }
+			if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id > 0) || (pos.id <= 21)) {
+				client, err := hc.FindServiceClient(p.ID)
+				if err == nil {
+					return client, p.ID, nil
+				}
+			}
 		}
 	}
 	return hc.router.GetClientSupportShard(cid)
