@@ -1,0 +1,64 @@
+syntax = "proto3";
+package proto;
+
+// The message definition
+service HighwayMessage {
+  // Send msg from highway to monitor BE
+  rpc Send (stream Message) returns (Response) {}
+}
+
+// Official message for highway and monitor BE to use
+message Message{
+  string id = 1;
+  string type = 2;
+  string committeePubKey = 3;
+  string peerID = 4;
+  BFTMessage bftMessage = 5;
+  NodeStateMessage nodeStateMessage = 6;
+}
+
+//BFTMessage
+message BFTMessage {
+
+  message Info{
+    string type = 1;
+    string committeeID = 2;
+    string content = 3;
+  }
+
+  Info info = 1;
+  Block block = 2;
+  AgreementOfValidator agreementOfValidator = 3;
+}
+
+//NodeStateMessage
+message NodeStateMessage{
+  string latestState = 1;
+  string role = 2;
+  string content = 3;
+}
+
+//Response for highway and monitor BE to use for interacting
+message Response{
+  uint32 code = 1;
+  string content = 2;
+  string error = 3;
+  repeated string miss_msg = 4;
+}
+
+//Block info
+message Block{
+  string hash = 1;
+  string prevHash = 2;
+  uint32 timestamp = 3;
+  uint32 height = 4;
+  string committeeID = 5;
+}
+
+//AgreementOfValidator
+message AgreementOfValidator{
+  string validatorID = 1;
+  string blockHash = 2;
+  string content = 3;
+}
+
