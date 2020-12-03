@@ -108,6 +108,7 @@ func (pubsub *PubSubManager) PublishPeerStateToNode() {
 	for _, cID := range pubsub.SupportShards {
 		pubTopics := topic.Handler.GetHWPubTopicsFromMsg(topic.CmdPeerState, int(cID))
 		pubsub.BlockChainData.Locker.RLock()
+		logger.Info("[testpeerstate] Len of msg peerstate %v", len(pubsub.BlockChainData.ListMsgPeerStateOfShard[cID]))
 		for _, stateData := range pubsub.BlockChainData.ListMsgPeerStateOfShard[cID] {
 			for _, pubTopic := range pubTopics {
 				err := pubsub.FloodMachine.Publish(pubTopic, stateData)
