@@ -12,6 +12,7 @@ import (
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/wire"
 	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 )
 
@@ -24,6 +25,7 @@ type ChainData struct {
 	ShardByMiningPubkey        map[string]byte
 	ShardPendingByMiningPubkey map[string]byte
 	Locker                     *sync.RWMutex
+	cacher                     *cache.Cache
 }
 
 type PeerWithBlk struct {
@@ -45,6 +47,8 @@ func (chainData *ChainData) Init(numberOfShard int) error {
 	chainData.PeerIDByMiningPubkey = map[string]peer.ID{}
 	chainData.ShardPendingByMiningPubkey = map[string]byte{}
 	chainData.ShardByMiningPubkey = map[string]byte{}
+	chainData.cacher = cache.New(common.MaxTimeKeepPeerState, common.MaxTimeKeepPeerState)
+	chainData.cacher.OnEvicted(chainData.DeletePeerStateInfo)
 	return nil
 }
 
@@ -260,6 +264,7 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 	}
 	// Save peerstate by miningPubkey
 	chainData.Locker.Lock()
+	chainData.cacher.Add(miningPubkey, committeeID, common.MaxTimeKeepPeerState)
 	if chainData.ListMsgPeerStateOfShard[committeeID] == nil {
 		chainData.ListMsgPeerStateOfShard[committeeID] = map[string][]byte{}
 	}
@@ -267,6 +272,7 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 		chainData.ListMsgPeerStateOfShard[committeeID][miningPubkey] = data
 	}
 	chainData.Locker.Unlock()
+
 	err = chainData.UpdateStateV2WithMsgPeerState(committeeID, msgPeerState.SenderID, msgPeerState)
 	if err != nil {
 		logger.Errorf(err.Error())
@@ -278,6 +284,16 @@ func (chainData *ChainData) UpdatePeerStateFromHW(publisher peer.ID, data []byte
 		msgPeerState,
 	)
 	return nil
+}
+
+func (chainData *ChainData) DeletePeerStateInfo(
+	keyCaching string,
+	value interface{},
+) {
+	chainData.Locker.Lock()
+	cID := value.(byte)
+	delete(chainData.ListMsgPeerStateOfShard[cID], keyCaching)
+	chainData.Locker.Unlock()
 }
 
 func newChainStateFromMsgPeerState(
