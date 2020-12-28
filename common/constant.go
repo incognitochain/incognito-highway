@@ -9,6 +9,7 @@ const (
 	ShardRole          = "shard"
 
 	CommitteeRole = "committee"
+	MonitorRole   = "netmonitor"
 	PendingRole   = "pending"
 	WaitingRole   = "waiting"
 	NormalNode    = ""
@@ -57,6 +58,7 @@ const (
 	COMMITTEE byte = iota
 	PENDING
 	NORMAL
+	MONITOR
 )
 
 type ExpectedBlkByHeight struct {

@@ -39,6 +39,8 @@ func (s *Server) Register(
 	role := common.NORMAL // normal node, waiting and pending validators
 	if reqRole == common.CommitteeRole {
 		role = common.COMMITTEE
+	} else {
+		role = common.MONITOR
 	}
 
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
@@ -220,6 +222,9 @@ func (s *Server) processListWantedMessageOfPeer(
 		msgAndCID[m] = committeeIDs
 	}
 	// TODO handle error here
+	if role == common.MONITOR {
+		return topic.Handler.GetListTopicPairForMonitor(), nil
+	}
 	pairs = topic.Handler.GetListTopicPairForNode(role, msgAndCID)
 	return pairs, nil
 }
