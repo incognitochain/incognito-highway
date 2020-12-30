@@ -40,7 +40,9 @@ func (s *Server) Register(
 	if reqRole == common.CommitteeRole {
 		role = common.COMMITTEE
 	} else {
-		role = common.MONITOR
+		if reqRole == common.MonitorRole {
+			role = common.MONITOR
+		}
 	}
 
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
