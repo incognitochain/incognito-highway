@@ -298,7 +298,13 @@ func (f *OneBlockFork) CheckIfItFork(
 				err := fmt.Errorf("Not support this cID %v", cID)
 				panic(err)
 			}
-
+			if wantedHeight != 0 {
+				simpleScene.RLock()
+				if _, ok := simpleScene.ByBlock[wantedHeight]; !ok {
+					wantedHeight = 0
+				}
+				simpleScene.RUnlock()
+			}
 			fork, fs = simpleScene.IsTrigger(msg)
 			if !fork {
 				pInfo.ForkScene = nil
@@ -313,9 +319,11 @@ func (f *OneBlockFork) CheckIfItFork(
 		if bftP.BlkHeight < wantedHeight {
 			continue
 		}
-		if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
-			fmt.Println("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
-			return fmt.Errorf("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
+		if fork {
+			if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
+				fmt.Println("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
+				return fmt.Errorf("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
+			}
 		}
 		pInfo.Height = bftP.BlkHeight
 		msgProposeMap[round] = msgPBFT
