@@ -288,6 +288,9 @@ func (f *OneBlockFork) CheckIfItFork(
 	}
 	for msgPBFT := range pbftCh {
 		msg := msgPBFT.Msg
+		bft := msg.(*wire.MessageBFT)
+		bftP := ParseBFTPropose(bft)
+		fmt.Printf("[debugfork] Received msg proposes: cID %v Height %v Hash %v \n", bftP.ShardID, bftP.BlkHeight, bftP.BlkHash)
 		if round == 1 {
 			pInfo.StartTimeSlot = common.GetCurrentTimeSlot()
 			// fork, fs = f.BS.IsTrigger(msg)
@@ -299,9 +302,12 @@ func (f *OneBlockFork) CheckIfItFork(
 				panic(err)
 			}
 			if wantedHeight != 0 {
+				fmt.Printf("[debugfork] %v %v \n", wantedHeight, bftP.BlkHeight)
 				simpleScene.RLock()
 				if _, ok := simpleScene.ByBlock[wantedHeight]; !ok {
+					fmt.Println("[debugfork] Outdated heights, update wanted height")
 					wantedHeight = 0
+					pInfo.Height = wantedHeight
 				}
 				simpleScene.RUnlock()
 			}
@@ -314,14 +320,12 @@ func (f *OneBlockFork) CheckIfItFork(
 		}
 		pInfo.MsgBFTByRound[round] = msgPBFT
 
-		bft := msg.(*wire.MessageBFT)
-		bftP := ParseBFTPropose(bft)
 		if bftP.BlkHeight < wantedHeight {
 			continue
 		}
 		if fork {
 			if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
-				fmt.Println("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
+				fmt.Printf("Broken, received height %v, wanted height %v\n", bftP.BlkHeight, wantedHeight)
 				return fmt.Errorf("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
 			}
 		}
@@ -338,7 +342,7 @@ func (f *OneBlockFork) CheckIfItFork(
 			Round:     round,
 			ShardID:   bftP.ShardID,
 		}
-		fmt.Printf("Chose block %v %v", bftP.MsgPropose.TimeSlot, bftP.BlkHash)
+		fmt.Printf("Chose block height %v cID %v blkHash %v", bftP.BlkHeight, bftP.ShardID, bftP.BlkHash)
 		round++
 		if fork {
 			if uint64(len(msgProposeMap)) == fs.TotalForkBlock {
