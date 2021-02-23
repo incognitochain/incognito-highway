@@ -314,6 +314,7 @@ func (f *OneBlockFork) CheckIfItFork(
 			continue
 		}
 		if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
+			fmt.Println("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
 			return fmt.Errorf("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
 		}
 		pInfo.Height = bftP.BlkHeight
