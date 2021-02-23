@@ -204,33 +204,6 @@ func (topicManager *TopicManager) getTopicPairForNode(
 	return pair
 }
 
-func (topicManager *TopicManager) GetListTopicPairForMonitor() []*proto.MessageTopicPair {
-	res := []*proto.MessageTopicPair{}
-	// listTopicsPubsub := topicManager.GetAllTopicOutsideForHW()
-	// for
-	for _, msg := range Message4Process {
-		listTopics := []string{}
-		listAcc := []proto.MessageTopicPair_Action{}
-		for _, cID := range topicManager.supportShards {
-			pair := getTopicPairOutsideForHW(msg, cID)
-			for _, tp := range pair.Topic {
-				if (len(tp) > 0) && (common.HasStringAt(listTopics, tp) == -1) {
-					listTopics = append(listTopics, tp)
-					listAcc = append(listAcc, proto.MessageTopicPair_SUB)
-				}
-			}
-		}
-		if len(listTopics) > 0 {
-			res = append(res, &proto.MessageTopicPair{
-				Message: msg,
-				Topic:   listTopics,
-				Act:     listAcc,
-			})
-		}
-	}
-	return res
-}
-
 func (topicManager *TopicManager) GetListTopicPairForNode(
 	level byte,
 	msgAndCID map[string][]int,

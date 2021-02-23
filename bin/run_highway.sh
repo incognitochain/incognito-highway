@@ -12,10 +12,6 @@ if [ -z "$NAME" ]; then
 fi
 
 if [ -z "$PUBLIC_IP" ]; then
-    PUBLIC_IP=`dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com | tr -d '"'`;
-fi
-
-if [ -z "$PUBLIC_IP" ]; then
     PUBLIC_IP=`dig -4 @resolver1.opendns.com ANY myip.opendns.com +short`;
 fi
 
