@@ -485,7 +485,7 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 					case msgBFT := <-f.VBFTsCh[cID]:
 						msg := msgBFT.Msg
 						bft := msg.(*wire.MessageBFT)
-						fmt.Printf("[debugfork] CID %v Received msg vote %v\n", cID, chaincommon.HashB(bft.Content))
+						fmt.Printf("[debugfork] CID %v Received msg vote %v, len committee %v %v\n", cID, chaincommon.HashB(bft.Content), len(f.CommitteeInfo.PubKeyBySID[byte(cID)])/3*2)
 						bftV := ParseBFTVote(bft)
 						fmt.Printf("[debugfork] Parse result %v\n", bftV.BlkHash)
 						voteR, ok := blkInfoByHash[bftV.BlkHash]

@@ -3,6 +3,8 @@ package datahandler
 import (
 	"highway/process/topic"
 
+	"github.com/incognitochain/incognito-chain/common"
+
 	libp2p "github.com/incognitochain/go-libp2p-pubsub"
 )
 
@@ -17,6 +19,7 @@ func (handler *TxHandler) HandleDataFromTopic(topicReceived string, dataReceived
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
 	cID := topic.GetCommitteeIDOfTopic(topicReceived)
 	if handler.FromNode {
+		logger.Infof("[msgtx] received tx from topic %v, data received %v", topicReceived, common.HashH(dataReceived.Data).String())
 		topicPub := topic.Handler.GetHWPubSubOutSideFromMsg(msgType, cID)
 		topicPubs = append(topicPubs, topicPub)
 	} else {

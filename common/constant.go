@@ -9,6 +9,7 @@ const (
 	ShardRole          = "shard"
 
 	CommitteeRole = "committee"
+	MonitorRole   = "netmonitor"
 	PendingRole   = "pending"
 	WaitingRole   = "waiting"
 	NormalNode    = ""
@@ -50,6 +51,8 @@ var (
 
 	PercentGetFromCache = 80
 	TIMESLOT            = int64(10)
+
+	MaxPSMsgSize = 1 << 23
 )
 
 var TopicPrivate = map[string]struct{}{
@@ -60,6 +63,7 @@ const (
 	COMMITTEE byte = iota
 	PENDING
 	NORMAL
+	MONITOR
 )
 
 type ExpectedBlkByHeight struct {
