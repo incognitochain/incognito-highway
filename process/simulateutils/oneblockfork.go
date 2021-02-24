@@ -290,6 +290,9 @@ func (f *OneBlockFork) CheckIfItFork(
 		msg := msgPBFT.Msg
 		bft := msg.(*wire.MessageBFT)
 		bftP := ParseBFTPropose(bft)
+		if bftP.BlkHeight < wantedHeight {
+			continue
+		}
 		fmt.Printf("[debugfork] Received msg proposes: cID %v Height %v Hash %v \n", bftP.ShardID, bftP.BlkHeight, bftP.BlkHash)
 		if round == 1 {
 			pInfo.StartTimeSlot = common.GetCurrentTimeSlot()
@@ -320,9 +323,6 @@ func (f *OneBlockFork) CheckIfItFork(
 		}
 		pInfo.MsgBFTByRound[round] = msgPBFT
 
-		if bftP.BlkHeight < wantedHeight {
-			continue
-		}
 		if fork {
 			if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
 				fmt.Printf("Broken, received height %v, wanted height %v\n", bftP.BlkHeight, wantedHeight)
