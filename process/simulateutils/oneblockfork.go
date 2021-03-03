@@ -371,7 +371,7 @@ func (f *OneBlockFork) CheckIfItFork(
 
 func (f *OneBlockFork) GetNextPropose(cID int, stTS, stIdx, curTS int64) (string, int) {
 	f.CommitteeInfo.lock.RLock()
-	idx := int(stIdx+curTS-stTS) % f.CommitteeInfo.CommitteeSize[byte(cID)]
+	idx := int(stIdx+curTS-stTS) % f.CommitteeInfo.GetSize(byte(cID))
 	f.CommitteeInfo.lock.RUnlock()
 	pk := f.CommitteeInfo.PubKeyBySID[byte(cID)][idx]
 	return pk, idx
@@ -505,7 +505,7 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 						voteR, ok := blkInfoByHash[bftV.BlkHash]
 						if (ok) && (blkInfoMap[voteR].BlkHash == bftV.BlkHash) {
 							blkInfoMap[voteR].Vote = append(blkInfoMap[voteR].Vote, msg)
-							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > len(f.CommitteeInfo.PubKeyBySID[byte(cID)])/3*2) {
+							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID)) / 3 * 2)) {
 								fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 								forkStatus = "PublishVote"
 								out = true
@@ -531,7 +531,7 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 						int64(blkInfoMap[1].Propose.ProposeIndex),
 						curTS,
 					)
-					fmt.Printf("[fork] Next propose for fork scence (%v, %v): %v %v", pInfo.ForkScene.NextBlock, pInfo.ForkScene.TotalForkBlock, pk, idx)
+					fmt.Printf("[fork] Next propose for fork scence (%v, %v): %v %v %v\n", pInfo.ForkScene.NextBlock, pInfo.ForkScene.TotalForkBlock, pk, idx, f.CommitteeInfo.GetSize(byte(cID)))
 					for _, msgV := range blkInfoMap[int(curfs.NextBlock)].Vote {
 						f.PublishToPK(
 							blkInfoMap[int(curfs.NextBlock)].Propose.Topic,

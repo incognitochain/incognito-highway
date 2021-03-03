@@ -70,3 +70,12 @@ func (table *CommitteeTable) GetKeysByKey(pubKey string) []string {
 	}
 	return []string{}
 }
+
+func (table *CommitteeTable) GetSize(cID byte) int {
+	table.lock.RLock()
+	defer table.lock.RUnlock()
+	if size, ok := table.CommitteeSize[cID]; ok {
+		return size
+	}
+	return 0
+}
