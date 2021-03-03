@@ -370,7 +370,9 @@ func (f *OneBlockFork) CheckIfItFork(
 }
 
 func (f *OneBlockFork) GetNextPropose(cID int, stTS, stIdx, curTS int64) (string, int) {
-	idx := int(stIdx+curTS-stTS) % len(f.CommitteeInfo.PubKeyBySID[byte(cID)])
+	f.CommitteeInfo.lock.RLock()
+	idx := int(stIdx+curTS-stTS) % f.CommitteeInfo.CommitteeSize[byte(cID)]
+	f.CommitteeInfo.lock.RUnlock()
 	pk := f.CommitteeInfo.PubKeyBySID[byte(cID)][idx]
 	return pk, idx
 }

@@ -11,6 +11,8 @@ type CommitteeTable struct {
 	SIDByPubKey map[string]byte
 	PubKeyIdx   map[string]int
 	lock        *sync.RWMutex
+
+	CommitteeSize map[byte]int
 }
 
 func NewCommitteeTable() *CommitteeTable {
@@ -19,6 +21,8 @@ func NewCommitteeTable() *CommitteeTable {
 		SIDByPubKey: map[string]byte{},
 		PubKeyIdx:   map[string]int{},
 		lock:        &sync.RWMutex{},
+
+		CommitteeSize: map[byte]int{},
 	}
 }
 
@@ -36,6 +40,13 @@ func (table *CommitteeTable) AddPubKey(pubKey string, SID byte, idx int) {
 	table.SIDByPubKey[pubKey] = SID
 	table.PubKeyBySID[SID] = append(table.PubKeyBySID[SID], pubKey)
 	table.PubKeyIdx[pubKey] = idx
+	size, ok := table.CommitteeSize[SID]
+	if ok {
+		if idx+1 > size {
+			size = idx + 1
+		}
+	}
+	table.CommitteeSize[SID] = size
 	sort.Slice(table.PubKeyBySID[SID], func(i, j int) bool {
 		return table.PubKeyIdx[table.PubKeyBySID[SID][i]] < table.PubKeyIdx[table.PubKeyBySID[SID][j]]
 	})
