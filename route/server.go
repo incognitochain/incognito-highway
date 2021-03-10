@@ -7,6 +7,8 @@ import (
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func (s *Server) GetChainCommittee(ctx context.Context, req *proto.GetChainCommitteeRequest) (*proto.GetChainCommitteeResponse, error) {
@@ -46,7 +48,9 @@ func (s *Server) GetHighwayInfos(ctx context.Context, req *proto.GetHighwayInfos
 
 func NewServer(prtc *p2pgrpc.GRPCProtocol, hmap *hmap.Map) *Server {
 	s := &Server{hmap: hmap}
+	sHealth := health.NewServer()
 	proto.RegisterHighwayConnectorServiceServer(prtc.GetGRPCServer(), s)
+	healthpb.RegisterHealthServer(prtc.GetGRPCServer(), sHealth)
 	return s
 }
 

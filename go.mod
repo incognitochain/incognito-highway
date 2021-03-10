@@ -6,7 +6,7 @@ require (
 	github.com/dgraph-io/ristretto v0.0.2
 	github.com/ethereum/go-ethereum v1.9.5 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20191225095939-98e504cb1c95
 	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20210126072501-9870234752e4
@@ -24,6 +24,6 @@ require (
 	github.com/stathat/consistent v1.0.0
 	github.com/stretchr/testify v1.6.1
 	go.uber.org/zap v1.15.0
-	google.golang.org/grpc v1.27.1
+	google.golang.org/grpc v1.36.0
 	stathat.com/c/consistent v1.0.0 // indirect
 )
