@@ -14,6 +14,21 @@ func (s *Server) StreamBlockByHeight(
 	req *proto.BlockByHeightRequest,
 	ss proto.HighwayService_StreamBlockByHeightServer,
 ) error {
+	pClient, ok := peer.FromContext(ss.Context())
+	pIP := "Can not get IP, so sorry"
+	if ok {
+		pIP = pClient.Addr.String()
+		s.counter.Locker.RLock()
+		if lastTime, ok := s.counter.Data[pIP]; ok {
+			if time.Since(lastTime) < common.DelayDuration {
+				return errors.Errorf("Sync too fast, last time %v", lastTime.UTC())
+			}
+		}
+		s.counter.Locker.RUnlock()
+		s.counter.Locker.Lock()
+		s.counter.Data[pIP] = time.Now()
+		s.counter.Locker.Unlock()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), common.MaxTimePerRequest)
 	defer cancel()
 	ctx = WithRequestID(ctx, req)
@@ -22,11 +37,6 @@ func (s *Server) StreamBlockByHeight(
 		err := errors.Errorf("reach max calldepth %v ", req)
 		logger.Error(err)
 		return err
-	}
-	pClient, ok := peer.FromContext(ss.Context())
-	pIP := "Can not get IP, so sorry"
-	if ok {
-		pIP = pClient.Addr.String()
 	}
 	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	if err := proto.CheckReqNCapBlocks(req); err != nil {
