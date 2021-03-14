@@ -36,6 +36,7 @@ func (s *Server) StreamBlockByHeight(
 			if (time.Since(info.Time) < common.DelayDuration) && (req.Heights[0] == info.From) {
 				err := errors.Errorf("Sync too fast, last time sync blocks from %v is %v", info.From, info.Time.UTC())
 				logger.Error(err)
+				s.counter.Locker.RUnlock()
 				return err
 			}
 		}
