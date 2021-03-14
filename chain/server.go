@@ -168,9 +168,13 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 	return nil, errors.New("not supported")
 }
 
+type BlockRequestedInfo struct {
+	From uint64
+	Time time.Time
+}
 type Server struct {
 	counter struct {
-		Data   map[string]time.Time
+		Data   map[string]BlockRequestedInfo
 		Locker *sync.RWMutex
 	}
 	proto.UnimplementedHighwayServiceServer
@@ -208,10 +212,10 @@ func RegisterServer(
 
 	s := &Server{
 		counter: struct {
-			Data   map[string]time.Time
+			Data   map[string]BlockRequestedInfo
 			Locker *sync.RWMutex
 		}{
-			Data:   map[string]time.Time{},
+			Data:   map[string]BlockRequestedInfo{},
 			Locker: &sync.RWMutex{},
 		},
 		Providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
