@@ -97,8 +97,15 @@ func (c *Client) StreamBlkByHeight(
 			sc, err = c.FindServiceClient(pID)
 		}
 	} else {
-		logger.Infof("[stream2] Call for block. %v %v", req.GetSyncFromPeer(), c.router.CheckHWPeerID(req.GetSyncFromPeer()))
-		sc, pID, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
+		if req.GetFrom() == int32(common.BEACONID) {
+			pID, err = peer.IDB58Decode("QmQ7Ld3X2pq7Gm4A8Lkow3BNLLPbb5UepEWxQcnoksjWEq")
+			if err == nil {
+				sc, err = c.FindServiceClient(pID)
+			}
+		} else {
+			logger.Infof("[stream2] Call for block. %v %v", req.GetSyncFromPeer(), c.router.CheckHWPeerID(req.GetSyncFromPeer()))
+			sc, pID, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
+		}
 	}
 	logger.Infof("[stream] Server call Client: Start stream request from peer %v, HW call peer %v, type %s, shard %d -> %d, #heights %d", req.GetSyncFromPeer(), pID.String(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHeights()))
 	if (err != nil) || (sc == nil) {
