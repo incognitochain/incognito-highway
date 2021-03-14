@@ -23,13 +23,12 @@ func (s *Server) StreamBlockByHeight(
 		logger.Error(err)
 		return err
 	}
-	pClient, ok := peer.FromContext(ss.Context())
-	pIP := "Can not get IP, so sorry"
-	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	if err := proto.CheckReqNCapBlocks(req); err != nil {
 		logger.Error(err)
 		return err
 	}
+	pIP := "Can not get IP, so sorry"
+	pClient, ok := peer.FromContext(ss.Context())
 	if ok {
 		pIP = pClient.Addr.String()
 		s.counter.Locker.RLock()
@@ -48,7 +47,7 @@ func (s *Server) StreamBlockByHeight(
 		}
 		s.counter.Locker.Unlock()
 	}
-	logger.Infof("Receive StreamBlockByHeight request spec %v, type = %s, heights = %v %v", req.Specific, req.GetType().String(), req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1])
+	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	g := NewBlkGetter(req, nil)
 	blkRecv := g.Get(ctx, s)
 	sent, err := SendWithTimeout(blkRecv, common.MaxTimeForSend, ss.Send)
