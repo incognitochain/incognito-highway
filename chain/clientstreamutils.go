@@ -97,8 +97,22 @@ func (c *Client) StreamBlkByHeight(
 			sc, err = c.FindServiceClient(pID)
 		}
 	} else {
-		logger.Infof("[stream2] Call for block. %v %v", req.GetSyncFromPeer(), c.router.CheckHWPeerID(req.GetSyncFromPeer()))
-		sc, pID, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
+		if req.GetFrom() == int32(common.BEACONID) {
+			if pk, ok := c.m.watcher.anchorK[int(common.BEACONID)]; ok {
+				pID, err = c.peerStore.GetPeerIDOfPubkey(pk)
+				if err == nil {
+					sc, err = c.FindServiceClient(pID)
+				} else {
+					logger.Infof("Get key error %v", err)
+				}
+			} else {
+				logger.Infof("Cannot found pk")
+			}
+		}
+		if (err != nil) || (sc == nil) {
+			logger.Infof("[stream2] Call for block. %v %v", req.GetSyncFromPeer(), c.router.CheckHWPeerID(req.GetSyncFromPeer()))
+			sc, pID, err = c.getClientWithBlock(ctx, int(req.GetFrom()), req.GetHeights()[len(req.GetHeights())-1])
+		}
 	}
 	logger.Infof("[stream] Server call Client: Start stream request from peer %v, HW call peer %v, type %s, shard %d -> %d, #heights %d", req.GetSyncFromPeer(), pID.String(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHeights()))
 	if (err != nil) || (sc == nil) {
