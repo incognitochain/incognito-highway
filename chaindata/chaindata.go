@@ -190,6 +190,20 @@ func (chainData *ChainData) UpdateCommittee(pubkey common.ProcessedKey, peerID p
 	chainData.ShardByMiningPubkey[miningPubkey] = cid
 }
 
+func (chainData *ChainData) GetPeerIDOfPubkey(pk string) (peer.ID, error) {
+	key, err := common.PreprocessKey(pk)
+	if err != nil {
+		return peer.ID(""), err
+	}
+	chainData.Locker.RLock()
+	defer chainData.Locker.RUnlock()
+	if pID, ok := chainData.PeerIDByMiningPubkey[string(key)]; ok {
+		return pID, nil
+	} else {
+		return peer.ID(""), errors.Errorf("Can not get peerID of this publickey %v %v", pk, key)
+	}
+}
+
 func (chainData *ChainData) UpdateStateV2WithMsgPeerState(
 	committeeID byte,
 	peerID string,
