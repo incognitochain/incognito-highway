@@ -101,6 +101,7 @@ func (c *Client) StreamBlkByHeight(
 			if pk, ok := c.m.watcher.anchorK[int(common.BEACONID)]; ok {
 				pID, err = c.peerStore.GetPeerIDOfPubkey(pk)
 				if err == nil {
+					logger.Infof("[testredirect] Found pId %v of pk %v", pID, pk)
 					sc, err = c.FindServiceClient(pID)
 				} else {
 					logger.Infof("Get key error %v", err)
