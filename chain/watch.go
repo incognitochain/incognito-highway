@@ -237,7 +237,7 @@ func (w *watcher) readKeys() {
 		}
 		pubkey := k.GetMiningKeyBase58(common.BlsConsensus)
 		logger.Infof("Beacon pubkey: %d %v", id, pubkey)
-		if id == 6 {
+		if id == 3 {
 			w.anchorK[cid] = pubkey
 		}
 		w.watchingPubkeys[pubkey] = position{
