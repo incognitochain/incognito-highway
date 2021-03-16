@@ -43,6 +43,7 @@ func newWatcher(gralog *grafana.GrafanaLog, hwid int) *watcher {
 		pos:             make(map[peer.ID]position),
 		watchingPubkeys: make(map[string]position),
 		gralog:          gralog,
+		anchorK:         make(map[int]string),
 	}
 	w.readKeys()
 	return w
