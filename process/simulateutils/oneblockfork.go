@@ -9,7 +9,7 @@ import (
 	"time"
 
 	libp2p "github.com/incognitochain/go-libp2p-pubsub"
-	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	chaincommon "github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/consensus/blsbftv2"
 	"github.com/incognitochain/incognito-chain/wire"
@@ -212,13 +212,13 @@ func ParseBFTPropose(x *wire.MessageBFT) MsgPropose {
 	res.MsgPropose = &msgPropose
 	msgPropose.PeerID = x.PeerID
 	if x.ChainKey != "beacon" {
-		y := blockchain.NewShardBlock()
+		y := types.NewShardBlock()
 		y.UnmarshalJSON(msgPropose.Block)
 		res.BlkHeight = y.GetHeight()
 		res.ShardID = y.GetShardID()
 		res.BlkHash = y.Hash().String()
 	} else {
-		y := blockchain.NewBeaconBlock()
+		y := types.NewBeaconBlock()
 		y.UnmarshalJSON(msgPropose.Block)
 		res.BlkHeight = y.GetHeight()
 		res.ShardID = y.GetShardID()

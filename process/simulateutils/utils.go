@@ -3,12 +3,12 @@ package simulateutils
 import (
 	"encoding/json"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/wire"
 )
 
-func UnmarshalShardBlock(blockString []byte) (*blockchain.ShardBlock, error) {
-	var shardBlk blockchain.ShardBlock
+func UnmarshalShardBlock(blockString []byte) (*types.ShardBlock, error) {
+	var shardBlk types.ShardBlock
 	err := json.Unmarshal(blockString, &shardBlk)
 	if err != nil {
 		return nil, err
