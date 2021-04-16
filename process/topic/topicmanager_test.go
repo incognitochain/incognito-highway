@@ -61,7 +61,7 @@ func TestTopicManager_GetListTopicPairForNode(t *testing.T) {
 func TestTopicManager_GetListSubTopicForHW(t *testing.T) {
 	tm := new(TopicManager)
 	tm.Init("aa")
-	tm.UpdateSupportShards([]byte{0, 1, 2, 3, 4, 5, 6, 7, 255})
+	tm.UpdateSupportShards([]byte{255})
 	res := tm.GetListSubTopicForHW()
 	fmt.Println("HW SUB----------------------")
 	for _, topic := range res {
@@ -84,7 +84,7 @@ func TestTopicManager_GetHWPubTopicsFromMsg(t *testing.T) {
 }
 
 func Test_getTopicPairOutsideForHW(t *testing.T) {
-	supportShards := []byte{0, 1, 2, 3, 4, 5, 6, 7, 255}
+	supportShards := []byte{0, 255, 3}
 	for _, msgType := range Message4Process {
 		fmt.Println("Message: ", msgType)
 		for _, cID := range supportShards {
@@ -100,14 +100,4 @@ func TestTopicManager_GetAllTopicOutsideForHW(t *testing.T) {
 	tm.Init("aa")
 	tm.UpdateSupportShards([]byte{255, 0, 1, 2, 3, 4, 5, 6, 7})
 	fmt.Println(tm.GetAllTopicOutsideForHW())
-}
-
-func TestTopicManager_GetListTopicPairForMonitor(t *testing.T) {
-	tm := new(TopicManager)
-	tm.Init("aa")
-	tm.UpdateSupportShards([]byte{255, 0, 1, 2, 3, 4, 5, 6, 7})
-	got := tm.GetListTopicPairForMonitor()
-	for _, v := range got {
-		fmt.Println(v)
-	}
 }

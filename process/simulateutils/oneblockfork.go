@@ -288,6 +288,12 @@ func (f *OneBlockFork) CheckIfItFork(
 	}
 	for msgPBFT := range pbftCh {
 		msg := msgPBFT.Msg
+		bft := msg.(*wire.MessageBFT)
+		bftP := ParseBFTPropose(bft)
+		if bftP.BlkHeight < wantedHeight {
+			continue
+		}
+		fmt.Printf("[debugfork] Received msg proposes: cID %v Height %v Hash %v \n", bftP.ShardID, bftP.BlkHeight, bftP.BlkHash)
 		if round == 1 {
 			pInfo.StartTimeSlot = common.GetCurrentTimeSlot()
 			// fork, fs = f.BS.IsTrigger(msg)
@@ -298,7 +304,16 @@ func (f *OneBlockFork) CheckIfItFork(
 				err := fmt.Errorf("Not support this cID %v", cID)
 				panic(err)
 			}
-
+			if wantedHeight != 0 {
+				fmt.Printf("[debugfork] %v %v \n", wantedHeight, bftP.BlkHeight)
+				simpleScene.RLock()
+				if _, ok := simpleScene.ByBlock[wantedHeight]; !ok {
+					fmt.Println("[debugfork] Outdated heights, update wanted height")
+					wantedHeight = 0
+					pInfo.Height = wantedHeight
+				}
+				simpleScene.RUnlock()
+			}
 			fork, fs = simpleScene.IsTrigger(msg)
 			if !fork {
 				pInfo.ForkScene = nil
@@ -308,13 +323,11 @@ func (f *OneBlockFork) CheckIfItFork(
 		}
 		pInfo.MsgBFTByRound[round] = msgPBFT
 
-		bft := msg.(*wire.MessageBFT)
-		bftP := ParseBFTPropose(bft)
-		if bftP.BlkHeight < wantedHeight {
-			continue
-		}
-		if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
-			return fmt.Errorf("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
+		if fork {
+			if (wantedHeight != bftP.BlkHeight) && (wantedHeight != 0) {
+				fmt.Printf("Broken, received height %v, wanted height %v\n", bftP.BlkHeight, wantedHeight)
+				return fmt.Errorf("Broken, received height %v, wanted height %v", bftP.BlkHeight, wantedHeight)
+			}
 		}
 		pInfo.Height = bftP.BlkHeight
 		msgProposeMap[round] = msgPBFT
@@ -329,7 +342,7 @@ func (f *OneBlockFork) CheckIfItFork(
 			Round:     round,
 			ShardID:   bftP.ShardID,
 		}
-		fmt.Printf("Chose block %v %v", bftP.MsgPropose.TimeSlot, bftP.BlkHash)
+		fmt.Printf("Chose block height %v cID %v blkHash %v", bftP.BlkHeight, bftP.ShardID, bftP.BlkHash)
 		round++
 		if fork {
 			if uint64(len(msgProposeMap)) == fs.TotalForkBlock {
@@ -357,7 +370,9 @@ func (f *OneBlockFork) CheckIfItFork(
 }
 
 func (f *OneBlockFork) GetNextPropose(cID int, stTS, stIdx, curTS int64) (string, int) {
-	idx := int(stIdx+curTS-stTS) % len(f.CommitteeInfo.PubKeyBySID[byte(cID)])
+	f.CommitteeInfo.lock.RLock()
+	idx := int(stIdx+curTS-stTS) % f.CommitteeInfo.GetSize(byte(cID))
+	f.CommitteeInfo.lock.RUnlock()
 	pk := f.CommitteeInfo.PubKeyBySID[byte(cID)][idx]
 	return pk, idx
 }
@@ -484,13 +499,13 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 					case msgBFT := <-f.VBFTsCh[cID]:
 						msg := msgBFT.Msg
 						bft := msg.(*wire.MessageBFT)
-						fmt.Printf("[debugfork] CID %v Received msg vote %v, len committee %v %v\n", cID, chaincommon.HashB(bft.Content), len(f.CommitteeInfo.PubKeyBySID[byte(cID)])/3*2)
+						fmt.Printf("[debugfork] CID %v Received msg vote %v\n", cID, chaincommon.HashB(bft.Content))
 						bftV := ParseBFTVote(bft)
 						fmt.Printf("[debugfork] Parse result %v\n", bftV.BlkHash)
 						voteR, ok := blkInfoByHash[bftV.BlkHash]
 						if (ok) && (blkInfoMap[voteR].BlkHash == bftV.BlkHash) {
 							blkInfoMap[voteR].Vote = append(blkInfoMap[voteR].Vote, msg)
-							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > len(f.CommitteeInfo.PubKeyBySID[byte(cID)])/3*2) {
+							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID)) / 3 * 2)) {
 								fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 								forkStatus = "PublishVote"
 								out = true
@@ -516,7 +531,7 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 						int64(blkInfoMap[1].Propose.ProposeIndex),
 						curTS,
 					)
-					fmt.Printf("[fork] Next propose for fork scence (%v, %v): %v %v", pInfo.ForkScene.NextBlock, pInfo.ForkScene.TotalForkBlock, pk, idx)
+					fmt.Printf("[fork] Next propose for fork scence (%v, %v): %v %v %v\n", pInfo.ForkScene.NextBlock, pInfo.ForkScene.TotalForkBlock, pk, idx, f.CommitteeInfo.GetSize(byte(cID)))
 					for _, msgV := range blkInfoMap[int(curfs.NextBlock)].Vote {
 						f.PublishToPK(
 							blkInfoMap[int(curfs.NextBlock)].Propose.Topic,

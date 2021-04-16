@@ -42,7 +42,7 @@ func (handler *BFTHandler) HandleDataFromTopic(topicReceived string, dataReceive
 			logger.Infof("debuglock Check trigger cID %v done", cID)
 			switch msgBFT.Type {
 			case blsbftv2.MSG_PROPOSE:
-				logger.Infof("[debugfork] cID %v Received propose from key %v ", cID, srcPKey)
+				logger.Infof("[debugfork] cID %v Received propose from key %v %v %v %v", cID, srcPKey, msgBFT.ChainKey, msgBFT.TimeSlot, msgBFT.Timestamp)
 				handler.FMaker.PBFTInbox(cID) <- simulateutils.MsgBFT{
 					ProposeIndex: handler.CommitteeInfo.PubKeyIdx[srcPKey],
 					Msg:          msg,
