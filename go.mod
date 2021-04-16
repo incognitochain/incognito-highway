@@ -9,8 +9,8 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20191225095939-98e504cb1c95
-	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20210125225236-8f0f0f59ec71
-	github.com/incognitochain/incognito-chain v0.0.0-20210121082946-4a4818b0daca
+	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20210126072501-9870234752e4
+	github.com/incognitochain/incognito-chain v0.0.0-20210416101822-608a4f15b99d
 	github.com/jbenet/goprocess v0.1.4
 	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-core v0.6.1
@@ -24,6 +24,7 @@ require (
 	github.com/stathat/consistent v1.0.0
 	github.com/streadway/amqp v1.0.0
 	github.com/stretchr/testify v1.6.1
+	github.com/whyrusleeping/go-notifier v0.0.0-20170827234753-097c5d47330f // indirect
 	go.uber.org/zap v1.15.0
 	google.golang.org/grpc v1.27.1
 )
