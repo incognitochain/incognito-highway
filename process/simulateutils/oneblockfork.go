@@ -551,6 +551,7 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 							)
 						}
 						delete(blkInfoMap, int(i))
+						time.Sleep(1 * time.Second)
 					}
 				} else {
 					for _, msgV := range blkInfoMap[1].Vote {
