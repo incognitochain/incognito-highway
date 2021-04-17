@@ -505,7 +505,7 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 						voteR, ok := blkInfoByHash[bftV.BlkHash]
 						if (ok) && (blkInfoMap[voteR].BlkHash == bftV.BlkHash) {
 							blkInfoMap[voteR].Vote = append(blkInfoMap[voteR].Vote, msg)
-							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID)) / 3 * 2)) {
+							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID))/3*2 + 1)) {
 								fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 								forkStatus = "PublishVote"
 								out = true
