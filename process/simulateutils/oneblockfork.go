@@ -505,12 +505,22 @@ func (f *OneBlockFork) MakeItFork(cID int) {
 						voteR, ok := blkInfoByHash[bftV.BlkHash]
 						if (ok) && (blkInfoMap[voteR].BlkHash == bftV.BlkHash) {
 							blkInfoMap[voteR].Vote = append(blkInfoMap[voteR].Vote, msg)
-							if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID))/3*2 + 1)) {
-								fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-								forkStatus = "PublishVote"
-								out = true
-								break
+							if cID == 255 {
+								if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID)) / 3 * 2)) {
+									fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+									forkStatus = "PublishVote"
+									out = true
+									break
+								}
+							} else {
+								if (voteR == 1) && (len(blkInfoMap[voteR].Vote) > (f.CommitteeInfo.GetSize(byte(cID))/3*2 + 1)) {
+									fmt.Println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+									forkStatus = "PublishVote"
+									out = true
+									break
+								}
 							}
+
 						}
 					case <-ticker.C:
 						if common.GetCurrentTimeSlot() > curTS {
