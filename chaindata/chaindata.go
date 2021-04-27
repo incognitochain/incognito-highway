@@ -114,16 +114,20 @@ func (chainData *ChainData) GetPeerHasBlkV2(
 ) {
 	var exist bool
 	var committeeState map[string]ChainState
+	var locker sync.RWMutex
 	chainData.Locker.RLock()
-	defer chainData.Locker.RUnlock()
 	if committeeID == common.BEACONID {
 		committeeState = chainData.CurrentNetworkStateV2.BeaconState
+		locker = *chainData.CurrentNetworkStateV2.beaconLocker
 	} else {
 		if committeeState, exist = chainData.CurrentNetworkStateV2.ShardState[committeeID]; !exist {
 			return nil, errors.New("committeeID " + string(committeeID) + " not found")
 		}
+		locker = *chainData.CurrentNetworkStateV2.shardLocker
 	}
+	chainData.Locker.RUnlock()
 	peers := []PeerWithBlk{}
+	locker.RLock()
 	for pID, nodeState := range committeeState {
 		HWID, err := chainData.CurrentNetworkStateV2.GetHWIDOfPeerID(pID)
 		if err != nil {
@@ -142,7 +146,7 @@ func (chainData *ChainData) GetPeerHasBlkV2(
 		}
 		peers = append(peers, peer)
 	}
-
+	locker.RUnlock()
 	// Sort based on block height
 	sort.Slice(peers, func(i, j int) bool {
 		return peers[i].Height > peers[j].Height
