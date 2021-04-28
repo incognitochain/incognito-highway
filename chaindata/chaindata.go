@@ -116,6 +116,7 @@ func (chainData *ChainData) GetPeerHasBlkV2(
 	var committeeState map[string]ChainState
 	var locker sync.RWMutex
 	chainData.Locker.RLock()
+	defer chainData.Locker.RUnlock()
 	if committeeID == common.BEACONID {
 		committeeState = chainData.CurrentNetworkStateV2.BeaconState
 		locker = *chainData.CurrentNetworkStateV2.beaconLocker
@@ -125,7 +126,6 @@ func (chainData *ChainData) GetPeerHasBlkV2(
 		}
 		locker = *chainData.CurrentNetworkStateV2.shardLocker
 	}
-	chainData.Locker.RUnlock()
 	peers := []PeerWithBlk{}
 	locker.RLock()
 	for pID, nodeState := range committeeState {
