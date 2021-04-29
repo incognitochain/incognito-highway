@@ -114,17 +114,17 @@ func (chainData *ChainData) GetPeerHasBlkV2(
 ) {
 	var exist bool
 	var committeeState map[string]ChainState
-	var locker sync.RWMutex
+	locker := &sync.RWMutex{}
 	chainData.Locker.RLock()
 	defer chainData.Locker.RUnlock()
 	if committeeID == common.BEACONID {
 		committeeState = chainData.CurrentNetworkStateV2.BeaconState
-		locker = *chainData.CurrentNetworkStateV2.beaconLocker
+		locker = chainData.CurrentNetworkStateV2.beaconLocker
 	} else {
 		if committeeState, exist = chainData.CurrentNetworkStateV2.ShardState[committeeID]; !exist {
 			return nil, errors.New("committeeID " + string(committeeID) + " not found")
 		}
-		locker = *chainData.CurrentNetworkStateV2.shardLocker
+		locker = chainData.CurrentNetworkStateV2.shardLocker
 	}
 	peers := []PeerWithBlk{}
 	locker.RLock()
