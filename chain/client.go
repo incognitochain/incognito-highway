@@ -7,6 +7,7 @@ import (
 	"highway/proto"
 	"math/rand"
 	"sync"
+	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	peer "github.com/libp2p/go-libp2p-core/peer"
@@ -153,15 +154,29 @@ func (hc *Client) getClientWithHashes(
 	hashes [][]byte,
 ) (proto.HighwayServiceClient, peer.ID, error) {
 	connectedPeers := hc.m.GetPeers(cid)
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
 	if len(connectedPeers) > 0 {
+		p := PeerInfo{}
 		// Find block proposer (position = 0) and ask it
-		for _, p := range connectedPeers {
-			// if pos, ok := hc.m.watcher.pos[p.ID]; ok && ((pos.id > 0) || (pos.id <= 21)) {
-			client, err := hc.FindServiceClient(p.ID)
-			if err == nil {
-				return client, p.ID, nil
+		mark := map[peer.ID]struct{}{}
+		for range connectedPeers {
+			for {
+				p = connectedPeers[r1.Intn(len(connectedPeers))]
+				if _, ok := mark[p.ID]; !ok {
+					mark[p.ID] = struct{}{}
+					break
+				}
+				if len(mark) == len(connectedPeers) {
+					break
+				}
 			}
-			// }
+			if pos, ok := hc.m.watcher.pos[p.ID]; (ok && ((pos.id > 0) && (pos.id <= 21))) || (len(mark) == len(connectedPeers)) {
+				client, err := hc.FindServiceClient(p.ID)
+				if err == nil {
+					return client, p.ID, nil
+				}
+			}
 		}
 	}
 	return hc.router.GetClientSupportShard(cid)
