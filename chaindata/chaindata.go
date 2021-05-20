@@ -7,7 +7,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
 	ic "github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/wire"
@@ -319,7 +318,7 @@ func newChainStateFromMsgPeerState(
 	committeeID byte,
 	// candidateKey string,
 ) ChainState {
-	var blkChainState blockchain.ChainState
+	var blkChainState wire.ChainState
 	if committeeID == common.BEACONID {
 		blkChainState = msgPeerState.Beacon
 	} else {
