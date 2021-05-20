@@ -2,6 +2,7 @@ package chain
 
 import (
 	context "context"
+	"fmt"
 	"highway/common"
 	"highway/proto"
 	"time"
@@ -31,10 +32,11 @@ func (s *Server) StreamBlockByHeight(
 	pClient, ok := peer.FromContext(ss.Context())
 	if ok {
 		pIP = pClient.Addr.String()
+		key := fmt.Sprintf("%v-%v", pIP, req.GetFrom())
 		s.counter.Locker.RLock()
-		if info, ok := s.counter.Data[pIP]; ok {
+		if info, ok := s.counter.Data[key]; ok {
 			if (time.Since(info.Time) < common.DelayDuration) && (req.Heights[0] == info.From) {
-				err := errors.Errorf("Sync too fast, last time sync blocks from %v is %v", info.From, info.Time.UTC())
+				err := errors.Errorf("Sync too fast, last time sync blocks of CID %v from height %v is %v", req.GetFrom(), info.From, info.Time.UTC())
 				// logger.Error(err)
 				s.counter.Locker.RUnlock()
 				time.Sleep(2 * time.Second)
@@ -43,7 +45,7 @@ func (s *Server) StreamBlockByHeight(
 		}
 		s.counter.Locker.RUnlock()
 		s.counter.Locker.Lock()
-		s.counter.Data[pIP] = BlockRequestedInfo{
+		s.counter.Data[key] = BlockRequestedInfo{
 			From: req.Heights[0],
 			Time: time.Now(),
 		}
