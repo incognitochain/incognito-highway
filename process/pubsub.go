@@ -57,6 +57,7 @@ func NewPubSub(
 		s,
 		p2pPubSub.WithMaxMessageSize(common.MaxPSMsgSize),
 		p2pPubSub.WithPeerOutboundQueueSize(1024),
+		p2pPubSub.WithValidateQueueSize(1024),
 	)
 	if err != nil {
 		return nil, err

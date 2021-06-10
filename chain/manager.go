@@ -120,7 +120,7 @@ func (m *Manager) addNewPeer(pinfo PeerInfo) {
 	cid := pinfo.CID
 
 	m.peers.Lock()
-	m.peers.ids = remove(m.peers.ids, pid, m.gralog)   // Remove from previous lists
+	// m.peers.ids = remove(m.peers.ids, pid, m.gralog)   // Remove from previous lists
 	m.peers.ids[cid] = append(m.peers.ids[cid], pinfo) // Append to list
 	logger.Infof("Appended new peer to shard %d, pid = %v, cnt = %d peers", cid, pid, len(m.peers.ids[cid]))
 	m.peers.Unlock()
