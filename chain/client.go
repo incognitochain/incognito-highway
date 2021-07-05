@@ -464,6 +464,7 @@ type PeerStore interface {
 	GetPeerHasBlk(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
 	GetPeerHasBlkV2(blkHeight uint64, committeeID byte) ([]chaindata.PeerWithBlk, error)
 	GetHWIDOfPeer(pID peer.ID) (peer.ID, error)
+	GetPeerIDOfPubkey(pk string) (peer.ID, error)
 }
 
 type Dialer interface {

@@ -6,6 +6,8 @@ import (
 	"highway/common"
 	"highway/process/topic"
 	"highway/proto"
+	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -166,7 +168,15 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 	return nil, errors.New("not supported")
 }
 
+type BlockRequestedInfo struct {
+	From uint64
+	Time time.Time
+}
 type Server struct {
+	counter struct {
+		Data   map[string]BlockRequestedInfo
+		Locker *sync.RWMutex
+	}
 	proto.UnimplementedHighwayServiceServer
 	m         *Manager
 	Providers []Provider
@@ -201,6 +211,13 @@ func RegisterServer(
 	}
 
 	s := &Server{
+		counter: struct {
+			Data   map[string]BlockRequestedInfo
+			Locker *sync.RWMutex
+		}{
+			Data:   map[string]BlockRequestedInfo{},
+			Locker: &sync.RWMutex{},
+		},
 		Providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
 		m:         m,
 		reporter:  reporter,
