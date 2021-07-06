@@ -121,7 +121,7 @@ func (c *Client) StreamBlkByHeight(
 	} else {
 		nreq, ok := req.(*proto.BlockByHeightRequest)
 		if !ok {
-			err = errors.Errorf("Invalid Request %v", req)
+			err = errors.Errorf("Invalid Request %v", req.GetUUID())
 		} else {
 			nreq.CallDepth++
 			stream, err = sc.StreamBlockByHeight(ctx, nreq)
@@ -207,7 +207,7 @@ func (c *Client) StreamBlkByHash(
 	} else {
 		nreq, ok := req.(*proto.BlockByHashRequest)
 		if !ok {
-			err = errors.Errorf("Invalid Request %v", req)
+			err = errors.Errorf("Invalid Request %v", req.GetUUID())
 		} else {
 			nreq.CallDepth++
 			stream, err = sc.StreamBlockByHash(ctx, nreq)
