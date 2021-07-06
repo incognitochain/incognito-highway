@@ -10,7 +10,7 @@ require (
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645
 	github.com/incognitochain/go-libp2p-grpc v0.0.0-20191225095939-98e504cb1c95
 	github.com/incognitochain/go-libp2p-pubsub v0.2.7-0.20210126072501-9870234752e4
-	github.com/incognitochain/incognito-chain v0.0.0-20210630075939-1050efab5f7f
+	github.com/incognitochain/incognito-chain v0.0.0-20210706070436-49642936b10f
 	github.com/jbenet/goprocess v0.1.4
 	github.com/libp2p/go-libp2p v0.11.0
 	github.com/libp2p/go-libp2p-core v0.6.1
