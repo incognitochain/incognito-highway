@@ -20,7 +20,7 @@ func (s *Server) StreamBlockByHeight(
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	if req.GetCallDepth() > common.MaxCallDepth {
-		err := errors.Errorf("reach max calldepth %v ", req)
+		err := errors.Errorf("reach max calldepth %v ", req.GetUUID())
 		logger.Error(err)
 		return err
 	}
@@ -71,7 +71,7 @@ func (s *Server) StreamBlockByHash(
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
 	if req.GetCallDepth() > common.MaxCallDepth {
-		err := errors.Errorf("reach max calldepth %v ", req)
+		err := errors.Errorf("reach max calldepth %v ", req.GetUUID())
 		logger.Error(err)
 		return err
 	}

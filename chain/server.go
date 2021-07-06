@@ -90,7 +90,7 @@ func (s *Server) Register(
 
 func (s *Server) GetBlockByHash(ctx context.Context, req GetBlockByHashRequest) ([][]byte, error) {
 	if req.GetCallDepth() > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
+		err := errors.Errorf("reached max call depth: %+v", req.GetUUID())
 		return nil, err
 	}
 	hashes := req.GetHashes()
