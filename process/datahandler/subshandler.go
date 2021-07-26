@@ -79,6 +79,7 @@ func (handler *SubsHandler) GetDataHandler(
 		return &TxHandler{
 			FromNode: forInside,
 			PubSub:   handler.PubSub,
+			Cacher:   handler.Cacher,
 		}, nil
 	case topic.CmdPeerState:
 		return &PeerStateHandler{

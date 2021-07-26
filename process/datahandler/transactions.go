@@ -8,6 +8,7 @@ import (
 	cCommon "github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/wire"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 
 	libp2p "github.com/incognitochain/go-libp2p-pubsub"
@@ -16,13 +17,18 @@ import (
 type TxHandler struct {
 	FromNode bool
 	PubSub   *libp2p.PubSub
-	// Locker   *sync.Mutex
+	Cacher   *cache.Cache
 }
 
-const MaxDuration = 4 * time.Hour
+const MaxDuration = 3 * time.Hour
 
 func (handler *TxHandler) HandleDataFromTopic(topicReceived string, dataReceived libp2p.Message) error {
 	var topicPubs []string
+	dataHash := cCommon.HashH(dataReceived.Data).String()
+	if _, isExist := handler.Cacher.Get(dataHash); isExist {
+		return errors.Errorf("Received old data, dataHash %v", dataHash)
+	}
+	handler.Cacher.Set(dataHash, nil, 3*time.Hour)
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
 	cID := topic.GetCommitteeIDOfTopic(topicReceived)
 	msg, err := common.ParseMsgChainData(dataReceived.Data)
