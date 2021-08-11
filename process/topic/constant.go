@@ -23,7 +23,7 @@ const (
 	CmdBFT       = "bft"
 	CmdPeerState = "peerstate"
 
-	CmdFinishSync = "msg_finish_sync"
+	CmdFinishSync = "finishsync"
 )
 
 var (
@@ -38,7 +38,7 @@ var (
 		"ping",
 		"bft",
 		"peerstate",
-		"msg_finish_sync",
+		"finishsync",
 	}
 
 	lvlAllowPubOfMsg = map[string]byte{
@@ -53,7 +53,7 @@ var (
 		"bft":          common.COMMITTEE,
 		"peerstate":    common.COMMITTEE,
 
-		"msg_finish_sync": common.NORMAL,
+		"finishsync": common.NORMAL,
 	}
 	lvlAllowSubOfMsg = map[string]byte{
 		"blockshard":   common.NORMAL,
@@ -67,6 +67,6 @@ var (
 		"bft":          common.COMMITTEE,
 		"peerstate":    common.NORMAL,
 
-		"msg_finish_sync": common.COMMITTEE,
+		"finishsync": common.COMMITTEE,
 	}
 )
