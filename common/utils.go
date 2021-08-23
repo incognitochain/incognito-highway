@@ -125,18 +125,16 @@ func GetTransactionTimestamp(data []byte) (int64, error) {
 			return 0, errors.WithStack(err)
 		}
 		rawTx := make(map[string]interface{})
-		fmt.Println(message.Transaction)
 		err = json.Unmarshal(message.Transaction, &rawTx)
 		if err != nil {
 			return 0, err
 		}
 		if locktimeI, hasLocktime := rawTx["LockTime"]; hasLocktime {
 			if lockTime, ok := locktimeI.(float64); ok {
-				fmt.Printf("tx Locktime %v %v\n", lockTime, int64(lockTime))
 				return int64(lockTime), nil
 			}
+			return 0, errors.Errorf("Can cast %v to float64", locktimeI)
 		}
-
 		return 0, errors.Errorf("Can not get lock time from raw tx %v", message.Transaction)
 	}
 
