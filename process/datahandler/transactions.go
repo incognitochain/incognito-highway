@@ -6,8 +6,6 @@ import (
 	"time"
 
 	cCommon "github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/metadata"
-	"github.com/incognitochain/incognito-chain/wire"
 	"github.com/pkg/errors"
 
 	libp2p "github.com/incognitochain/go-libp2p-pubsub"
@@ -25,24 +23,11 @@ func (handler *TxHandler) HandleDataFromTopic(topicReceived string, dataReceived
 	var topicPubs []string
 	msgType := topic.GetMsgTypeOfTopic(topicReceived)
 	cID := topic.GetCommitteeIDOfTopic(topicReceived)
-	msg, err := common.ParseMsgChainData(dataReceived.Data)
+	locktime, err := common.GetTransactionTimestamp(dataReceived.Data)
 	if err == nil {
-		var tx metadata.Transaction
-		if msgTx, ok := msg.(*wire.MessageTx); ok {
-			tx = msgTx.Transaction
-		} else {
-			if msgTx, ok := msg.(*wire.MessageTxPrivacyToken); ok {
-				tx = msgTx.Transaction
-			} else {
-				logger.Errorf("Can not parse transaction")
-				tx = nil
-			}
-		}
-		if tx != nil {
-			dur := time.Now().Unix() - tx.GetLockTime()
-			if dur > int64(MaxDuration.Seconds()) {
-				return errors.Errorf("Tx %v too old, time stamp %v", tx.Hash().String(), tx.GetLockTime())
-			}
+		dur := time.Now().Unix() - locktime
+		if dur > int64(MaxDuration.Seconds()) {
+			return errors.Errorf("Tx from msg %v too old, time stamp %v", cCommon.HashH(dataReceived.Data).String(), locktime)
 		}
 	} else {
 		logger.Error(err)

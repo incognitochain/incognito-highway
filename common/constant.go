@@ -38,7 +38,7 @@ var (
 
 	TimeIntervalPublishStates = 5 * time.Second
 	MaxTimeKeepPeerState      = 90 * time.Second
-	MaxTimeKeepPubSubData     = 30 * time.Second
+	MaxTimeKeepPubSubData     = 5 * time.Minute
 
 	RouteClientKeepaliveTime    = 20 * time.Minute
 	RouteClientKeepaliveTimeout = 20 * time.Second
