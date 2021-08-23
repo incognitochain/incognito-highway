@@ -116,7 +116,7 @@ func GetTransactionTimestamp(data []byte) (int64, error) {
 	}
 	if (msgType == wire.CmdTx) || (msgType == wire.CmdPrivacyCustomToken) {
 		message := &struct {
-			Transaction *json.RawMessage
+			Transaction json.RawMessage
 		}{}
 		err = json.Unmarshal(messageBody, message)
 		if (err != nil) || (message.Transaction == nil) {
@@ -125,7 +125,8 @@ func GetTransactionTimestamp(data []byte) (int64, error) {
 			return 0, errors.WithStack(err)
 		}
 		rawTx := make(map[string]interface{})
-		err = json.Unmarshal(*message.Transaction, &rawTx)
+		fmt.Println(message.Transaction)
+		err = json.Unmarshal(message.Transaction, &rawTx)
 		if err != nil {
 			return 0, err
 		}
@@ -138,7 +139,7 @@ func GetTransactionTimestamp(data []byte) (int64, error) {
 			xType := fmt.Sprintf("%T", v)
 			fmt.Printf("%v - %v - %v\n", k, xType, v)
 		}
-		return 0, errors.Errorf("Can not get lock time from raw tx %v", *message.Transaction)
+		return 0, errors.Errorf("Can not get lock time from raw tx %v", message.Transaction)
 	}
 
 	return 0, errors.Errorf("Can not get tx timestamp from msg type %v ", msgType)
