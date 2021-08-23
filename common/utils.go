@@ -134,6 +134,10 @@ func GetTransactionTimestamp(data []byte) (int64, error) {
 				return lockTime, nil
 			}
 		}
+		for k, v := range rawTx {
+			xType := fmt.Sprintf("%T", v)
+			fmt.Printf("%v - %v - %v\n", k, xType, v)
+		}
 		return 0, errors.Errorf("Can not get lock time from raw tx %v", *message.Transaction)
 	}
 
