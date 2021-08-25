@@ -204,13 +204,18 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 		if err := hc.Dial(p); err != nil {
 			return err
 		}
+		if hc.host.Network().Connectedness(p.ID) != network.Connected {
+			if err := hc.enlist(); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Update list of connected shards
 	hc.hmap.ConnectToShardOfPeer(p)
 
 	// Publish msg enlist
-	return hc.enlist()
+	return nil
 }
 
 type notifiee Connector
