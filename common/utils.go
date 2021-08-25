@@ -85,6 +85,62 @@ func BytesToInts(b []byte) []int {
 	return s
 }
 
+func ParseMsgBody(data []byte) ([]byte, string, error) {
+	dataStr := string(data)
+	jsonDecodeBytesRaw, err := hex.DecodeString(dataStr)
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "msgStr: %v", dataStr)
+	}
+	jsonDecodeBytes, err := GZipToBytes(jsonDecodeBytesRaw)
+	if err != nil {
+		fmt.Println("Can not unzip from message")
+		fmt.Println(err)
+		return nil, "", errors.WithStack(err)
+	}
+	// Parse Message body
+	messageBody := jsonDecodeBytes[:len(jsonDecodeBytes)-wire.MessageHeaderSize]
+	messageHeader := jsonDecodeBytes[len(jsonDecodeBytes)-wire.MessageHeaderSize:]
+
+	// get cmd type in header message
+	commandInHeader := bytes.Trim(messageHeader[:wire.MessageCmdTypeSize], "\x00")
+	commandType := string(messageHeader[:len(commandInHeader)])
+	// convert to particular message from message cmd type
+
+	return messageBody, commandType, nil
+}
+
+func GetTransactionTimestamp(data []byte) (int64, error) {
+	messageBody, msgType, err := ParseMsgBody(data)
+	if err != nil {
+		return 0, err
+	}
+	if (msgType == wire.CmdTx) || (msgType == wire.CmdPrivacyCustomToken) {
+		message := &struct {
+			Transaction json.RawMessage
+		}{}
+		err = json.Unmarshal(messageBody, message)
+		if (err != nil) || (message.Transaction == nil) {
+			fmt.Println("Can not parse struct from json message")
+			fmt.Println(err)
+			return 0, errors.WithStack(err)
+		}
+		rawTx := make(map[string]interface{})
+		err = json.Unmarshal(message.Transaction, &rawTx)
+		if err != nil {
+			return 0, err
+		}
+		if locktimeI, hasLocktime := rawTx["LockTime"]; hasLocktime {
+			if lockTime, ok := locktimeI.(float64); ok {
+				return int64(lockTime), nil
+			}
+			return 0, errors.Errorf("Can cast %v to float64", locktimeI)
+		}
+		return 0, errors.Errorf("Can not get lock time from raw tx %v", message.Transaction)
+	}
+
+	return 0, errors.Errorf("Can not get tx timestamp from msg type %v ", msgType)
+}
+
 func ParseMsgChainData(data []byte) (wire.Message, error) {
 	dataStr := string(data)
 	jsonDecodeBytesRaw, err := hex.DecodeString(dataStr)
