@@ -157,6 +157,9 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 			continue
 		}
 		em := &enlistMessage{}
+		if msg.GetFrom().Pretty() == hc.host.ID().Pretty() {
+			continue
+		}
 		if err := json.Unmarshal(msg.Data, em); err != nil {
 			logger.Error(err)
 			continue
