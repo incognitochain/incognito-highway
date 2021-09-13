@@ -157,6 +157,9 @@ func (hc *Connector) enlistHighways(sub *pubsub.Subscription) {
 			continue
 		}
 		em := &enlistMessage{}
+		if msg.GetFrom().Pretty() == hc.host.ID().Pretty() {
+			continue
+		}
 		if err := json.Unmarshal(msg.Data, em); err != nil {
 			logger.Error(err)
 			continue
@@ -201,13 +204,18 @@ func (hc *Connector) dialAndEnlist(p peer.AddrInfo) error {
 		if err := hc.Dial(p); err != nil {
 			return err
 		}
+		if hc.host.Network().Connectedness(p.ID) != network.Connected {
+			if err := hc.enlist(); err != nil {
+				return err
+			}
+		}
 	}
 
 	// Update list of connected shards
 	hc.hmap.ConnectToShardOfPeer(p)
 
 	// Publish msg enlist
-	return hc.enlist()
+	return nil
 }
 
 type notifiee Connector
