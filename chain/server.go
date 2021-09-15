@@ -22,7 +22,7 @@ func (s *Server) Register(
 ) {
 	ctx = WithRequestID(ctx, req)
 	logger := Logger(ctx)
-	logger.Infof("Receive Register request, CID %v, peerID %v, role %v", req.CommitteeID, req.PeerID, req.Role)
+	logger.Infof("Receive Register request, CID %v, peerID %v, role %v, wanted %v", req.CommitteeID, req.PeerID, req.Role, req.GetWantedMessages())
 
 	// Monitor status
 	defer s.reporter.watchRequestCounts("register")
@@ -47,6 +47,7 @@ func (s *Server) Register(
 
 	// logger.Errorf("Received register from -%v- role -%v- cIDs -%v-", req.GetCommitteePublicKey(), role, cIDs)
 	pairs, err := s.processListWantedMessageOfPeer(req.GetWantedMessages(), role, cIDs)
+	logger.Infof("Return pairs for peerID %v: %v", pairs)
 	if err != nil {
 		logger.Warnf("Couldn't process wantedMsgs: %+v %+v %+v", req.GetWantedMessages(), role, cIDs)
 		return nil, err
