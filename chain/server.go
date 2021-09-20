@@ -6,6 +6,8 @@ import (
 	"highway/common"
 	"highway/process/topic"
 	"highway/proto"
+	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -89,7 +91,7 @@ func (s *Server) Register(
 
 func (s *Server) GetBlockByHash(ctx context.Context, req GetBlockByHashRequest) ([][]byte, error) {
 	if req.GetCallDepth() > common.MaxCallDepth {
-		err := errors.Errorf("reached max call depth: %+v", req)
+		err := errors.Errorf("reached max call depth: %+v", req.GetUUID())
 		return nil, err
 	}
 	hashes := req.GetHashes()
@@ -167,7 +169,15 @@ func (s *Server) GetBlockCrossShardByHash(ctx context.Context, req *proto.GetBlo
 	return nil, errors.New("not supported")
 }
 
+type BlockRequestedInfo struct {
+	From uint64
+	Time time.Time
+}
 type Server struct {
+	counter struct {
+		Data   map[string]BlockRequestedInfo
+		Locker *sync.RWMutex
+	}
 	proto.UnimplementedHighwayServiceServer
 	m         *Manager
 	Providers []Provider
@@ -202,6 +212,13 @@ func RegisterServer(
 	}
 
 	s := &Server{
+		counter: struct {
+			Data   map[string]BlockRequestedInfo
+			Locker *sync.RWMutex
+		}{
+			Data:   map[string]BlockRequestedInfo{},
+			Locker: &sync.RWMutex{},
+		},
 		Providers: []Provider{memcache, hc}, // NOTE: memcache must go before client
 		m:         m,
 		reporter:  reporter,

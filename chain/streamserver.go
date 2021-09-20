@@ -2,6 +2,7 @@ package chain
 
 import (
 	context "context"
+	"fmt"
 	"highway/common"
 	"highway/proto"
 	"time"
@@ -23,17 +24,34 @@ func (s *Server) StreamBlockByHeight(
 		logger.Error(err)
 		return err
 	}
-	pClient, ok := peer.FromContext(ss.Context())
-	pIP := "Can not get IP, so sorry"
-	if ok {
-		pIP = pClient.Addr.String()
-	}
-	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	if err := proto.CheckReqNCapBlocks(req); err != nil {
 		logger.Error(err)
 		return err
 	}
-	logger.Infof("Receive StreamBlockByHeight request spec %v, type = %s, heights = %v %v", req.Specific, req.GetType().String(), req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1])
+	pIP := "Can not get IP, so sorry"
+	pClient, ok := peer.FromContext(ss.Context())
+	if ok {
+		pIP = pClient.Addr.String()
+		key := fmt.Sprintf("%v-%v", pIP, req.GetFrom())
+		s.counter.Locker.RLock()
+		if info, ok := s.counter.Data[key]; ok {
+			if (time.Since(info.Time) < common.DelayDuration) && (req.Heights[0] == info.From) {
+				err := errors.Errorf("Sync too fast, last time sync blocks of CID %v from height %v is %v", req.GetFrom(), info.From, info.Time.UTC())
+				// logger.Error(err)
+				s.counter.Locker.RUnlock()
+				time.Sleep(2 * time.Second)
+				return err
+			}
+		}
+		s.counter.Locker.RUnlock()
+		s.counter.Locker.Lock()
+		s.counter.Data[key] = BlockRequestedInfo{
+			From: req.Heights[0],
+			Time: time.Now(),
+		}
+		s.counter.Locker.Unlock()
+	}
+	logger.Infof("Receive StreamBlockByHeight request from IP: %v, type = %s - specific %v, heights = %v %v #%v", pIP, req.GetType().String(), req.Specific, req.GetHeights()[0], req.GetHeights()[len(req.GetHeights())-1], len(req.GetHeights()))
 	g := NewBlkGetter(req, nil)
 	blkRecv := g.Get(ctx, s)
 	sent, err := SendWithTimeout(blkRecv, common.MaxTimeForSend, ss.Send)
