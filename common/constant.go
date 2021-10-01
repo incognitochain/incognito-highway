@@ -50,7 +50,7 @@ var (
 	BroadcastMsgEnlistTimestep = 1 * time.Minute
 
 	PercentGetFromCache = 80
-	DelayDuration       = 15 * time.Second
+	DelayDuration       = 10 * time.Second
 
 	MaxPSMsgSize = 1 << 23
 )

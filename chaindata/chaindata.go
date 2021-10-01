@@ -240,9 +240,13 @@ func (chainData *ChainData) UpdateStateWithMsgPeerState(
 ) error {
 	chainData.Locker.Lock()
 	if committeeID == common.BEACONID {
+		chainData.CurrentNetworkState.beaconLocker.Lock()
 		chainData.CurrentNetworkState.BeaconState[committeePublicKey] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
+		chainData.CurrentNetworkState.beaconLocker.Unlock()
 	} else {
+		chainData.CurrentNetworkState.shardLocker.Lock()
 		chainData.CurrentNetworkState.ShardState[committeeID][committeePublicKey] = newChainStateFromMsgPeerState(msgPeerState, committeeID)
+		chainData.CurrentNetworkState.shardLocker.Unlock()
 	}
 	defer chainData.Locker.Unlock()
 	return nil

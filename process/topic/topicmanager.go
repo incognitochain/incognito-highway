@@ -94,7 +94,7 @@ func getTopicPairOutsideForHW(
 	case CmdBFT, CmdPeerState:
 	case CmdBlockBeacon:
 		cIDint = NoCIDInTopic
-	case CmdBlkShardToBeacon:
+	case CmdBlkShardToBeacon, CmdFinishSync:
 		if cID == common.BEACONID {
 			cIDint = NoCIDInTopic
 		} else {
@@ -163,7 +163,7 @@ func (topicManager *TopicManager) getTopicPairForNode(
 			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 			listAction = append(listAction, proto.MessageTopicPair_SUB)
 		}
-	case CmdBlkShardToBeacon:
+	case CmdBlkShardToBeacon, CmdFinishSync:
 		if forPub {
 			if cID != common.BEACONID {
 				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))

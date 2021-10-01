@@ -26,7 +26,7 @@ type watcher struct {
 	posLocker sync.RWMutex
 
 	watchingPubkeys map[string]position
-	anchorK         map[int]string
+	// anchorK         map[int]string
 }
 
 type PeerInfoWithIP struct {
@@ -43,7 +43,7 @@ func newWatcher(gralog *grafana.GrafanaLog, hwid int) *watcher {
 		pos:             make(map[peer.ID]position),
 		watchingPubkeys: make(map[string]position),
 		gralog:          gralog,
-		anchorK:         make(map[int]string),
+		// anchorK:         make(map[int]string),
 	}
 	w.readKeys()
 	return w
@@ -219,9 +219,9 @@ func (w *watcher) readKeys() {
 				continue
 			}
 			pubkey := k.GetMiningKeyBase58(common.BlsConsensus)
-			if id == 21 {
-				w.anchorK[cid] = pubkey
-			}
+			// if id == 21 {
+			// 	w.anchorK[cid] = pubkey
+			// }
 			w.watchingPubkeys[pubkey] = position{
 				cid: cid,
 				id:  id,
@@ -238,9 +238,9 @@ func (w *watcher) readKeys() {
 		}
 		pubkey := k.GetMiningKeyBase58(common.BlsConsensus)
 		logger.Infof("Beacon pubkey: %d %v", id, pubkey)
-		if id == 6 {
-			w.anchorK[cid] = pubkey
-		}
+		// if id == 6 {
+		// 	w.anchorK[cid] = pubkey
+		// }
 		w.watchingPubkeys[pubkey] = position{
 			cid: cid,
 			id:  id,
