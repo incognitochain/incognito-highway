@@ -80,7 +80,7 @@ func (s *Server) StreamBlockByHash(
 	if ok {
 		pIP = pClient.Addr.String()
 	}
-	logger.Infof("Receive StreamBlockByHash request from IP: %v, type = %s, hashes = %v %v", pIP, req.GetType().String(), req.GetHashes()[0], req.GetHashes()[len(req.GetHashes())-1])
+	logger.Infof("Receive StreamBlockByHash request from IP: %v, type = %s, hashes = %v %v, request from peer %v.", pIP, req.GetType().String(), req.GetHashes()[0], req.GetHashes()[len(req.GetHashes())-1], req.GetSyncFromPeer())
 
 	g := NewBlkGetter(nil, req)
 	blkRecv := g.Get(ctx, s)
