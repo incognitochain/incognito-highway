@@ -260,3 +260,17 @@ func (w *watcher) setPeerPosition(pID peer.ID, pos position) {
 	w.pos[pID] = pos
 	w.posLocker.Unlock()
 }
+
+func (w *watcher) getFixedPeersOfCID(cid int) []peer.ID {
+	infos := []peer.ID{}
+	w.posLocker.Lock()
+	for pos, info := range w.data {
+		if (pos.cid != cid) || (info.connected == 0) {
+			continue
+		} else {
+			infos = append(infos, info.pid)
+		}
+	}
+	w.posLocker.Unlock()
+	return infos
+}

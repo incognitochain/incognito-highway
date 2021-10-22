@@ -182,6 +182,23 @@ func (hc *Client) getClientWithHashes(
 	return hc.router.GetClientSupportShard(cid)
 }
 
+func (hc *Client) getClientWithHashesV2(
+	cid int,
+	hashes [][]byte,
+) (proto.HighwayServiceClient, peer.ID, error) {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	peers := hc.m.watcher.getFixedPeersOfCID(cid)
+	if len(peers) > 0 {
+		p := peers[r1.Intn(len(peers))]
+		client, err := hc.FindServiceClient(p)
+		if err == nil {
+			return client, p, nil
+		}
+	}
+	return hc.router.GetClientSupportShard(cid)
+}
+
 // getClientOfSupportedShard returns a client (node or another highway)
 // that has the needed block height
 // This func prioritizes getting from a node to reduce load to highways
