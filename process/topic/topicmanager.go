@@ -177,14 +177,12 @@ func (topicManager *TopicManager) getTopicPairForNode(
 		}
 	case CmdFeatureStat:
 		if forPub {
-			if cID != common.BEACONID {
-				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
-				listAction = append(listAction, proto.MessageTopicPair_PUB)
-			}
+			listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
+			listAction = append(listAction, proto.MessageTopicPair_PUB)
 		} else {
 			if cID == common.BEACONID {
 				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
-				listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
+				listAction = append(listAction, proto.MessageTopicPair_SUB)
 			}
 		}
 	case CmdCrossShard:
