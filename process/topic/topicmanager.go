@@ -163,7 +163,7 @@ func (topicManager *TopicManager) getTopicPairForNode(
 			listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 			listAction = append(listAction, proto.MessageTopicPair_SUB)
 		}
-	case CmdBlkShardToBeacon, CmdFinishSync, CmdFeatureStat:
+	case CmdBlkShardToBeacon, CmdFinishSync:
 		if forPub {
 			if cID != common.BEACONID {
 				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
@@ -173,6 +173,18 @@ func (topicManager *TopicManager) getTopicPairForNode(
 			if cID == common.BEACONID {
 				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
 				listAction = append(listAction, proto.MessageTopicPair_SUB)
+			}
+		}
+	case CmdFeatureStat:
+		if forPub {
+			if cID != common.BEACONID {
+				listTopic = append(listTopic, getTopicForPub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
+				listAction = append(listAction, proto.MessageTopicPair_PUB)
+			}
+		} else {
+			if cID == common.BEACONID {
+				listTopic = append(listTopic, getTopicForSub(NODESIDE, msgType, NoCIDInTopic, topicManager.selfID))
+				listAction = append(listAction, proto.MessageTopicPair_PUBSUB)
 			}
 		}
 	case CmdCrossShard:
