@@ -70,7 +70,7 @@ func (handler *SubsHandler) GetDataHandler(
 			FromNode: forInside,
 			PubSub:   handler.PubSub,
 		}, nil
-	case topic.CmdBlkShardToBeacon, topic.CmdFinishSync, topic.CmdCrossShard:
+	case topic.CmdBlkShardToBeacon, topic.CmdFinishSync, topic.CmdFeatureStat, topic.CmdCrossShard:
 		return &BlkCrossCommitteeHandler{
 			FromNode: forInside,
 			PubSub:   handler.PubSub,

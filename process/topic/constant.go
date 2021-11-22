@@ -24,6 +24,7 @@ const (
 	CmdPeerState = "peerstate"
 
 	CmdFinishSync = "finishsync"
+	CmdFeatureStat = "featurestat"
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 		"bft",
 		"peerstate",
 		"finishsync",
+		"featurestat",
 	}
 
 	lvlAllowPubOfMsg = map[string]byte{
@@ -54,6 +56,7 @@ var (
 		"peerstate":    common.COMMITTEE,
 
 		"finishsync": common.NORMAL,
+		"featurestat": common.NORMAL,
 	}
 	lvlAllowSubOfMsg = map[string]byte{
 		"blockshard":   common.NORMAL,
@@ -68,5 +71,6 @@ var (
 		"peerstate":    common.NORMAL,
 
 		"finishsync": common.COMMITTEE,
+		"featurestat": common.COMMITTEE,
 	}
 )
