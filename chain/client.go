@@ -171,12 +171,12 @@ func (hc *Client) getClientWithHashes(
 					break
 				}
 			}
-			if pos, ok := hc.m.watcher.pos[p.ID]; (ok && ((pos.id > 0) && (pos.id <= 21))) || (len(mark) == len(connectedPeers)) {
-				client, err := hc.FindServiceClient(p.ID)
-				if err == nil {
-					return client, p.ID, nil
-				}
+			// if pos, ok := hc.m.watcher.pos[p.ID]; (ok && ((pos.id > 0) && (pos.id <= 21))) || (len(mark) == len(connectedPeers)) {
+			client, err := hc.FindServiceClient(p.ID)
+			if err == nil {
+				return client, p.ID, nil
 			}
+			// }
 		}
 	}
 	return hc.router.GetClientSupportShard(cid)
