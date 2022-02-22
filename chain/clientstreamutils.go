@@ -198,7 +198,7 @@ func (c *Client) StreamBlkByHash(
 			sc, err = c.FindServiceClient(pID)
 		}
 	} else {
-		sc, pID, err = c.getClientWithHashesV2(int(req.GetFrom()), req.GetHashes())
+		sc, pID, err = c.getClientWithHashes(int(req.GetFrom()), req.GetHashes())
 	}
 	logger.Infof("[stream] Server call Client: Start stream request, call client %v, type %s, shard %d -> %d, #hash %d", pID.String(), req.GetType().String(), req.GetFrom(), req.GetTo(), len(req.GetHashes()))
 	if (err != nil) || (sc == nil) {
