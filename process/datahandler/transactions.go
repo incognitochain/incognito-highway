@@ -17,7 +17,7 @@ type TxHandler struct {
 	// Locker   *sync.Mutex
 }
 
-const MaxDuration = 4 * time.Hour
+const MaxDuration = 30 * 24 * time.Hour
 
 func (handler *TxHandler) HandleDataFromTopic(topicReceived string, dataReceived libp2p.Message) error {
 	var topicPubs []string
