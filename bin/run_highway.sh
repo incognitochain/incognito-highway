@@ -38,4 +38,16 @@ if [ -z "$VERSION" ]; then
     VERSION="version"
 fi
 
-./highway -privateseed $PRIVATE_SEED -index $INDEX -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug 2>&1 | cronolog /data/$NAME/highway-$PUBLIC_IP-%Y-%m-%d.log -S /data/$NAME/$PUBLIC_IP.cur.log
+if [ -z "$ADMINPORT" ]; then
+    ADMINPORT=8080
+fi
+
+if [ -z "$PROXYPORT" ]; then
+    PROXYPORT=7337
+fi
+
+if [ -z "$BOOTNODEPORT" ]; then
+    ./highway -privateseed $PRIVATE_SEED -index $INDEX -support_shards all -host $PUBLIC_IP --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug 2>&1 | cronolog /data/$NAME/highway-$PUBLIC_IP-%Y-%m-%d.log -S /data/$NAME/$PUBLIC_IP.cur.log
+else
+    ./highway -privateseed $PRIVATE_SEED -index $INDEX -support_shards all -host $PUBLIC_IP -admin_port $ADMINPORT -proxy_port $PROXYPORT -bootnode_port $BOOTNODEPORT --bootstrap $BOOTSTRAP --gdburl $GDBURL --version $VERSION --loglevel debug 2>&1 | cronolog /data/$NAME/highway-$PUBLIC_IP-%Y-%m-%d.log -S /data/$NAME/$PUBLIC_IP.cur.log
+fi
