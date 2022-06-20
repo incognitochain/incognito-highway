@@ -23,7 +23,7 @@ func (handler *BlkShardHandler) HandleDataFromTopic(topicReceived string, dataRe
 		topicPubs = append(topicPubs, topicPub)
 	} else {
 		topicPubs = topic.Handler.GetHWPubTopicsFromMsg(msgType, cID)
-		topicPubs = append(topicPubs, topic.Handler.GetHWPubTopicsFromMsg(msgType, topic.NoCIDInTopic)...)
+		topicPubs = topic.Handler.GetHWPubTopicsFromMsg(msgType, topic.NoCIDInTopic)
 	}
 	for _, topicPub := range topicPubs {
 		logger.Debugf("[msgblockshard]\tPublish topic %v", topicPub)
