@@ -42,8 +42,12 @@ func (s *Server) Register(
 	if reqRole == common.CommitteeRole {
 		role = common.COMMITTEE
 	} else {
-		if reqRole == common.MonitorRole {
-			role = common.MONITOR
+		if reqRole == common.FullnodeRole {
+			role = common.FULLNODE
+		} else {
+			if reqRole == common.MonitorRole {
+				role = common.MONITOR
+			}
 		}
 	}
 
@@ -244,6 +248,9 @@ func (s *Server) processListWantedMessageOfPeer(
 	// TODO handle error here
 	if role == common.MONITOR {
 		return topic.Handler.GetListTopicPairForMonitor(), nil
+	}
+	if role == common.FULLNODE {
+		return topic.Handler.GetListTopicPairForFullNode(role, msgAndCID), nil
 	}
 	pairs = topic.Handler.GetListTopicPairForNode(role, msgAndCID)
 	return pairs, nil

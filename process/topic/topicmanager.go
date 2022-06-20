@@ -289,6 +289,20 @@ func (topicManager *TopicManager) GetListTopicPairForNode(
 	return res
 }
 
+func (topicManager *TopicManager) GetListTopicPairForFullNode(
+	level byte,
+	msgAndCID map[string][]int,
+) []*proto.MessageTopicPair {
+	delete(msgAndCID, CmdBlockShard)
+	res := topicManager.GetListTopicPairForNode(level, msgAndCID)
+	newMsgAndCID := map[string][]int{
+		CmdBlockShard: {255},
+	}
+	newTopicPair := topicManager.GetListTopicPairForNode(common.COMMITTEE, newMsgAndCID)
+	res = append(res, newTopicPair...)
+	return res
+}
+
 func (topicManager *TopicManager) GetListSubTopicForHW() []string {
 	res := []string{}
 	locker := topicManager.rwLockTopicNodePub

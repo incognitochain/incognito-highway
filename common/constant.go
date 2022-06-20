@@ -9,6 +9,7 @@ const (
 	ShardRole          = "shard"
 
 	CommitteeRole = "committee"
+	FullnodeRole  = "fullnode"
 	MonitorRole   = "netmonitor"
 	PendingRole   = "pending"
 	WaitingRole   = "waiting"
@@ -58,6 +59,7 @@ var (
 const (
 	COMMITTEE byte = iota
 	PENDING
+	FULLNODE
 	NORMAL
 	MONITOR
 )
