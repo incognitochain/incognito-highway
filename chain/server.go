@@ -44,6 +44,7 @@ func (s *Server) Register(
 	} else {
 		if reqRole == common.FullnodeRole {
 			role = common.FULLNODE
+			cIDs = []int{255, 0, 1, 2, 3, 4, 5, 6, 7}
 		} else {
 			if reqRole == common.MonitorRole {
 				role = common.MONITOR
